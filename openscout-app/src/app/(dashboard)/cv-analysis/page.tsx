@@ -1,21 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { motion } from "framer-motion";
-
-const JOB_CATEGORIES = [
-  "Frontend Developer",
-  "Backend Developer",
-  "Full Stack Developer",
-  "Mobile Developer",
-  "DevOps Engineer",
-  "Data Scientist",
-  "Product Manager",
-  "Pazarlama",
-  "Finans",
-];
+import { JOB_TITLES } from "@/constants/jobFormOptions";
+import { UsageBanner } from "@/components/dashboard/UsageBanner";
 
 type CVHolder = {
   full_name: string;
@@ -36,10 +27,23 @@ type AnalysisResult = {
   improvements: string[];
 };
 
-export default function CVAnalysisPage() {
+function CVAnalysisContent() {
+  const searchParams = useSearchParams();
+  const jobIdFromUrl = searchParams.get("jobId") ?? undefined;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [jobCategory, setJobCategory] = useState(JOB_CATEGORIES[0]);
+  const categoryFromUrl = searchParams.get("category");
+  const initialCategory = categoryFromUrl && JOB_TITLES.includes(categoryFromUrl as (typeof JOB_TITLES)[number])
+    ? categoryFromUrl
+    : JOB_TITLES[0];
+  const [jobCategory, setJobCategory] = useState(initialCategory);
+
+  useEffect(() => {
+    if (categoryFromUrl && JOB_TITLES.includes(categoryFromUrl as (typeof JOB_TITLES)[number])) {
+      setJobCategory(categoryFromUrl);
+    }
+  }, [categoryFromUrl]);
+
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +92,7 @@ export default function CVAnalysisPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("jobCategory", jobCategory);
+      if (jobIdFromUrl) formData.append("jobId", jobIdFromUrl);
 
       const res = await fetch("/api/cv-analysis", {
         method: "POST",
@@ -112,6 +117,8 @@ export default function CVAnalysisPage() {
         Upload your CV, select job category, and let AI evaluate it.
       </p>
 
+      <UsageBanner feature="cv_analysis" />
+
       {!result ? (
         <div className="mt-8 space-y-6">
           <div>
@@ -121,7 +128,7 @@ export default function CVAnalysisPage() {
               onChange={(e) => setJobCategory(e.target.value)}
               className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
             >
-              {JOB_CATEGORIES.map((c) => (
+              {JOB_TITLES.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>
@@ -332,5 +339,13 @@ export default function CVAnalysisPage() {
         </motion.div>
       )}
     </div>
+  );
+}
+
+export default function CVAnalysisPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-2xl p-8 text-center text-gray-500">Loading…</div>}>
+      <CVAnalysisContent />
+    </Suspense>
   );
 }

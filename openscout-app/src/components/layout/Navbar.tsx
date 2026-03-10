@@ -24,15 +24,14 @@ export function Navbar({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const navLinks = [
-    { href: "/", label: "Job Listings" },
-    { href: "/mock-interview", label: "Mock Interview" },
-    { href: "/cv-analysis", label: "CV Analysis" },
+    { href: "/jobs", label: "Job Listings" },
+    { href: "/blog", label: "Blog" },
   ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2">
+      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex shrink-0 items-center gap-2">
           <span
             className="flex h-8 w-8 items-center justify-center rounded-full"
             style={{ backgroundColor: "var(--primary-lighter)" }}
@@ -47,45 +46,58 @@ export function Navbar({
           </span>
         </Link>
 
-        {/* User type toggle - desktop */}
-        <div className="hidden items-center gap-8 md:flex">
-          <div className="flex items-center rounded-[10px] border border-[var(--border)] p-1">
+        {/* User type toggle - desktop, centered */}
+        <div className="absolute left-1/2 hidden -translate-x-1/2 items-center md:flex">
+          <div className="relative flex items-center rounded-[10px] border border-[var(--border)] bg-gray-50/80 p-1">
+            <motion.div
+              layout
+              animate={{ x: userType === "employer" ? "100%" : 0 }}
+              transition={{ type: "spring", stiffness: 380, damping: 28 }}
+              className="absolute inset-y-0 z-0 rounded-lg"
+              style={{
+                left: 4,
+                width: "calc(50% - 6px)",
+                backgroundColor: "var(--primary)",
+              }}
+            />
             <button
               onClick={() => onUserTypeChange?.("job_seeker")}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                userType === "job_seeker"
-                  ? "bg-primary text-white"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className="relative z-10 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: userType === "job_seeker" ? "white" : undefined,
+              }}
             >
               Find Jobs
             </button>
             <button
               onClick={() => onUserTypeChange?.("employer")}
-              className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                userType === "employer"
-                  ? "bg-primary text-white"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
+              className="relative z-10 rounded-lg px-4 py-2 text-sm font-medium transition-colors"
+              style={{
+                color: userType === "employer" ? "white" : undefined,
+              }}
             >
-              Ise Aliyorum
+              I'm Hiring
             </button>
           </div>
-
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-medium transition-colors ${
-                pathname === link.href
-                  ? "text-primary-dark"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
         </div>
+
+        {/* Job Listings, Blog + auth - right side */}
+        <div className="flex flex-1 items-center justify-end gap-6">
+          <div className="hidden items-center gap-6 md:flex">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm font-medium transition-colors ${
+                  pathname === link.href
+                    ? "text-primary-dark"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
 
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
@@ -113,6 +125,7 @@ export function Navbar({
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
+        </div>
         </div>
       </nav>
 
@@ -146,7 +159,7 @@ export function Navbar({
                     userType === "employer" ? "bg-primary-lighter" : ""
                   }`}
                 >
-                  Ise Aliyorum
+                  I'm Hiring
                 </button>
               </div>
               {navLinks.map((link) => (

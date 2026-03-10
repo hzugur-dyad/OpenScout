@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGroq } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
+import { logError, logInfo, logWarn } from "@/lib/logger";
+import { canUseFeature, logUsage, getUserPlan } from "@/lib/usage";
 // @ts-expect-error - pdf-parse has no types
 import pdfParse from "pdf-parse";
 
@@ -79,22 +81,47 @@ function computeOverallScore(categoryScores: Record<string, number>): number {
 }
 
 export async function POST(request: NextRequest) {
+  logInfo("cv-analysis request received");
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const plan = getUserPlan(profile?.plan);
+    const { allowed, used, limit } = await canUseFeature(supabase, user.id, "cv_analysis", plan);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Weekly CV analysis limit reached. Upgrade your plan for more.", used, limit },
+        { status: 403 }
+      );
+    }
+
     const contentType = request.headers.get("content-type") || "";
     let cvText: string;
     let jobCategory: string;
 
+    let jobId: string | undefined;
     if (contentType.includes("multipart/form-data")) {
       const formData = await request.formData();
       const file = formData.get("file") as File | null;
       jobCategory = (formData.get("jobCategory") as string) || "";
+      jobId = (formData.get("jobId") as string) || undefined;
       if (!file || !jobCategory) {
+        logWarn("cv-analysis validation failed", { reason: "file and job category required" });
         return NextResponse.json(
           { error: "File and job category are required" },
           { status: 400 }
         );
       }
       if (!isAllowedFile(file)) {
+        logWarn("cv-analysis validation failed", { reason: "invalid file type" });
         return NextResponse.json(
           { error: "Only PDF and TXT files are supported. DOC/DOCX are not supported." },
           { status: 400 }
@@ -102,6 +129,7 @@ export async function POST(request: NextRequest) {
       }
       cvText = await extractTextFromFile(file);
       if (!cvText || cvText.length < 10) {
+        logWarn("cv-analysis validation failed", { reason: "no readable text extracted" });
         return NextResponse.json(
           { error: "Could not extract readable text from the file. Please ensure the PDF is not scanned/image-based." },
           { status: 400 }
@@ -111,7 +139,9 @@ export async function POST(request: NextRequest) {
       const body = await request.json();
       cvText = body.cvText;
       jobCategory = body.jobCategory;
+      jobId = body.jobId;
       if (!cvText || !jobCategory) {
+        logWarn("cv-analysis validation failed", { reason: "cvText and jobCategory required" });
         return NextResponse.json(
           { error: "cvText and jobCategory are required" },
           { status: 400 }
@@ -119,10 +149,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    let cvRequiredBlock = "";
+    if (jobId && typeof jobId === "string") {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const { data: job } = await supabase
+        .from("job_listings")
+        .select("ai_interview_config")
+        .eq("id", jobId.trim())
+        .maybeSingle();
+      const config = (job?.ai_interview_config as { cv_required_items?: string[] } | null) ?? {};
+      const items = config.cv_required_items?.filter((s) => typeof s === "string" && s.trim()) ?? [];
+      if (items.length > 0) {
+        cvRequiredBlock = `\nThe employer requires the following in the CV. Score the CV considering presence or absence of these: reward if clearly present, penalize if missing.\n${items.map((s) => `- ${s}`).join("\n")}\n\n`;
+      }
+    }
+
     const systemPrompt = `You are a senior HR and recruitment expert (15+ years). The user has selected a TARGET ROLE for this CV evaluation. You must score the CV ONLY for fit to that role.
 
 TARGET ROLE (evaluate ONLY for this): "${jobCategory}"
-
+${cvRequiredBlock}
 CRITICAL RULES:
 - Score = how well this CV fits "${jobCategory}", not how good the CV is in general.
 - If the candidate's experience/skills are in a DIFFERENT area (e.g. Mobile Developer, Backend, Data) and do NOT show clear relevance to "${jobCategory}", score work_experience and skills LOW (e.g. 20-50). Do NOT give high scores for strong experience in an unrelated role.
@@ -190,17 +236,29 @@ Use the exact keys above. All strings must be non-empty where applicable. Scores
 
     const groq = getGroq();
     const userContent = `TARGET ROLE FOR THIS EVALUATION: "${jobCategory}"\n\nEvaluate the following CV only for fit to the role above. CV text:\n\n${cvText}`;
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userContent },
-      ],
-    });
+    let completion;
+    try {
+      completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userContent },
+        ],
+      });
+    } catch (groqError) {
+      logError("cv-analysis Groq request failed", groqError);
+      return NextResponse.json(
+        { error: groqError instanceof Error ? groqError.message : "CV analysis failed" },
+        { status: 500 }
+      );
+    }
 
     const text = completion.choices[0]?.message?.content;
-    if (!text) throw new Error("No response from model");
+    if (!text) {
+      logError("cv-analysis Groq returned empty content", undefined);
+      throw new Error("No response from model");
+    }
 
     const jsonStr = extractJsonFromText(text);
     let parsed: {
@@ -222,7 +280,7 @@ Use the exact keys above. All strings must be non-empty where applicable. Scores
     try {
       parsed = JSON.parse(jsonStr) as typeof parsed;
     } catch (e) {
-      console.error("CV analysis JSON parse failed. Raw:", text?.slice(0, 500));
+      logError("cv-analysis invalid JSON from model", e);
       return NextResponse.json(
         { error: "Invalid JSON from model" },
         { status: 500 }
@@ -265,22 +323,26 @@ Use the exact keys above. All strings must be non-empty where applicable. Scores
       improvements,
     };
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("cv_analyses").insert({
-        user_id: user.id,
-        job_category: jobCategory,
-        overall_score: result.overall_score,
-        category_scores: result.category_scores || {},
-        strengths: result.strengths || [],
-        improvements: result.improvements || [],
-      });
+    const { error: insertError } = await supabase.from("cv_analyses").insert({
+      user_id: user.id,
+      job_category: jobCategory,
+      ...(jobId && jobId.trim() ? { job_id: jobId.trim() } : {}),
+      overall_score: result.overall_score,
+      category_scores: result.category_scores || {},
+      strengths: result.strengths || [],
+      improvements: result.improvements || [],
+    });
+
+    if (insertError) {
+      logError("cv-analysis insert failed", insertError);
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
+
+    await logUsage(supabase, user.id, "cv_analysis");
 
     return NextResponse.json(result);
   } catch (e) {
-    console.error("CV analysis error:", e);
+    logError("cv-analysis unexpected error", e);
     const msg = e instanceof Error ? e.message : "CV analysis failed";
     return NextResponse.json(
       { error: msg },

@@ -1,0 +1,225 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - Next.js 16
+  - React 19
+  - Tailwind CSS
+  - Framer Motion
+  - Supabase
+  - Stripe
+routes:
+  - path: /
+    file: src/app/(marketing)/page.tsx
+    auth_required: false
+    description: Landing page
+  - path: /login
+    file: src/app/(auth)/login/page.tsx
+    auth_required: false
+    description: User login page
+  - path: /register
+    file: src/app/(auth)/register/page.tsx
+    auth_required: false
+    description: User registration page
+  - path: /confirm-email
+    file: src/app/(auth)/confirm-email/page.tsx
+    auth_required: false
+    description: Email confirmation page
+  - path: /dashboard
+    file: src/app/(dashboard)/dashboard/page.tsx
+    auth_required: true
+    description: User dashboard
+  - path: /jobs
+    file: src/app/(marketing)/jobs/page.tsx
+    auth_required: false
+    description: Public jobs listing
+  - path: /jobs/[jobId]
+    file: src/app/(marketing)/jobs/[jobId]/page.tsx
+    auth_required: false
+    description: Job detail page
+  - path: /jobs/[jobId]/apply
+    file: src/app/(dashboard)/jobs/[jobId]/apply/page.tsx
+    auth_required: true
+    description: Apply to job
+  - path: /cv-analysis
+    file: src/app/(dashboard)/cv-analysis/page.tsx
+    auth_required: true
+    description: CV analysis tool
+  - path: /mock-interview
+    file: src/app/(dashboard)/mock-interview/page.tsx
+    auth_required: true
+    description: Mock interview start
+  - path: /mock-interview/[sessionId]
+    file: src/app/(dashboard)/mock-interview/[sessionId]/page.tsx
+    auth_required: true
+    description: Mock interview session
+  - path: /mock-interview/[sessionId]/result
+    file: src/app/(dashboard)/mock-interview/[sessionId]/result/page.tsx
+    auth_required: true
+    description: Mock interview result
+  - path: /onboarding
+    file: src/app/(dashboard)/onboarding/page.tsx
+    auth_required: true
+    description: User onboarding
+  - path: /employer
+    file: src/app/(dashboard)/employer/page.tsx
+    auth_required: true
+    description: Employer dashboard
+  - path: /employer/new
+    file: src/app/(dashboard)/employer/new/page.tsx
+    auth_required: true
+    description: Create new job listing
+  - path: /employer/[jobId]/edit
+    file: src/app/(dashboard)/employer/[jobId]/edit/page.tsx
+    auth_required: true
+    description: Edit job listing
+  - path: /employer/[jobId]/applications
+    file: src/app/(dashboard)/employer/[jobId]/applications/page.tsx
+    auth_required: true
+    description: Job applications list
+  - path: /employer/[jobId]/applications/[applicationId]
+    file: src/app/(dashboard)/employer/[jobId]/applications/[applicationId]/page.tsx
+    auth_required: true
+    description: Application detail
+  - path: /employer/pricing
+    file: src/app/(dashboard)/employer/pricing/page.tsx
+    auth_required: true
+    description: Employer pricing
+  - path: /blog
+    file: src/app/(marketing)/blog/page.tsx
+    auth_required: false
+    description: Blog index
+  - path: /blog/why-scout-credential
+    file: src/app/(marketing)/blog/why-scout-credential/page.tsx
+    auth_required: false
+    description: Blog post
+  - path: /blog/what-employers-see
+    file: src/app/(marketing)/blog/what-employers-see/page.tsx
+    auth_required: false
+    description: Blog post
+  - path: /pass/[slug]
+    file: src/app/(marketing)/pass/[slug]/page.tsx
+    auth_required: false
+    description: Scout pass public page
+features:
+  - name: User Login
+    description: Login with email and password via Supabase
+    files:
+      - src/app/(auth)/login/page.tsx
+      - src/lib/supabase/client.ts
+    entry_route: /login
+    user_interactions:
+      - Fill email input field
+      - Fill password input field
+      - Click Login button to submit
+      - See error message on invalid credentials
+      - Redirect to dashboard on success
+    api_calls: []
+    auth_required: false
+  - name: User Registration
+    description: Register new account with email and password
+    files:
+      - src/app/(auth)/register/page.tsx
+    entry_route: /register
+    user_interactions:
+      - Fill email and password fields
+      - Submit registration form
+      - See confirmation message
+    api_calls: []
+    auth_required: false
+  - name: Landing Page
+    description: Marketing landing with hero, features, FAQ
+    files:
+      - src/app/(marketing)/page.tsx
+    entry_route: /
+    user_interactions:
+      - Scroll page
+      - Click navigation links
+      - Click CTA buttons
+    api_calls: []
+    auth_required: false
+  - name: Dashboard
+    description: Authenticated user dashboard
+    files:
+      - src/app/(dashboard)/dashboard/page.tsx
+      - src/components/dashboard/DashboardShell.tsx
+    entry_route: /dashboard
+    user_interactions:
+      - View dashboard content
+      - Navigate to CV analysis, mock interview, jobs
+    api_calls: []
+    auth_required: true
+  - name: CV Analysis
+    description: Upload and analyze CV with AI
+    files:
+      - src/app/(dashboard)/cv-analysis/page.tsx
+    entry_route: /cv-analysis
+    user_interactions:
+      - Upload PDF CV
+      - View analysis results
+    api_calls:
+      - method: POST
+        endpoint: /api/cv-analysis
+    auth_required: true
+  - name: Mock Interview
+    description: Start and complete AI mock interview
+    files:
+      - src/app/(dashboard)/mock-interview/page.tsx
+      - src/app/(dashboard)/mock-interview/[sessionId]/page.tsx
+      - src/app/(dashboard)/mock-interview/[sessionId]/result/page.tsx
+    entry_route: /mock-interview
+    user_interactions:
+      - Select job category
+      - Start interview session
+      - Answer questions verbally
+      - View result and Scout Score
+    api_calls:
+      - method: POST
+        endpoint: /api/mock-interview
+      - method: POST
+        endpoint: /api/mock-interview/result
+      - method: POST
+        endpoint: /api/tts
+    auth_required: true
+  - name: Jobs Listing
+    description: Browse public job listings
+    files:
+      - src/app/(marketing)/jobs/page.tsx
+    entry_route: /jobs
+    user_interactions:
+      - View job list
+      - Click job to see detail
+    api_calls: []
+    auth_required: false
+  - name: Job Application
+    description: Apply to a job with CV and details
+    files:
+      - src/app/(dashboard)/jobs/[jobId]/apply/page.tsx
+    entry_route: /jobs/[jobId]/apply
+    user_interactions:
+      - Fill application form
+      - Submit application
+    api_calls:
+      - method: POST
+        endpoint: /api/job-applications
+    auth_required: true
+  - name: Employer Job Management
+    description: Create and edit job listings, view applications
+    files:
+      - src/app/(dashboard)/employer/page.tsx
+      - src/app/(dashboard)/employer/new/page.tsx
+      - src/app/(dashboard)/employer/[jobId]/edit/page.tsx
+      - src/app/(dashboard)/employer/[jobId]/applications/page.tsx
+    entry_route: /employer
+    user_interactions:
+      - Create new job
+      - Edit job
+      - View applications list
+      - Open checkout for subscription
+    api_calls:
+      - method: POST
+        endpoint: /api/employer/create-checkout-session
+      - method: POST
+        endpoint: /api/employer/verify-session
+    auth_required: true
+known_limitations: []

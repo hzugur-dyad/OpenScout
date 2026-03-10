@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OnboardingStepper } from "@/components/onboarding/OnboardingStepper";
 import { Button } from "@/components/ui/Button";
 import { motion, AnimatePresence } from "framer-motion";
+import { FileText, Upload, X } from "lucide-react";
 
 const STEPS = [
   {
@@ -37,8 +39,13 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
+  const [editing, setEditing] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [cvFileUrl, setCvFileUrl] = useState<string | null>(null);
+  const [cvUploading, setCvUploading] = useState(false);
+  const cvInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -85,22 +92,86 @@ export default function OnboardingPage() {
   useEffect(() => {
     async function loadProfile() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      if (profile) {
-        setForm((f) => ({
-          ...f,
-          first_name: profile.first_name ?? "",
-          last_name: profile.last_name ?? "",
-          email: profile.email ?? user.email ?? "",
-          location: profile.location ?? "",
-          professional_summary: profile.professional_summary ?? "",
-        }));
+      if (!user) {
+        setProfileLoading(false);
+        return;
       }
+      // Apply profile data from registration if present (e.g. user landed here after email confirm)
+      try {
+        const raw = typeof window !== "undefined" ? sessionStorage.getItem("pending_candidate_profile") : null;
+        if (raw) {
+          const parsed = JSON.parse(raw) as { first_name?: string; last_name?: string; location?: string };
+          if (parsed.first_name != null || parsed.last_name != null || parsed.location != null) {
+            await supabase.from("profiles").upsert({
+              user_id: user.id,
+              first_name: parsed.first_name ?? "",
+              last_name: parsed.last_name ?? "",
+              email: user.email ?? "",
+              location: parsed.location ?? "",
+              updated_at: new Date().toISOString(),
+            });
+            sessionStorage.removeItem("pending_candidate_profile");
+          }
+        }
+      } catch (_) {}
+      const [
+        { data: profile },
+        { data: workList },
+        { data: eduList },
+        { data: prefs },
+        { data: links },
+      ] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("work_experiences").select("*").eq("user_id", user.id).order("sort_order"),
+        supabase.from("educations").select("*").eq("user_id", user.id).order("sort_order"),
+        supabase.from("job_preferences").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("professional_links").select("*").eq("user_id", user.id).maybeSingle(),
+      ]);
+      setForm((f) => ({
+        ...f,
+        first_name: (profile as { first_name?: string } | null)?.first_name ?? "",
+        last_name: (profile as { last_name?: string } | null)?.last_name ?? "",
+        email: (profile as { email?: string } | null)?.email ?? user.email ?? "",
+        location: (profile as { location?: string } | null)?.location ?? "",
+        professional_summary: (profile as { professional_summary?: string } | null)?.professional_summary ?? "",
+      }));
+      setCvFileUrl((profile as { cv_file_url?: string } | null)?.cv_file_url ?? null);
+      setForm((f) => ({
+        ...f,
+        work_experiences: (workList ?? []).map((w: Record<string, unknown>) => ({
+          company_name: (w.company_name as string) ?? "",
+          job_title: (w.job_title as string) ?? "",
+          start_date: (w.start_date as string) ?? "",
+          end_date: (w.end_date as string) ?? "",
+          employment_type: (w.employment_type as string) ?? "full_time",
+          location: (w.location as string) ?? "",
+          is_remote: (w.is_remote as boolean) ?? false,
+          description: (w.description as string) ?? "",
+          highlights: (w.highlights as string[]) ?? [],
+        })),
+        educations: (eduList ?? []).map((e: Record<string, unknown>) => ({
+          institution: (e.institution as string) ?? "",
+          location: (e.location as string) ?? "",
+          degree_type: (e.degree_type as string) ?? "bachelor",
+          field_of_study: (e.field_of_study as string) ?? "",
+          start_year: e.start_year != null ? String(e.start_year) : "",
+          end_year: e.end_year != null ? String(e.end_year) : "",
+          completed: (e.completed as boolean) ?? true,
+        })),
+        job_search_status: (prefs as { job_search_status?: string } | null)?.job_search_status ?? "actively_looking",
+        available_start: (prefs as { available_start?: string } | null)?.available_start ?? "within_1_month",
+        salary_expectation: (prefs as { salary_expectation?: number } | null)?.salary_expectation != null ? String((prefs as { salary_expectation?: number }).salary_expectation) : "",
+        work_arrangement: (prefs as { work_arrangement?: string } | null)?.work_arrangement ?? "flexible",
+        domain: (prefs as { domain?: string } | null)?.domain ?? "engineering",
+        experience_level: (prefs as { experience_level?: string } | null)?.experience_level ?? "senior",
+        desired_roles: (prefs as { desired_roles?: string[] } | null)?.desired_roles ?? [],
+        skills: (prefs as { skills?: string[] } | null)?.skills ?? [],
+        linkedin: (links as { linkedin?: string } | null)?.linkedin ?? "",
+        github: (links as { github?: string } | null)?.github ?? "",
+        portfolio: (links as { portfolio?: string } | null)?.portfolio ?? "",
+        other_highlights: (links as { other_highlights?: string[] } | null)?.other_highlights ?? [],
+      }));
+      setProfileLoading(false);
     }
     loadProfile();
   }, [supabase]);
@@ -210,12 +281,220 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       });
 
-      router.push("/dashboard");
+      setEditing(false);
+      setStep(1);
+      router.refresh();
     } catch (e) {
       console.error(e);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  if (profileLoading) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!editing) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Profile</h1>
+            <p className="mt-1 text-gray-500">Your information is shown below. Edit when you need to.</p>
+          </div>
+          <Button variant="primary" onClick={() => setEditing(true)}>
+            Edit profile
+          </Button>
+        </div>
+
+        <div className="mt-8 space-y-8">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">About</h2>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">First name</dt>
+                <dd className="mt-0.5 text-gray-900">{form.first_name || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Last name</dt>
+                <dd className="mt-0.5 text-gray-900">{form.last_name || "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-sm font-medium text-gray-500">Email</dt>
+                <dd className="mt-0.5 text-gray-900">{form.email || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Location</dt>
+                <dd className="mt-0.5 text-gray-900">{form.location || "—"}</dd>
+              </div>
+              {form.professional_summary && (
+                <div className="sm:col-span-2">
+                  <dt className="text-sm font-medium text-gray-500">Professional summary</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-gray-900">{form.professional_summary}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">Work Experience</h2>
+            {form.work_experiences.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-500">No work experience added yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-4">
+                {form.work_experiences.map((we, i) => (
+                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                    <p className="font-medium text-gray-900">{we.job_title || "—"} at {we.company_name || "—"}</p>
+                    {(we.start_date || we.end_date) && (
+                      <p className="text-sm text-gray-500">{we.start_date} – {we.end_date || "Present"}</p>
+                    )}
+                    {we.description && <p className="mt-1 text-sm text-gray-600">{we.description}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">Education</h2>
+            {form.educations.length === 0 ? (
+              <p className="mt-3 text-sm text-gray-500">No education added yet.</p>
+            ) : (
+              <ul className="mt-4 space-y-4">
+                {form.educations.map((ed, i) => (
+                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                    <p className="font-medium text-gray-900">{ed.institution || "—"}</p>
+                    <p className="text-sm text-gray-600">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
+                    {(ed.start_year || ed.end_year) && (
+                      <p className="text-sm text-gray-500">{ed.start_year} – {ed.end_year || "Present"}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">Job Preferences</h2>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Job search status</dt>
+                <dd className="mt-0.5 text-gray-900">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Available to start</dt>
+                <dd className="mt-0.5 text-gray-900">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Domain</dt>
+                <dd className="mt-0.5 text-gray-900">{form.domain ?? "—"}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">Links</h2>
+            <dl className="mt-4 space-y-3">
+              <div>
+                <dt className="text-sm font-medium text-gray-500">LinkedIn</dt>
+                <dd className="mt-0.5 text-gray-900">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.linkedin}</a> : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">GitHub</dt>
+                <dd className="mt-0.5 text-gray-900">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.github}</a> : "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500">Portfolio</dt>
+                <dd className="mt-0.5 text-gray-900">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.portfolio}</a> : "—"}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+            <h2 className="text-lg font-semibold text-gray-900">CV</h2>
+            {cvFileUrl ? (
+              <div className="mt-4 flex items-center gap-3">
+                <FileText className="h-5 w-5 text-primary" />
+                <a
+                  href="#"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const { data } = await supabase.storage.from("cvs").createSignedUrl(cvFileUrl!, 60);
+                    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                  }}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Download CV
+                </a>
+                <input ref={cvInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const name = file.name.toLowerCase();
+                  if (!name.endsWith(".pdf") && !name.endsWith(".txt")) return;
+                  if (file.size > 10 * 1024 * 1024) return;
+                  setCvUploading(true);
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
+                    const ext = file.name.split(".").pop() || "pdf";
+                    const filePath = `${user.id}/cv.${ext}`;
+                    await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
+                    await supabase.from("profiles").update({ cv_file_url: filePath }).eq("user_id", user.id);
+                    setCvFileUrl(filePath);
+                    try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
+                  } finally { setCvUploading(false); }
+                }} />
+                <Button variant="outline" size="sm" onClick={() => cvInputRef.current?.click()} isLoading={cvUploading}>
+                  Re-upload
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-4">
+                <input ref={cvInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const name = file.name.toLowerCase();
+                  if (!name.endsWith(".pdf") && !name.endsWith(".txt")) return;
+                  if (file.size > 10 * 1024 * 1024) return;
+                  setCvUploading(true);
+                  try {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) return;
+                    const ext = file.name.split(".").pop() || "pdf";
+                    const filePath = `${user.id}/cv.${ext}`;
+                    await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
+                    await supabase.from("profiles").update({ cv_file_url: filePath }).eq("user_id", user.id);
+                    setCvFileUrl(filePath);
+                    try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
+                  } finally { setCvUploading(false); }
+                }} />
+                <button
+                  type="button"
+                  onClick={() => cvInputRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary"
+                >
+                  <Upload className="h-5 w-5" />
+                  {cvUploading ? "Uploading..." : "Upload your CV (PDF or TXT, max 10MB)"}
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="mt-6">
+          <Button variant="primary" onClick={() => setEditing(true)}>
+            Edit profile
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -224,9 +503,9 @@ export default function OnboardingPage() {
       <p className="mt-1 text-gray-500">
         Review and complete your information.
       </p>
-      <a href="#" className="mt-2 inline-block text-sm text-primary hover:underline">
+      <Link href="/cv-analysis" className="mt-2 inline-block text-sm text-primary hover:underline">
         Upload new CV
-      </a>
+      </Link>
 
       <div className="mt-8">
         <OnboardingStepper currentStep={step} />
@@ -234,7 +513,11 @@ export default function OnboardingPage() {
 
       <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
         {validationError && (
-          <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+          <div
+            role="alert"
+            data-testid="onboarding-validation-error"
+            className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+          >
             {validationError}
           </div>
         )}
@@ -246,6 +529,7 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
+              data-testid="onboarding-step-about"
             >
               <h2 className="text-lg font-semibold">About</h2>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -255,7 +539,12 @@ export default function OnboardingPage() {
                     value={form.first_name}
                     onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
                     className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                    required
+                    aria-invalid={!!(validationError && !form.first_name.trim())}
                   />
+                  {validationError && !form.first_name.trim() && (
+                    <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium">Last Name <span className="text-red-500">*</span></label>
@@ -263,7 +552,12 @@ export default function OnboardingPage() {
                     value={form.last_name}
                     onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
                     className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                    required
+                    aria-invalid={!!(validationError && !form.last_name.trim())}
                   />
+                  {validationError && !form.last_name.trim() && (
+                    <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -273,7 +567,12 @@ export default function OnboardingPage() {
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  required
+                  aria-invalid={!!(validationError && !form.email.trim())}
                 />
+                {validationError && !form.email.trim() && (
+                  <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Location <span className="text-red-500">*</span></label>
@@ -282,7 +581,12 @@ export default function OnboardingPage() {
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   placeholder="Berlin, Germany"
                   className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  required
+                  aria-invalid={!!(validationError && !form.location.trim())}
                 />
+                {validationError && !form.location.trim() && (
+                  <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                )}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Professional Summary</label>
@@ -304,8 +608,10 @@ export default function OnboardingPage() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
+              data-testid="onboarding-step-work-experience"
             >
               <h2 className="text-lg font-semibold">Work Experience</h2>
+              <p className="text-sm text-gray-600">Work experience: add your past roles below.</p>
               {form.work_experiences.length === 0 ? (
                 <p className="text-sm text-gray-500">No work experience added yet.</p>
               ) : (
@@ -418,6 +724,7 @@ export default function OnboardingPage() {
               <Button
                 variant="outline"
                 size="sm"
+                data-testid="add-work-experience"
                 onClick={() =>
                   setForm((f) => ({
                     ...f,
@@ -701,13 +1008,18 @@ export default function OnboardingPage() {
         </AnimatePresence>
 
         <div className="mt-8 flex justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => setStep((s) => Math.max(1, s - 1))}
-            disabled={step === 1}
-          >
-            Back
-          </Button>
+          {step === 1 ? (
+            <Button variant="ghost" onClick={() => setEditing(false)}>
+              Back to profile
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+            >
+              Back
+            </Button>
+          )}
           {step < 5 ? (
             <Button variant="primary" onClick={handleNext}>
               Next

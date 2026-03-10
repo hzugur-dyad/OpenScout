@@ -1,0 +1,1609 @@
+[
+  {
+    "id": "TC001",
+    "title": "Register a new account successfully and reach email confirmation page",
+    "description": "Verifies a user can submit the registration form with valid email/password and is guided to confirm their email.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"new.user.e2e+001@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"ValidPassw0rd!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Create account\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Check your email\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Go to email confirmation\" link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/confirm-email\""
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Registration fails with empty email",
+    "description": "Verifies required-field validation appears when the email field is left blank.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"ValidPassw0rd!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Create account\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email is required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/register\""
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Registration fails with empty password",
+    "description": "Verifies required-field validation appears when the password field is left blank.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"new.user.e2e+002@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Create account\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Password is required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/register\""
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Registration fails with invalid email format",
+    "description": "Verifies the form shows an error when the email format is invalid.",
+    "category": "User Registration",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"not-an-email\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"ValidPassw0rd!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Create account\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Enter a valid email\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/register\""
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Registration fails with too-short password",
+    "description": "Verifies password policy validation appears for a short/weak password.",
+    "category": "User Registration",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"new.user.e2e+003@example.com\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"123\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Create account\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Password\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"too short\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Navigate from registration page to confirmation email page without submitting",
+    "description": "Verifies users can reach the email confirmation guidance page via navigation from registration UI.",
+    "category": "User Registration",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /register"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Register\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Confirm email\" link"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/confirm-email\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confirm your email\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Complete onboarding with all required sections and reach dashboard",
+    "description": "Verifies a user can complete the multi-step onboarding (About, Work, Education, Preferences, Links) and is redirected to the dashboard with completion indicated.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Full name\" with \"Test User\""
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Finish About section required fields and proceed to next step",
+    "description": "Verifies required About fields can be filled and the user can proceed to the next onboarding step.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Location\" with \"New York, NY\""
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Add a work experience entry during onboarding",
+    "description": "Verifies a user can add a new work experience entry and see it appear in the onboarding UI.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Work Experience\" step/tab"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Add\" button to add a work experience entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Work experience\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Add an education entry during onboarding",
+    "description": "Verifies a user can add a new education entry and see it appear in the onboarding UI.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Education\" step/tab"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Add\" button to add an education entry"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Education\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Add LinkedIn link in Links step and verify it is shown",
+    "description": "Verifies a user can enter a LinkedIn URL in the Links step and see it reflected in the UI before submission.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Links\" step/tab"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"LinkedIn\" with \"https://www.linkedin.com/in/test-user\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"linkedin.com/in/test-user\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Submit onboarding with missing required fields shows validation and blocks completion",
+    "description": "Verifies validation prevents submission when required fields like name or location are missing.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Finish\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Attempt to submit with name missing shows inline error near name field",
+    "description": "Verifies the onboarding form surfaces a visible validation message specifically when name is empty.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Location\" with \"Austin, TX\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Finish\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Name\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Attempt to submit with location missing shows inline error near location field",
+    "description": "Verifies the onboarding form surfaces a visible validation message specifically when location is empty.",
+    "category": "Onboarding / Profile Completion",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Onboarding\" or \"Complete your profile\" (whichever is present) to open onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Full name\" with \"Test User\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Finish\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Location\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Dashboard shows core feature cards after successful login",
+    "description": "Verifies an authenticated user can reach the dashboard and see entry points for CV Analysis, Mock Interview, and Jobs.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"CV Analysis\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Mock Interview\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Jobs\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Navigate from Dashboard to CV Analysis via card",
+    "description": "Verifies the CV Analysis card/link from the dashboard takes the user to the CV analysis page.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"CV Analysis\" card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/cv-analysis\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"CV\""
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Navigate from Dashboard to Mock Interview via card",
+    "description": "Verifies the Mock Interview card/link from the dashboard takes the user to the mock interview start page.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Mock Interview\" card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/mock-interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Mock Interview\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Navigate from Dashboard to Marketing Jobs page via card/link",
+    "description": "Verifies the Jobs entry point from the dashboard navigates to the jobs listing page.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Jobs\" card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/jobs\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Jobs\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Dashboard shows onboarding prompt for users with incomplete onboarding",
+    "description": "Verifies that users who have not completed onboarding see a prompt to complete their profile on the dashboard.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Complete\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Profile\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Navigate from onboarding prompt to Onboarding page",
+    "description": "Verifies clicking the dashboard onboarding call-to-action navigates to the onboarding flow.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Complete profile\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Onboarding\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Invalid credentials do not allow access to dashboard",
+    "description": "Verifies the login form rejects invalid credentials and the user is not taken to the dashboard.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"fake.user@example.com\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"WrongPassword123!\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/login\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Dashboard content is visible and not empty after load",
+    "description": "Verifies the dashboard loads its main content shell and the user sees the dashboard area rather than a blank state.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Dashboard\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"CV Analysis\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "CV Analysis page loads and shows upload + analyze controls",
+    "description": "Verifies the CV Analysis page is reachable after login and exposes the primary actions needed to start analysis.",
+    "category": "CV Analysis",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"CV Analysis\" in the main navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/cv-analysis"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Upload CV\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Analyze\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Attempt to analyze without uploading a CV shows validation error",
+    "description": "Verifies the user cannot run analysis without providing a CV and receives a visible validation message.",
+    "category": "CV Analysis",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"CV Analysis\" in the main navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Analyze\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Please upload\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Start mock interview session from the Mock Interview entry page",
+    "description": "Verifies an authenticated user can start a mock interview and is taken into a new session page.",
+    "category": "Mock Interview",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Login\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Start mock interview\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Session page loads first question prompt after starting",
+    "description": "Verifies that after starting a session, the user sees the first interview question prompt on the session page.",
+    "category": "Mock Interview",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start mock interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/mock-interview/\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Question\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Toggle to text-only mode when TTS is unclear",
+    "description": "Verifies the user can switch to text-only prompts and the prompt remains visible without relying on audio playback.",
+    "category": "Mock Interview",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start mock interview\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Text-only\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Text-only\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Request TTS retry for the current question prompt",
+    "description": "Verifies the user can trigger a retry/replay of the question prompt and sees an on-screen indication that replay was requested.",
+    "category": "Mock Interview",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start mock interview\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Replay\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Replaying\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Finish session and view results page with feedback visible",
+    "description": "Verifies the user can finish the interview session and view the result/feedback page.",
+    "category": "Mock Interview",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start mock interview\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Finish\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/result\""
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Results page shows summary and actionable feedback sections",
+    "description": "Verifies the results page displays visible summary and feedback content after a session completes.",
+    "category": "Mock Interview",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Mock Interview\" in the navigation menu"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start mock interview\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Finish\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Feedback\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Browse jobs list and open a job detail from /jobs",
+    "description": "Verifies a user can view the public jobs list and open a job detail page.",
+    "category": "Jobs Listing and Apply",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /jobs"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Jobs\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"job list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first job in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"job title\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Apply\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Authenticated user can reach the protected apply form from a job detail",
+    "description": "Verifies that a logged-in user can start an application and land on the job application form.",
+    "category": "Jobs Listing and Apply",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Jobs\" in the site navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first job in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Apply\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/apply\""
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Authenticated user submits a job application successfully and sees confirmation",
+    "description": "Verifies that a logged-in user can complete and submit the application form and receives a visible confirmation state.",
+    "category": "Jobs Listing and Apply",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Jobs\" in the site navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first job in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Apply\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"application form\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Taylor Applicant\" into the \"Full name\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"taylor.applicant@example.com\" into the \"Email\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"I am excited to apply for this role.\" into the \"Cover letter\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Submit application\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Application submitted\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"confirmation\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Apply form validation: required fields block submission with visible messages",
+    "description": "Verifies the application form shows visible validation feedback when submitted with missing required fields.",
+    "category": "Jobs Listing and Apply",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Jobs\" in the site navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first job in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Apply\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"application form\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Submit application\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Submission error shows visible error message and retry option",
+    "description": "Verifies that when application submission fails, the user sees an error message and a visible way to retry submission.",
+    "category": "Jobs Listing and Apply",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Sign in\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Jobs\" in the site navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first job in the list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Apply\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Taylor Applicant\" into the \"Full name\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"taylor.applicant@example.com\" into the \"Email\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Please consider my application.\" into the \"Cover letter\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Submit application\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Retry\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Jobs list page supports basic browsing and maintains visible list after scrolling",
+    "description": "Verifies the jobs list remains usable when the user scrolls and continues browsing entries.",
+    "category": "Jobs Listing and Apply",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /jobs"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"job list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the bottom of the jobs list page"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"job list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on a job visible near the lower portion of the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"job title\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Create a new job listing from the employer dashboard",
+    "description": "Verifies an authenticated employer can create a job and see it listed on the employer dashboard.",
+    "category": "Employer Job Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Employer\" in the main navigation/menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/employer\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create new job\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Submit the new job form and confirm the job appears in the employer list",
+    "description": "Verifies the job creation form can be completed and the new job appears back in the employer job list.",
+    "category": "Employer Job Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Employer\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create new job\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/employer/new\""
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Validate required fields on Create Job form",
+    "description": "Verifies the create job form shows visible validation feedback when attempting to submit with missing required fields.",
+    "category": "Employer Job Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Log in\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Employer\" in the main navigation/menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create new job\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Submit\" or \"Create\" button on the job form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  }
+]

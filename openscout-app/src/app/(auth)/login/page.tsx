@@ -29,7 +29,9 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+      const safeRedirect = /^\/[^/]/.test(redirectTo) ? redirectTo : "/dashboard";
+      router.push(safeRedirect);
       router.refresh();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error signing in";
@@ -103,6 +105,12 @@ export default function LoginPage() {
             Don&apos;t have an account?{" "}
             <Link href="/register" className="font-medium text-primary hover:underline">
               Sign up
+            </Link>
+          </p>
+          <p className="mt-2 text-center text-sm text-gray-500">
+            I&apos;m an employer{" "}
+            <Link href="/employer/login" className="font-medium text-primary hover:underline">
+              Log in as employer
             </Link>
           </p>
         </div>

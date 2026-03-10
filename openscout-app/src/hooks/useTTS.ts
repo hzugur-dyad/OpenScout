@@ -2,6 +2,16 @@
 
 import { useState, useCallback, useRef } from "react";
 
+function formatTtsError(raw: string): string {
+  try {
+    const parsed = JSON.parse(raw) as { error?: string };
+    if (typeof parsed?.error === "string" && parsed.error.length > 0) return parsed.error;
+  } catch {
+    // ignore
+  }
+  return raw;
+}
+
 export function useTTS() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +48,9 @@ export function useTTS() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error ?? `TTS failed: ${res.status}`);
+        const raw = (data as { error?: string }).error ?? `TTS failed: ${res.status}`;
+        const friendly = formatTtsError(raw);
+        throw new Error(friendly);
       }
 
       const blob = await res.blob();

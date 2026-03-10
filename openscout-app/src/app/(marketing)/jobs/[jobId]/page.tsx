@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
+import { slugifyJobTitle, getJobTitleBySlug } from "@/lib/seo/job-titles";
 
 export default async function JobDetailPage({
   params,
@@ -26,13 +27,17 @@ export default async function JobDetailPage({
 
   if (!job) notFound();
 
+  const jobTitle = job.title as string;
+  const slug = slugifyJobTitle(jobTitle);
+  const knownTitle = getJobTitleBySlug(slug);
+
   return (
     <div className="mx-auto max-w-3xl">
       <Link href="/jobs" className="text-sm text-gray-500 hover:underline">
         ← Back to listings
       </Link>
       <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card">
-        <h1 className="text-2xl font-bold">{job.title}</h1>
+        <h1 className="text-2xl font-bold">{jobTitle}</h1>
         <p className="mt-1 text-gray-500">
           {String((job.companies as { name?: string } | null)?.name ?? "Company")}
         </p>
@@ -52,6 +57,18 @@ export default async function JobDetailPage({
             <h3 className="font-semibold">Requirements</h3>
             <p className="mt-2 whitespace-pre-wrap text-gray-600">{job.requirements}</p>
           </div>
+        )}
+        {knownTitle && (
+          <p className="mt-6 text-sm text-gray-600">
+            Prepare for interviews:{" "}
+            <Link href={`/interview-questions/${slug}`} className="text-[var(--primary)] hover:underline">
+              Interview questions for {knownTitle}
+            </Link>
+            {" · "}
+            <Link href={`/interview-guide/${slug}`} className="text-[var(--primary)] hover:underline">
+              Interview guide
+            </Link>
+          </p>
         )}
         <Link href={`/jobs/${jobId}/apply`} className="mt-8 inline-block">
           <Button variant="primary" size="lg">

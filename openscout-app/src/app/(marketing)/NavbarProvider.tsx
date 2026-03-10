@@ -1,14 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
+import { LandingUserTypeProvider, useLandingUserType } from "@/contexts/LandingUserTypeContext";
+
+function NavbarWithContext() {
+  const { userType, setUserType } = useLandingUserType();
+  return (
+    <Navbar
+      userType={userType}
+      onUserTypeChange={setUserType}
+      isAuthenticated={false}
+    />
+  );
+}
 
 export function NavbarProvider({ children }: { children: React.ReactNode }) {
-  const [userType, setUserType] = useState<"job_seeker" | "employer">("job_seeker");
   return (
-    <>
-      <Navbar userType={userType} onUserTypeChange={setUserType} isAuthenticated={false} />
+    <LandingUserTypeProvider>
+      <NavbarWithContext />
       {children}
-    </>
+    </LandingUserTypeProvider>
   );
 }

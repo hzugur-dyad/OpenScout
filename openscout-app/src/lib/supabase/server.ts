@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -26,4 +27,11 @@ export async function createClient() {
       },
     }
   );
+}
+
+/** Server-only admin client for public read by slug (e.g. Scout Pass). Requires SUPABASE_SERVICE_ROLE_KEY. */
+export function createAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return createSupabaseClient(url, key!);
 }
