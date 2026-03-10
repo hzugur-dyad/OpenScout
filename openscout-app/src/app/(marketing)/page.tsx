@@ -54,11 +54,11 @@ export default function LandingPage() {
                 transition={{ duration: 0.35 }}
                 className="mx-auto max-w-3xl text-center"
               >
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl">
                   Get your{" "}
                   <span style={{ color: "var(--primary-dark)" }}>Scout Score</span>
                 </h1>
-                <p className="mt-6 text-lg text-gray-600 sm:text-xl">
+                <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
                   One credential, many companies. Take one AI interview, get a shareable score and report — stand out to every employer.
                 </p>
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -83,11 +83,11 @@ export default function LandingPage() {
                 transition={{ duration: 0.35 }}
                 className="mx-auto max-w-3xl text-center"
               >
-                <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+                <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl">
                   Hire with{" "}
                   <span style={{ color: "var(--primary-dark)" }}>Scout-vetted</span> talent
                 </h1>
-                <p className="mt-6 text-lg text-gray-600 sm:text-xl">
+                <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
                   Every candidate has a CV score and AI interview report. Cut screening time and hire faster — only applicants who passed the bar.
                 </p>
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -109,7 +109,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats/Benefits */}
-      <section className="border-y border-[var(--border)] bg-white py-16">
+      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-700 dark:bg-zinc-900">
         <Container>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
@@ -144,7 +144,7 @@ export default function LandingPage() {
                     {item.value}
                   </span>
                 </div>
-                <p className="text-sm font-medium text-gray-600">{item.label}</p>
+                <p className="text-sm font-medium text-gray-600 dark:text-zinc-400">{item.label}</p>
               </motion.div>
             ))}
           </div>
@@ -154,8 +154,8 @@ export default function LandingPage() {
       {/* How it works - different for job seeker vs employer */}
       <section className="py-20">
         <Container>
-          <h2 className="text-center text-3xl font-bold">How It Works</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600">
+          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">How It Works</h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">
             {!isEmployer
               ? "Get your Scout Score — the one credential that gets you in the room. Job listings are where you use it."
               : "Post your role, set your bar. Only candidates with a Scout Score can apply — so you see CV score and interview report from day one."}
@@ -187,12 +187,12 @@ export default function LandingPage() {
                 >
                   <item.icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-center text-lg font-semibold">{item.title}</h3>
-                <p className="mt-2 text-center text-sm text-gray-500">
+                <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{item.title}</h3>
+                <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
                   {item.desc}
                 </p>
                 {i < 2 && (
-                  <div className="absolute -right-4 top-6 hidden text-gray-200 md:block">
+                  <div className="absolute -right-4 top-6 hidden text-gray-200 dark:text-zinc-600 md:block">
                     <ChevronDown className="h-8 w-8 rotate-[-90deg]" />
                   </div>
                 )}
@@ -203,9 +203,9 @@ export default function LandingPage() {
       </section>
 
       {/* Why OpenScout - different heading and cards for employer */}
-      <section className="border-t border-[var(--border)] bg-gray-50/50 py-20">
+      <section className="border-t border-[var(--border)] bg-gray-50/50 py-20 dark:border-zinc-700 dark:bg-zinc-900/50">
         <Container>
-          <h2 className="text-center text-3xl font-bold">
+          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             {!isEmployer ? "Why Candidates Choose OpenScout" : "Why Employers Use OpenScout"}
           </h2>
           <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
@@ -228,15 +228,15 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft"
+                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
               >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: "var(--primary-lighter)" }}
                 />
                 <div>
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{item.desc}</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{item.title}</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">{item.desc}</p>
                 </div>
               </motion.div>
             ))}
@@ -247,20 +247,20 @@ export default function LandingPage() {
       {/* FAQ */}
       <section className="py-20">
         <Container>
-          <h2 className="text-center text-3xl font-bold">
+          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             Frequently Asked Questions
           </h2>
           <div className="mx-auto mt-12 max-w-2xl space-y-4">
             {faqs.map((faq, i) => (
               <details
                 key={i}
-                className="group rounded-[10px] border border-[var(--border)] bg-white p-4 shadow-soft"
+                className="group rounded-[10px] border border-[var(--border)] bg-white p-4 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
               >
-                <summary className="flex cursor-pointer list-none items-center justify-between font-medium">
+                <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-gray-900 dark:text-zinc-100">
                   {faq.q}
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180" />
+                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 text-gray-500 dark:text-zinc-400" />
                 </summary>
-                <p className="mt-3 text-sm text-gray-600">{faq.a}</p>
+                <p className="mt-3 text-sm text-gray-600 dark:text-zinc-400">{faq.a}</p>
               </details>
             ))}
           </div>
@@ -268,10 +268,10 @@ export default function LandingPage() {
       </section>
 
       {/* For employers */}
-      <section className="border-t border-[var(--border)] bg-white py-20">
+      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-700 dark:bg-zinc-900">
         <Container>
-          <h2 className="text-center text-3xl font-bold">For Employers</h2>
-          <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600">
+          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
+          <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">
             Get applicants who are already Scout-vetted. Every candidate has a CV score and AI interview report — cut screening time and hire faster.
           </p>
           <div className="mt-10 flex justify-center">
@@ -293,8 +293,8 @@ export default function LandingPage() {
       >
         <Container>
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold">Ready to get your Scout Score?</h2>
-            <p className="mt-2 text-gray-600">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">Ready to get your Scout Score?</h2>
+            <p className="mt-2 text-gray-600 dark:text-zinc-400">
               One credential, many companies. Create your profile and take the AI interview.
             </p>
             <Link href="/register" className="mt-8 inline-block">

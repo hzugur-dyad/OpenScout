@@ -62,11 +62,11 @@ export function UsageBanner({ feature }: UsageBannerProps) {
 
   if (isExhausted) {
     return (
-      <div className="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-4">
-        <p className="font-medium text-red-800">
+      <div className="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/40">
+        <p className="font-medium text-red-800 dark:text-red-300">
           You've used all {limit} {label} {limit === 1 ? "attempt" : "attempts"} this week.
         </p>
-        <p className="mt-1 text-sm text-red-600">
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
           Upgrade your plan to get more.{" "}
           <Link href="/pricing" className="font-semibold underline">
             View plans
@@ -77,8 +77,8 @@ export function UsageBanner({ feature }: UsageBannerProps) {
   }
 
   return (
-    <div className="mb-6 rounded-[10px] border border-[var(--border)] bg-white p-3">
-      <p className="text-sm text-gray-600">
+    <div className="mb-6 rounded-[10px] border border-[var(--border)] bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+      <p className="text-sm text-gray-600 dark:text-zinc-300">
         <span className="font-medium capitalize">{plan}</span> plan — {remaining} of {limit} {label} {limit === 1 ? "use" : "uses"} remaining this week.
         {plan === "free" && (
           <>

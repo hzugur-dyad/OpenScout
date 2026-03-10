@@ -23,8 +23,8 @@ export default async function EmployerHomePage() {
     return (
       <div className="mx-auto max-w-4xl">
         <CompleteEmployerRegistration />
-        <h1 className="text-2xl font-bold">Employer</h1>
-        <p className="mt-1 text-gray-500">Post job listings and review applications.</p>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Employer</h1>
+        <p className="mt-1 text-gray-500 dark:text-zinc-400">Post job listings and review applications.</p>
         <div className="mt-8">
           <CreateCompanyCard />
         </div>
@@ -77,11 +77,11 @@ export default async function EmployerHomePage() {
       )}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Employer</h1>
-          <div className="mt-1 text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Employer</h1>
+          <div className="mt-1 text-gray-500 dark:text-zinc-400">
             Company: <EditCompanyName companyId={company.id} initialName={company.name} />
           </div>
-          <p className="mt-1 text-sm font-medium text-gray-600">
+          <p className="mt-1 text-sm font-medium text-gray-600 dark:text-zinc-400">
             Only Scout-vetted candidates — every application includes CV + interview scores and report.
           </p>
         </div>
@@ -105,9 +105,9 @@ export default async function EmployerHomePage() {
       </div>
 
       {!listings || listings.length === 0 ? (
-        <div className="mt-10 rounded-[10px] border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-gray-600">No job listings yet.</p>
-          <p className="mt-1 text-sm text-gray-500">Create your first listing to start receiving applications.</p>
+        <div className="mt-10 rounded-[10px] border border-dashed border-gray-300 bg-white p-10 text-center dark:border-zinc-600 dark:bg-zinc-900">
+          <p className="text-gray-600 dark:text-zinc-300">No job listings yet.</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">Create your first listing to start receiving applications.</p>
           <div className="mt-6">
             <Link href="/employer/new">
               <Button variant="primary">Create listing</Button>
@@ -119,12 +119,12 @@ export default async function EmployerHomePage() {
           {listings.map((job) => (
             <div
               key={job.id}
-              className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft"
+              className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
             >
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div>
-                  <h3 className="font-semibold">{job.title}</h3>
-                  <p className="mt-1 text-sm text-gray-500">
+                  <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{job.title}</h3>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
                     {job.is_active ? "Active (public)" : "Inactive (hidden)"} · Min CV score: {job.min_cv_score ?? 0}
                   </p>
                 </div>

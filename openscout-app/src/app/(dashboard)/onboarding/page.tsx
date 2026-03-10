@@ -315,65 +315,65 @@ export default function OnboardingPage() {
         </div>
 
         <div className="mt-8 space-y-8">
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">About</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">About</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500">First name</dt>
-                <dd className="mt-0.5 text-gray-900">{form.first_name || "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">First name</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.first_name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Last name</dt>
-                <dd className="mt-0.5 text-gray-900">{form.last_name || "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Last name</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.last_name || "—"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-0.5 text-gray-900">{form.email || "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Email</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.email || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Location</dt>
-                <dd className="mt-0.5 text-gray-900">{form.location || "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Location</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.location || "—"}</dd>
               </div>
               {form.professional_summary && (
                 <div className="sm:col-span-2">
-                  <dt className="text-sm font-medium text-gray-500">Professional summary</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap text-gray-900">{form.professional_summary}</dd>
+                  <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Professional summary</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-gray-900 dark:text-zinc-100">{form.professional_summary}</dd>
                 </div>
               )}
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Work Experience</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Work Experience</h2>
             {form.work_experiences.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">No work experience added yet.</p>
+              <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No work experience added yet.</p>
             ) : (
               <ul className="mt-4 space-y-4">
                 {form.work_experiences.map((we, i) => (
-                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-                    <p className="font-medium text-gray-900">{we.job_title || "—"} at {we.company_name || "—"}</p>
+                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-700">
+                    <p className="font-medium text-gray-900 dark:text-zinc-100">{we.job_title || "—"} at {we.company_name || "—"}</p>
                     {(we.start_date || we.end_date) && (
-                      <p className="text-sm text-gray-500">{we.start_date} – {we.end_date || "Present"}</p>
+                      <p className="text-sm text-gray-500 dark:text-zinc-500">{we.start_date} – {we.end_date || "Present"}</p>
                     )}
-                    {we.description && <p className="mt-1 text-sm text-gray-600">{we.description}</p>}
+                    {we.description && <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{we.description}</p>}
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Education</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Education</h2>
             {form.educations.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500">No education added yet.</p>
+              <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No education added yet.</p>
             ) : (
               <ul className="mt-4 space-y-4">
                 {form.educations.map((ed, i) => (
-                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-                    <p className="font-medium text-gray-900">{ed.institution || "—"}</p>
-                    <p className="text-sm text-gray-600">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
+                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-700">
+                    <p className="font-medium text-gray-900 dark:text-zinc-100">{ed.institution || "—"}</p>
+                    <p className="text-sm text-gray-600 dark:text-zinc-400">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
                     {(ed.start_year || ed.end_year) && (
-                      <p className="text-sm text-gray-500">{ed.start_year} – {ed.end_year || "Present"}</p>
+                      <p className="text-sm text-gray-500 dark:text-zinc-500">{ed.start_year} – {ed.end_year || "Present"}</p>
                     )}
                   </li>
                 ))}
@@ -381,44 +381,44 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Job Preferences</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Job Preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Job search status</dt>
-                <dd className="mt-0.5 text-gray-900">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Job search status</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Available to start</dt>
-                <dd className="mt-0.5 text-gray-900">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Available to start</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Domain</dt>
-                <dd className="mt-0.5 text-gray-900">{form.domain ?? "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Domain</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.domain ?? "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Links</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
-                <dt className="text-sm font-medium text-gray-500">LinkedIn</dt>
-                <dd className="mt-0.5 text-gray-900">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.linkedin}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">LinkedIn</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.linkedin}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">GitHub</dt>
-                <dd className="mt-0.5 text-gray-900">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.github}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">GitHub</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.github}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Portfolio</dt>
-                <dd className="mt-0.5 text-gray-900">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.portfolio}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Portfolio</dt>
+                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.portfolio}</a> : "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">CV</h2>
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">
                 <FileText className="h-5 w-5 text-primary" />
@@ -478,7 +478,7 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => cvInputRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary"
+                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
                 >
                   <Upload className="h-5 w-5" />
                   {cvUploading ? "Uploading..." : "Upload your CV (PDF or TXT, max 10MB)"}
@@ -499,8 +499,8 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">Complete Your Profile</h1>
-      <p className="mt-1 text-gray-500">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Complete Your Profile</h1>
+      <p className="mt-1 text-gray-500 dark:text-zinc-400">
         Review and complete your information.
       </p>
       <Link href="/cv-analysis" className="mt-2 inline-block text-sm text-primary hover:underline">
@@ -511,12 +511,12 @@ export default function OnboardingPage() {
         <OnboardingStepper currentStep={step} />
       </div>
 
-      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
+      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
         {validationError && (
           <div
             role="alert"
             data-testid="onboarding-validation-error"
-            className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700"
+            className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
           >
             {validationError}
           </div>

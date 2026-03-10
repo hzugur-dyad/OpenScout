@@ -9,10 +9,10 @@ export default function GlobalError({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
-        <div className="rounded-[10px] border border-red-200 bg-white p-8 shadow-card max-w-md text-center">
-          <h1 className="text-xl font-bold text-gray-900">Something went wrong</h1>
-          <p className="mt-2 text-sm text-gray-600">
+      <body className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 dark:bg-zinc-950">
+        <div className="rounded-[10px] border border-red-200 bg-white p-8 shadow-card max-w-md text-center dark:border-zinc-700 dark:bg-zinc-900">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Something went wrong</h1>
+          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
             An unexpected error occurred. Please try again.
           </p>
           <button

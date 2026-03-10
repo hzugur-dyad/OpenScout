@@ -142,7 +142,7 @@ export function EmployerJobForm(props: {
           <button
             type="button"
             onClick={() => setTitleOpen((o) => !o)}
-            className="mt-2 flex w-full items-center justify-between rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-left text-sm outline-none focus:ring-2 focus:ring-primary"
+            className="mt-2 flex w-full items-center justify-between rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-left text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
           >
             <span className={!titleDisplay ? "text-gray-400" : ""}>{titleDisplay || "Select role..."}</span>
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${titleOpen ? "rotate-180" : ""}`} />
@@ -158,7 +158,7 @@ export function EmployerJobForm(props: {
                     setTitleOpen(false);
                     if (t !== "Other") setTitleOther("");
                   }}
-                  className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                  className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-zinc-800 dark:text-zinc-200"
                 >
                   {t}
                 </button>
@@ -170,7 +170,7 @@ export function EmployerJobForm(props: {
               value={titleOther}
               onChange={(e) => setTitleOther(e.target.value)}
               placeholder="Enter job title"
-              className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
             />
           )}
         </div>
@@ -196,12 +196,12 @@ export function EmployerJobForm(props: {
           <button
             type="button"
             onClick={() => setDescDropdownOpen((o) => !o)}
-            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary"
+            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:text-zinc-400"
           >
             + Add skills / tech
           </button>
           {descDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
               {SKILLS_TECH_OPTIONS.filter((t) => !descTags.includes(t)).map((t) => (
                 <button
                   key={t}
@@ -209,7 +209,7 @@ export function EmployerJobForm(props: {
                   onClick={() => {
                     setDescTags([...descTags, t]);
                   }}
-                  className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50"
+                  className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {t}
                 </button>
@@ -221,7 +221,7 @@ export function EmployerJobForm(props: {
             onChange={(e) => setDescCustom(e.target.value)}
             placeholder="Role overview, technical responsibilities, tools, frameworks, etc."
             rows={4}
-            className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
           />
         </div>
 
@@ -246,18 +246,18 @@ export function EmployerJobForm(props: {
           <button
             type="button"
             onClick={() => setReqDropdownOpen((o) => !o)}
-            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary"
+            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:text-zinc-400"
           >
             + Add trait / preference
           </button>
           {reqDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
               {WORK_TRAIT_OPTIONS.filter((t) => !reqTags.includes(t)).map((t) => (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setReqTags([...reqTags, t])}
-                  className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50"
+                  className="block w-full rounded px-2 py-1.5 text-left text-sm hover:bg-gray-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {t}
                 </button>
@@ -269,7 +269,7 @@ export function EmployerJobForm(props: {
             onChange={(e) => setReqCustom(e.target.value)}
             placeholder="Years of experience, work arrangement details, personality traits, etc."
             rows={3}
-            className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+            className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
           />
         </div>
 
@@ -290,12 +290,12 @@ export function EmployerJobForm(props: {
                     setCustomQuestions(next);
                   }}
                   placeholder={`Question ${i + 1}`}
-                  className="flex-1 rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                 />
                 <button
                   type="button"
                   onClick={() => setCustomQuestions(customQuestions.filter((_, j) => j !== i))}
-                  className="rounded-lg px-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg px-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                   aria-label="Remove"
                 >
                   <X className="h-4 w-4" />
@@ -305,7 +305,7 @@ export function EmployerJobForm(props: {
             <button
               type="button"
               onClick={() => setCustomQuestions([...customQuestions, ""])}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary"
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary dark:text-zinc-400"
             >
               <Plus className="h-4 w-4" /> Add question
             </button>
@@ -327,12 +327,12 @@ export function EmployerJobForm(props: {
                     setCvRequiredItems(next);
                   }}
                   placeholder="E.g.: 3 years React, English B2"
-                  className="flex-1 rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  className="flex-1 rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                 />
                 <button
                   type="button"
                   onClick={() => setCvRequiredItems(cvRequiredItems.filter((_, j) => j !== i))}
-                  className="rounded-lg px-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  className="rounded-lg px-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
                   aria-label="Remove"
                 >
                   <X className="h-4 w-4" />
@@ -342,7 +342,7 @@ export function EmployerJobForm(props: {
             <button
               type="button"
               onClick={() => setCvRequiredItems([...cvRequiredItems, ""])}
-              className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary"
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary dark:text-zinc-400"
             >
               <Plus className="h-4 w-4" /> Add item
             </button>
@@ -356,7 +356,7 @@ export function EmployerJobForm(props: {
               type="number"
               value={minCvScore}
               onChange={(e) => setMinCvScore(Number(e.target.value))}
-              className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+              className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
               min={0}
               max={100}
             />

@@ -57,20 +57,20 @@ export function MockInterviewResultView({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">Interview Result</h1>
-      <p className="mt-1 text-gray-500">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Interview Result</h1>
+      <p className="mt-1 text-gray-500 dark:text-zinc-400">
         {tooShort ? "The interview was too short to analyze." : "Your AI evaluation is ready."}
       </p>
 
       {tooShort ? (
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-8 shadow-card">
-          <p className="text-center text-amber-800">
+        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-8 shadow-card dark:border-amber-800 dark:bg-amber-950/40">
+          <p className="text-center text-amber-800 dark:text-amber-200">
             The interview was shorter than 5 minutes, so it could not be analyzed. Please try again with a longer conversation to receive feedback and a score.
           </p>
         </div>
       ) : (
         <>
-          <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card">
+          <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
             <div className="flex items-center gap-6">
               <div
                 className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
@@ -82,19 +82,19 @@ export function MockInterviewResultView({
                 {score}
               </div>
               <div>
-                <h2 className="text-xl font-bold">Overall Score: {score}/100</h2>
-                <p className="text-sm text-gray-500">Your interview performance</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Overall Score: {score}/100</h2>
+                <p className="text-sm text-gray-500 dark:text-zinc-400">Your interview performance</p>
               </div>
             </div>
           </div>
 
           {passUrl && (
-            <div className="mt-6 rounded-[10px] border-2 border-[var(--primary)] bg-[var(--primary-lighter)]/30 p-6 shadow-card">
+            <div className="mt-6 rounded-[10px] border-2 border-[var(--primary)] bg-[var(--primary-lighter)]/30 p-6 shadow-card dark:bg-primary-muted/30">
               <div className="flex items-center gap-2">
                 <Share2 className="h-5 w-5" style={{ color: "var(--primary-dark)" }} />
                 <h3 className="font-semibold" style={{ color: "var(--primary-dark)" }}>Share your Scout Score</h3>
               </div>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">
                 One credential, many companies. Share this link so employers can see your AI-verified score and report.
               </p>
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -102,7 +102,7 @@ export function MockInterviewResultView({
                   type="text"
                   readOnly
                   value={passUrl}
-                  className="flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm"
+                  className="flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
                 />
                 <Button
                   variant="primary"
@@ -126,24 +126,24 @@ export function MockInterviewResultView({
             </div>
           )}
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card">
-            <h3 className="font-semibold">Strengths</h3>
-            <ul className="mt-3 space-y-2">
+          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Strengths</h3>
+            <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {strengths.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500 dark:text-green-400" />
                   {s}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card">
-            <h3 className="font-semibold">Improvement Suggestions</h3>
-            <ul className="mt-3 space-y-2">
+          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Improvement Suggestions</h3>
+            <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {improvements.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500" />
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" />
                   {s}
                 </li>
               ))}

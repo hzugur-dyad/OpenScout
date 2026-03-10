@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode for next-themes */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #1a1a1a;
@@ -12,6 +15,15 @@
   --border-strong: rgba(0, 0, 0, 0.12);
   --muted: #6b7280;
   --muted-foreground: #9ca3af;
+}
+
+.dark {
+  --background: #18181b;
+  --foreground: #fafafa;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.12);
+  --muted: #71717a;
+  --muted-foreground: #a1a1aa;
 }
 
 @theme inline {
@@ -44,4 +56,10 @@ body {
 /* Consistent border radius - 10px per skill */
 .rounded-consistent {
   border-radius: 10px;
+}
+
+/* Dark mode: ensure body uses theme variables */
+.dark body {
+  background: var(--background);
+  color: var(--foreground);
 }

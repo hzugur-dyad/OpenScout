@@ -23,14 +23,14 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-2 font-medium rounded-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex items-center justify-center gap-2 font-medium rounded-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-zinc-950";
 
   const variants = {
     primary: "bg-primary text-white hover:bg-primary-dark active:bg-primary-dark",
-    secondary: "bg-primary-lighter text-primary-dark hover:bg-primary-muted",
+    secondary: "bg-primary-lighter text-primary-dark hover:bg-primary-muted dark:bg-primary-muted dark:text-primary-dark dark:hover:bg-primary-lighter",
     outline:
-      "border border-[var(--border-strong)] bg-transparent hover:bg-gray-50",
-    ghost: "bg-transparent hover:bg-gray-100",
+      "border border-[var(--border-strong)] bg-transparent hover:bg-gray-50 dark:border-zinc-600 dark:hover:bg-zinc-800",
+    ghost: "bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800",
   };
 
   const sizes = {

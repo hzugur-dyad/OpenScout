@@ -32,32 +32,32 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-md rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card"
+        className="w-full max-w-md rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Share your Scout Score</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Share your Scout Score</h3>
           <button
             type="button"
             onClick={onClose}
-            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-        <p className="mt-2 text-sm text-gray-600">
+        <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">
           One credential, many companies. Share so employers can see your AI-verified score.
         </p>
 
         <div className="mt-4">
-          <label className="text-xs font-medium text-gray-500">Your Scout Pass link</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-zinc-400">Your Scout Pass link</label>
           <div className="mt-1 flex gap-2">
             <input
               type="text"
               readOnly
               value={passUrl}
-              className="flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-gray-50 px-3 py-2 text-sm"
+              className="flex-1 min-w-0 rounded-lg border border-[var(--border)] bg-gray-50 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
             />
             <Button
               variant="outline"
@@ -72,13 +72,13 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
         </div>
 
         <div className="mt-4">
-          <label className="text-xs font-medium text-gray-500">Share on</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-zinc-400">Share on</label>
           <div className="mt-2 flex flex-wrap gap-2">
             <a
               href={linkedinUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
             >
               LinkedIn
             </a>
@@ -86,12 +86,12 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
               href={twitterUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
             >
               X (Twitter)
             </a>
           </div>
-          <p className="mt-2 text-xs text-gray-500">
+          <p className="mt-2 text-xs text-gray-500 dark:text-zinc-500">
             Suggested text: &ldquo;I got my Scout Score on OpenScout — one credential, many companies. Get yours: [your link]&rdquo;
           </p>
         </div>

@@ -15,12 +15,12 @@ export function SEOPageLayout({ title, children, faqItems }: Props) {
       {faqItems && faqItems.length > 0 && <FAQSchema faqItems={faqItems} />}
       <Container>
         <article className="mx-auto max-w-3xl">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">{title}</h1>
-          <div className="mt-8 space-y-10 text-gray-700">{children}</div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">{title}</h1>
+          <div className="mt-8 space-y-10 text-gray-700 dark:text-zinc-300">{children}</div>
 
-          <section className="mt-12 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft">
-            <h2 className="text-xl font-semibold text-gray-900">Prepare with OpenScout</h2>
-            <p className="mt-2 text-gray-600">
+          <section className="mt-12 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">Prepare with OpenScout</h2>
+            <p className="mt-2 text-gray-600 dark:text-zinc-400">
               Practice with AI, get your CV scored, and create a free account to stand out to employers.
             </p>
             <div className="mt-6 flex flex-wrap gap-4">
@@ -32,7 +32,7 @@ export function SEOPageLayout({ title, children, faqItems }: Props) {
               </Link>
               <Link
                 href="/cv-analysis"
-                className="inline-flex items-center justify-center rounded-[10px] border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                className="inline-flex items-center justify-center rounded-[10px] border border-[var(--border)] px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
               >
                 Analyze your CV
               </Link>

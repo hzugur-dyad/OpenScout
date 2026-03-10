@@ -163,14 +163,14 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-bold">Welcome</h1>
-      <p className="mt-1 text-gray-500">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Welcome</h1>
+      <p className="mt-1 text-gray-500 dark:text-zinc-400">
         Complete your profile and take an AI interview.
       </p>
 
-      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4">
+      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-zinc-300">
             <span className="font-semibold capitalize">{plan}</span> plan
             {" — "}
             CV: {cvUsed}/{cvLimit === Infinity ? "∞" : cvLimit}
@@ -190,15 +190,15 @@ export default function DashboardPage() {
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Link href="/onboarding">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
             >
               <FileText className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
             </div>
-            <h3 className="font-semibold">Complete Your Profile</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Complete Your Profile</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
               Your profile in 5 steps
             </p>
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
@@ -208,15 +208,15 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/cv-analysis">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
             >
               <FileText className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
             </div>
-            <h3 className="font-semibold">CV Analysis</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">CV Analysis</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
               Get your CV evaluated by AI
             </p>
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
@@ -226,15 +226,15 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/mock-interview">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
             >
               <MessageCircle className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
             </div>
-            <h3 className="font-semibold">Mock Interview</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Mock Interview</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
               Practice with AI
             </p>
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
@@ -244,7 +244,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link href="/dashboard/jobs" className="sm:col-span-2 lg:col-span-3">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div
@@ -254,8 +254,8 @@ export default function DashboardPage() {
                   <Briefcase className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
                 </div>
                 <div>
-                  <h3 className="font-semibold">Job Listings</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Job Listings</h3>
+                  <p className="text-sm text-gray-500 dark:text-zinc-400">
                     Apply to open positions
                   </p>
                 </div>
