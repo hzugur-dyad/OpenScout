@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { Compass, Upload, FileText, X, Check } from "lucide-react";
 
 const PENDING_PROFILE_KEY = "pending_candidate_profile";
@@ -461,13 +462,18 @@ export default function RegisterPage() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Degree</label>
-                      <select value={ed.degree_type} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, degree_type: e.target.value } : e2))} className={inputClass}>
-                        <option value="bachelor">Bachelor</option>
-                        <option value="master">Master</option>
-                        <option value="phd">PhD</option>
-                        <option value="associate">Associate</option>
-                        <option value="diploma">Diploma</option>
-                      </select>
+                      <CustomSelect
+                        options={[
+                          { value: "bachelor", label: "Bachelor" },
+                          { value: "master", label: "Master" },
+                          { value: "phd", label: "PhD" },
+                          { value: "associate", label: "Associate" },
+                          { value: "diploma", label: "Diploma" },
+                        ]}
+                        value={ed.degree_type}
+                        onChange={(v) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, degree_type: v } : e2))}
+                        aria-label="Degree"
+                      />
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Field of Study</label>
@@ -497,29 +503,44 @@ export default function RegisterPage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Job search status</label>
-                <select value={jobSearchStatus} onChange={(e) => setJobSearchStatus(e.target.value)} className={inputClass}>
-                  <option value="actively_looking">Actively looking</option>
-                  <option value="open">Open to opportunities</option>
-                  <option value="not_looking">Not looking now</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: "actively_looking", label: "Actively looking" },
+                    { value: "open", label: "Open to opportunities" },
+                    { value: "not_looking", label: "Not looking now" },
+                  ]}
+                  value={jobSearchStatus}
+                  onChange={setJobSearchStatus}
+                  aria-label="Job search status"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">When can you start?</label>
-                <select value={availableStart} onChange={(e) => setAvailableStart(e.target.value)} className={inputClass}>
-                  <option value="immediately">Immediately</option>
-                  <option value="within_1_month">Within 1 month</option>
-                  <option value="within_3_months">Within 3 months</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: "immediately", label: "Immediately" },
+                    { value: "within_1_month", label: "Within 1 month" },
+                    { value: "within_3_months", label: "Within 3 months" },
+                  ]}
+                  value={availableStart}
+                  onChange={setAvailableStart}
+                  aria-label="When can you start"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Domain</label>
-                <select value={domain} onChange={(e) => setDomain(e.target.value)} className={inputClass}>
-                  <option value="engineering">Engineering</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="finance">Finance</option>
-                  <option value="design">Design</option>
-                  <option value="other">Other</option>
-                </select>
+                <CustomSelect
+                  options={[
+                    { value: "engineering", label: "Engineering" },
+                    { value: "marketing", label: "Marketing" },
+                    { value: "finance", label: "Finance" },
+                    { value: "design", label: "Design" },
+                    { value: "other", label: "Other" },
+                  ]}
+                  value={domain}
+                  onChange={setDomain}
+                  aria-label="Domain"
+                />
               </div>
             </div>
           )}

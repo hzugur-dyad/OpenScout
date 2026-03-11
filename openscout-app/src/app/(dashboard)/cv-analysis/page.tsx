@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Upload, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion } from "framer-motion";
 import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
@@ -123,17 +124,12 @@ function CVAnalysisContent() {
         <div className="mt-8 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">Job Category</label>
-            <select
+            <CustomSelect
+              options={JOB_TITLES}
               value={jobCategory}
-              onChange={(e) => setJobCategory(e.target.value)}
-              className="w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2 text-gray-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-            >
-              {JOB_TITLES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              onChange={setJobCategory}
+              aria-label="Job category"
+            />
           </div>
 
           <div

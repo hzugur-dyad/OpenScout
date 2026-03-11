@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { OnboardingStepper } from "@/components/onboarding/OnboardingStepper";
 import { Button } from "@/components/ui/Button";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Upload, X } from "lucide-react";
 
@@ -797,25 +798,26 @@ export default function OnboardingPage() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Degree</label>
-                        <select
+                        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Degree</label>
+                        <CustomSelect
+                          options={[
+                            { value: "bachelor", label: "Bachelor" },
+                            { value: "master", label: "Master" },
+                            { value: "phd", label: "PhD" },
+                            { value: "associate", label: "Associate" },
+                            { value: "diploma", label: "Diploma" },
+                          ]}
                           value={ed.degree_type}
-                          onChange={(e) =>
+                          onChange={(v) =>
                             setForm((f) => ({
                               ...f,
                               educations: f.educations.map((e2, idx) =>
-                                idx === i ? { ...e2, degree_type: e.target.value } : e2
+                                idx === i ? { ...e2, degree_type: v } : e2
                               ),
                             }))
                           }
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
-                        >
-                          <option value="bachelor">Bachelor</option>
-                          <option value="master">Master</option>
-                          <option value="phd">PhD</option>
-                          <option value="associate">Associate</option>
-                          <option value="diploma">Diploma</option>
-                        </select>
+                          aria-label="Degree"
+                        />
                       </div>
                       <div>
                         <label className="mb-1 block text-xs font-medium text-gray-600">Field of Study</label>
@@ -929,40 +931,43 @@ export default function OnboardingPage() {
             >
               <h2 className="text-lg font-semibold">Job Preferences</h2>
               <div>
-                <label className="mb-1 block text-sm font-medium">Job search status</label>
-                <select
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">Job search status</label>
+                <CustomSelect
+                  options={[
+                    { value: "actively_looking", label: "Actively looking" },
+                    { value: "open", label: "Open to opportunities" },
+                    { value: "not_looking", label: "Not looking now" },
+                  ]}
                   value={form.job_search_status}
-                  onChange={(e) => setForm((f) => ({ ...f, job_search_status: e.target.value }))}
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
-                >
-                  <option value="actively_looking">Actively looking</option>
-                  <option value="open">Open to opportunities</option>
-                  <option value="not_looking">Not looking now</option>
-                </select>
+                  onChange={(v) => setForm((f) => ({ ...f, job_search_status: v }))}
+                  aria-label="Job search status"
+                />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">When can you start?</label>
-                <select
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">When can you start?</label>
+                <CustomSelect
+                  options={[
+                    { value: "immediately", label: "Immediately" },
+                    { value: "within_1_month", label: "Within 1 month" },
+                    { value: "within_3_months", label: "Within 3 months" },
+                  ]}
                   value={form.available_start}
-                  onChange={(e) => setForm((f) => ({ ...f, available_start: e.target.value }))}
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
-                >
-                  <option value="immediately">Immediately</option>
-                  <option value="within_1_month">Within 1 month</option>
-                  <option value="within_3_months">Within 3 months</option>
-                </select>
+                  onChange={(v) => setForm((f) => ({ ...f, available_start: v }))}
+                  aria-label="When can you start"
+                />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Domain</label>
-                <select
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">Domain</label>
+                <CustomSelect
+                  options={[
+                    { value: "engineering", label: "Engineering" },
+                    { value: "marketing", label: "Marketing" },
+                    { value: "finance", label: "Finance" },
+                  ]}
                   value={form.domain}
-                  onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))}
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
-                >
-                  <option value="engineering">Engineering</option>
-                  <option value="marketing">Marketing</option>
-                  <option value="finance">Finance</option>
-                </select>
+                  onChange={(v) => setForm((f) => ({ ...f, domain: v }))}
+                  aria-label="Domain"
+                />
               </div>
             </motion.div>
           )}

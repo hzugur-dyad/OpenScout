@@ -71,6 +71,21 @@ body {
   color: var(--foreground);
 }
 
+/* Minimal scrollbar for custom dropdowns */
+.dropdown-list::-webkit-scrollbar {
+  width: 6px;
+}
+.dropdown-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+.dark .dropdown-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 /* Accordion open/close (Radix) */
 @keyframes accordion-down {
   from {

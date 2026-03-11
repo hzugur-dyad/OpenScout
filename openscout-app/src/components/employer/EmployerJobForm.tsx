@@ -148,7 +148,7 @@ export function EmployerJobForm(props: {
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${titleOpen ? "rotate-180" : ""}`} />
           </button>
           {titleOpen && (
-            <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+            <div className="dropdown-list absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {JOB_TITLES.map((t) => (
                 <button
                   key={t}
@@ -201,7 +201,7 @@ export function EmployerJobForm(props: {
             + Add skills / tech
           </button>
           {descDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+            <div className="dropdown-list absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {SKILLS_TECH_OPTIONS.filter((t) => !descTags.includes(t)).map((t) => (
                 <button
                   key={t}
@@ -251,7 +251,7 @@ export function EmployerJobForm(props: {
             + Add trait / preference
           </button>
           {reqDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+            <div className="dropdown-list absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {WORK_TRAIT_OPTIONS.filter((t) => !reqTags.includes(t)).map((t) => (
                 <button
                   key={t}

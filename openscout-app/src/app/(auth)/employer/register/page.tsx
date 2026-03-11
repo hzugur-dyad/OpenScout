@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { Compass } from "lucide-react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 const PENDING_EMPLOYER_KEY = "pending_employer_company";
 const PENDING_EMPLOYER_SECTOR = "pending_employer_sector";
@@ -163,19 +164,13 @@ export default function EmployerRegisterPage() {
               <label htmlFor="sector" className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">
                 Sector
               </label>
-              <select
+              <CustomSelect
                 id="sector"
+                options={[...SECTORS]}
                 value={sector}
-                onChange={(e) => setSector(e.target.value)}
-                required
-                className="w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
-              >
-                {SECTORS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                onChange={setSector}
+                aria-label="Sector"
+              />
             </div>
             <div>
               <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">
