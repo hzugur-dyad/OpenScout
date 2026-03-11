@@ -2,6 +2,7 @@
 
 import { Navbar } from "@/components/layout/Navbar";
 import { LandingUserTypeProvider, useLandingUserType } from "@/contexts/LandingUserTypeContext";
+import { HeroEntranceProvider } from "@/contexts/HeroEntranceContext";
 
 function NavbarWithContext() {
   const { userType, setUserType } = useLandingUserType();
@@ -17,8 +18,10 @@ function NavbarWithContext() {
 export function NavbarProvider({ children }: { children: React.ReactNode }) {
   return (
     <LandingUserTypeProvider>
-      <NavbarWithContext />
-      {children}
+      <HeroEntranceProvider>
+        <NavbarWithContext />
+        {children}
+      </HeroEntranceProvider>
     </LandingUserTypeProvider>
   );
 }

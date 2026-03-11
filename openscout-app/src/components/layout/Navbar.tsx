@@ -7,6 +7,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useHeroEntranceOptional } from "@/contexts/HeroEntranceContext";
 
 type UserType = "job_seeker" | "employer";
 
@@ -23,6 +24,9 @@ export function Navbar({
 }: NavbarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const heroEntrance = useHeroEntranceOptional();
+  const phase = heroEntrance?.phase ?? "content";
+  const isAnimating = phase === "centered";
 
   const navLinks = [
     { href: "/jobs", label: "Job Listings" },
@@ -32,23 +36,38 @@ export function Navbar({
   return (
     <>
       {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur dark:border-[#111] dark:bg-black">
+      <header
+        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur transition-opacity duration-300 dark:border-[#111] dark:bg-black ${
+          isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
+        }`}
+      >
         <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <span
-                className="flex h-8 w-8 items-center justify-center rounded-full"
-                style={{ backgroundColor: "var(--primary-lighter)" }}
+              <motion.div
+                layoutId="hero-logo"
+                className="flex items-center gap-2"
+                transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
               >
-                <Compass className="h-5 w-5" style={{ color: "var(--primary-dark)" }} />
-              </span>
-              <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
-                OpenScout
-              </span>
+                <span
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "var(--primary-lighter)" }}
+                >
+                  <Compass className="h-5 w-5" style={{ color: "var(--primary-dark)" }} />
+                </span>
+                <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
+                  OpenScout
+                </span>
+              </motion.div>
             </Link>
 
-            <div className="hidden items-center gap-5 md:flex">
+            <motion.div
+              className="hidden items-center gap-5 md:flex"
+              initial={phase !== "content" ? { opacity: 0 } : false}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -62,11 +81,16 @@ export function Navbar({
                   {link.label}
                 </Link>
               ))}
-            </div>
+            </motion.div>
           </div>
 
           {/* Right: auth + theme toggle (far-right) */}
-          <div className="flex items-center gap-3">
+          <motion.div
+            className="flex items-center gap-3"
+            initial={phase !== "content" ? { opacity: 0 } : false}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
             {isAuthenticated ? (
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">Dashboard</Button>
@@ -94,7 +118,7 @@ export function Navbar({
             >
               {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
-          </div>
+          </motion.div>
         </nav>
 
         {/* Mobile menu */}
@@ -142,7 +166,13 @@ export function Navbar({
       </header>
 
       {/* ── Find Jobs / I'm Hiring pill — floating, centered below navbar (desktop only) ── */}
-      <div className="relative z-40 hidden justify-center md:flex" style={{ marginTop: -1 }}>
+      <motion.div
+        className="relative z-40 hidden justify-center md:flex"
+        style={{ marginTop: -1 }}
+        initial={phase !== "content" ? { opacity: 0 } : false}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
         <div className="absolute top-3">
           <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/90 p-1 shadow-soft backdrop-blur dark:border-[#23292C] dark:bg-[#111]">
             <motion.div
@@ -172,7 +202,7 @@ export function Navbar({
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

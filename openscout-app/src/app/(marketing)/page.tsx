@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, FileText, MessageCircle, Briefcase, Play, Users, Building2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, FileText, MessageCircle, Briefcase, Users, Building2 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/Accordion";
+import { AnimatedHero } from "@/components/landing/AnimatedHero";
 import { useTheme } from "next-themes";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
 
@@ -40,77 +41,8 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* Hero - changes by Find jobs / I'm hiring */}
-      <section
-        className="relative overflow-hidden pt-16 pb-24 sm:pt-24 sm:pb-32"
-        style={{
-          background: resolvedTheme === "light" ? "linear-gradient(180deg, var(--primary-lighter) 0%, var(--background) 60%)" : "var(--background)",
-        }}
-      >
-        <Container>
-          <AnimatePresence mode="wait">
-            {!isEmployer ? (
-              <motion.div
-                key="job_seeker"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.35 }}
-                className="mx-auto max-w-3xl text-center"
-              >
-                <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl">
-                  Get your{" "}
-                  <span style={{ color: "var(--primary-dark)" }}>Scout Score</span>
-                </h1>
-                <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
-                  One credential, many companies. Take one AI interview, get a shareable score and report — stand out to every employer.
-                </p>
-                <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                  <Link href="/register">
-                    <Button variant="primary" size="lg" icon={Play} iconPosition="left">
-                      Get my Scout Score
-                    </Button>
-                  </Link>
-                  <Link href="/jobs">
-                    <Button variant="outline" size="lg">
-                      View Job Listings
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="employer"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.35 }}
-                className="mx-auto max-w-3xl text-center"
-              >
-                <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl">
-                  Hire with{" "}
-                  <span style={{ color: "var(--primary-dark)" }}>Scout-vetted</span> talent
-                </h1>
-                <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
-                  Every candidate has a CV score and AI interview report. Cut screening time and hire faster — only applicants who passed the bar.
-                </p>
-                <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                  <Link href="/employer">
-                    <Button variant="primary" size="lg" icon={Building2} iconPosition="left">
-                      Post a job
-                    </Button>
-                  </Link>
-                  <Link href="/employer/pricing">
-                    <Button variant="outline" size="lg">
-                      See pricing
-                    </Button>
-                  </Link>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Container>
-      </section>
+      {/* Hero with entrance animation */}
+      <AnimatedHero />
 
       {/* Stats/Benefits */}
       <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-800 dark:bg-black">
