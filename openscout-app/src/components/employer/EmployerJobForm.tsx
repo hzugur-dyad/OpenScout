@@ -134,21 +134,21 @@ export function EmployerJobForm(props: {
   }
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card">
+    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
       <div className="grid gap-5">
         {/* Title combobox */}
         <div ref={titleRef} className="relative">
-          <label className="text-sm font-medium">Title</label>
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Title</label>
           <button
             type="button"
             onClick={() => setTitleOpen((o) => !o)}
             className="mt-2 flex w-full items-center justify-between rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-left text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
           >
-            <span className={!titleDisplay ? "text-gray-400" : ""}>{titleDisplay || "Select role..."}</span>
+            <span className={!titleDisplay ? "text-gray-400 dark:text-zinc-500" : ""}>{titleDisplay || "Select role..."}</span>
             <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${titleOpen ? "rotate-180" : ""}`} />
           </button>
           {titleOpen && (
-            <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-lg">
+            <div className="absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {JOB_TITLES.map((t) => (
                 <button
                   key={t}
@@ -177,8 +177,8 @@ export function EmployerJobForm(props: {
 
         {/* Description: technical skills / technologies */}
         <div className="relative" ref={descDropdownRef}>
-          <label className="text-sm font-medium">Technical Skills &amp; Technologies</label>
-          <p className="mt-0.5 text-xs text-gray-500">Select required technologies and describe technical responsibilities.</p>
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Technical Skills &amp; Technologies</label>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">Select required technologies and describe technical responsibilities.</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {descTags.map((t) => (
               <span
@@ -196,12 +196,12 @@ export function EmployerJobForm(props: {
           <button
             type="button"
             onClick={() => setDescDropdownOpen((o) => !o)}
-            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:text-zinc-400"
+            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-zinc-600 dark:text-zinc-400"
           >
             + Add skills / tech
           </button>
           {descDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {SKILLS_TECH_OPTIONS.filter((t) => !descTags.includes(t)).map((t) => (
                 <button
                   key={t}
@@ -227,8 +227,8 @@ export function EmployerJobForm(props: {
 
         {/* Requirements: personal traits / work preferences */}
         <div className="relative" ref={reqDropdownRef}>
-          <label className="text-sm font-medium">Work Preferences &amp; Personal Traits</label>
-          <p className="mt-0.5 text-xs text-gray-500">Define work style, environment, and soft skill expectations.</p>
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Work Preferences &amp; Personal Traits</label>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">Define work style, environment, and soft skill expectations.</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {reqTags.map((t) => (
               <span
@@ -246,12 +246,12 @@ export function EmployerJobForm(props: {
           <button
             type="button"
             onClick={() => setReqDropdownOpen((o) => !o)}
-            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:text-zinc-400"
+            className="mt-2 rounded-[10px] border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 dark:border-zinc-600 dark:text-zinc-400"
           >
             + Add trait / preference
           </button>
           {reqDropdownOpen && (
-            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+            <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-auto rounded-[10px] border border-[var(--border)] bg-white p-2 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               {WORK_TRAIT_OPTIONS.filter((t) => !reqTags.includes(t)).map((t) => (
                 <button
                   key={t}
@@ -275,8 +275,8 @@ export function EmployerJobForm(props: {
 
         {/* Custom interview questions */}
         <div>
-          <label className="text-sm font-medium">Questions you want asked in the interview</label>
-          <p className="mt-1 text-xs text-gray-500">
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Questions you want asked in the interview</label>
+          <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
             Optional. Write the question in English (e.g. &quot;Do you like soccer?&quot;) or briefly describe the topic — the AI will turn it into a natural interview question.
           </p>
           <div className="mt-2 space-y-2">
@@ -314,8 +314,8 @@ export function EmployerJobForm(props: {
 
         {/* CV required items */}
         <div>
-          <label className="text-sm font-medium">Required items on the CV</label>
-          <p className="mt-1 text-xs text-gray-500">These items are considered in CV scoring.</p>
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Required items on the CV</label>
+          <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">These items are considered in CV scoring.</p>
           <div className="mt-2 space-y-2">
             {cvRequiredItems.map((s, i) => (
               <div key={i} className="flex gap-2">
@@ -351,7 +351,7 @@ export function EmployerJobForm(props: {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium">Minimum CV score (0–100)</label>
+            <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Minimum CV score (0–100)</label>
             <input
               type="number"
               value={minCvScore}
@@ -367,15 +367,15 @@ export function EmployerJobForm(props: {
               type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-gray-300 dark:border-zinc-500 dark:bg-zinc-800"
             />
-            <label htmlFor="active" className="text-sm">
+            <label htmlFor="active" className="text-sm text-gray-900 dark:text-zinc-200">
               Listing is active (public)
             </label>
           </div>
         </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex gap-3">
           <Button variant="primary" onClick={handleSave} isLoading={loading}>

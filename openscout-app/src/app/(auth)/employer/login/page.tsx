@@ -40,7 +40,7 @@ export default function EmployerLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
           <span
@@ -49,21 +49,21 @@ export default function EmployerLoginPage() {
           >
             <Compass className="h-6 w-6 text-white" />
           </span>
-          <span className="text-2xl font-bold">OpenScout</span>
+          <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card">
-          <h1 className="mb-2 text-2xl font-bold">Employer Log In</h1>
-          <p className="mb-6 text-gray-500">Sign in to your employer account</p>
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+          <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-zinc-100">Employer Log In</h1>
+          <p className="mb-6 text-gray-500 dark:text-zinc-400">Sign in to your employer account</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400">
                 {error}
               </div>
             )}
             <div>
-              <label htmlFor="email" className="mb-1 block text-sm font-medium">
+              <label htmlFor="email" className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">
                 Email
               </label>
               <input
@@ -72,12 +72,12 @@ export default function EmployerLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                 placeholder="you@example.com"
               />
             </div>
             <div>
-              <label htmlFor="password" className="mb-1 block text-sm font-medium">
+              <label htmlFor="password" className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">
                 Password
               </label>
               <input
@@ -86,7 +86,7 @@ export default function EmployerLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
               />
             </div>
             <Button
@@ -99,9 +99,9 @@ export default function EmployerLoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-zinc-400">
             Not a recruiter?{" "}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-primary hover:underline dark:hover:text-zinc-300">
               Log in as candidate
             </Link>
           </p>
