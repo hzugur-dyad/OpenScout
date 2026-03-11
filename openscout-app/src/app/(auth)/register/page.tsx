@@ -27,7 +27,7 @@ function StepIndicator({ current }: { current: number }) {
                   ? "bg-primary text-white"
                   : active
                     ? "bg-primary text-white"
-                    : "border-2 border-gray-200 bg-white text-gray-400"
+                    : "border-2 border-gray-200 bg-white text-gray-400 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-500"
               }`}
               style={active ? { backgroundColor: "var(--primary)" } : done ? { backgroundColor: "var(--primary)" } : {}}
             >
@@ -35,7 +35,7 @@ function StepIndicator({ current }: { current: number }) {
             </div>
             {i < STEP_LABELS.length - 1 && (
               <div
-                className={`mx-1 h-0.5 w-6 rounded ${done ? "bg-primary" : "bg-gray-200"}`}
+                className={`mx-1 h-0.5 w-6 rounded ${done ? "bg-primary" : "bg-gray-200 dark:bg-zinc-600"}`}
                 style={done ? { backgroundColor: "var(--primary)" } : {}}
               />
             )}
@@ -114,7 +114,7 @@ export default function RegisterPage() {
     }
   }, [searchParams]);
 
-  const inputClass = "w-full rounded-[10px] border border-[var(--border)] px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const inputClass = "w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500";
 
   function validateStep(): string | null {
     if (step === 1) {
@@ -315,23 +315,23 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center justify-center gap-2">
             <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "var(--primary)" }}>
               <Compass className="h-6 w-6 text-white" />
             </span>
-            <span className="text-2xl font-bold">OpenScout</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
           </Link>
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card text-center">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card text-center dark:border-white/[0.06] dark:bg-zinc-900">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
               <Check className="h-6 w-6 text-green-600" />
             </div>
-            <h1 className="text-xl font-bold">Check your email</h1>
-            <p className="mt-2 text-gray-500">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Check your email</h1>
+            <p className="mt-2 text-gray-500 dark:text-zinc-400">
               We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account and sign in.
             </p>
-            <p className="mt-4 text-sm text-gray-400">Your profile will be saved once you confirm your email.</p>
+            <p className="mt-4 text-sm text-gray-400 dark:text-zinc-500">Your profile will be saved once you confirm your email.</p>
           </div>
         </div>
       </div>
@@ -339,40 +339,40 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 py-8">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 py-8 dark:bg-transparent">
       <div className="w-full max-w-lg">
         <Link href="/" className="mb-6 flex items-center justify-center gap-2">
           <span className="flex h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: "var(--primary)" }}>
             <Compass className="h-6 w-6 text-white" />
           </span>
-          <span className="text-2xl font-bold">OpenScout</span>
+          <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 
         <div className="mb-6">
           <StepIndicator current={step} />
         </div>
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card">
-          <h1 className="mb-1 text-xl font-bold">{STEP_LABELS[step - 1]}</h1>
-          <p className="mb-6 text-sm text-gray-500">Step {step} of {TOTAL_STEPS}</p>
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+          <h1 className="mb-1 text-xl font-bold text-gray-900 dark:text-zinc-100">{STEP_LABELS[step - 1]}</h1>
+          <p className="mb-6 text-sm text-gray-500 dark:text-zinc-400">Step {step} of {TOTAL_STEPS}</p>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-400">{error}</div>
           )}
 
           {/* Step 1 - Account */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Email</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Email</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={inputClass} placeholder="you@example.com" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Password</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Password</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className={inputClass} placeholder="At least 6 characters" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Confirm Password</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Confirm Password</label>
                 <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={inputClass} />
               </div>
             </div>
@@ -383,20 +383,20 @@ export default function RegisterPage() {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">First Name <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">First Name <span className="text-red-500">*</span></label>
                   <input value={firstName} onChange={(e) => setFirstName(e.target.value)} required className={inputClass} placeholder="Jane" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Last Name <span className="text-red-500">*</span></label>
+                  <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Last Name <span className="text-red-500">*</span></label>
                   <input value={lastName} onChange={(e) => setLastName(e.target.value)} required className={inputClass} placeholder="Doe" />
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Location <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Location <span className="text-red-500">*</span></label>
                 <input value={location} onChange={(e) => setLocation(e.target.value)} required className={inputClass} placeholder="Berlin, Germany" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Professional Summary</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Professional Summary</label>
                 <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} className={inputClass} placeholder="Brief overview of your experience and goals" />
               </div>
             </div>
@@ -405,35 +405,35 @@ export default function RegisterPage() {
           {/* Step 3 - Work Experience */}
           {step === 3 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">Add your past roles. You can skip this and add later.</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">Add your past roles. You can skip this and add later.</p>
               {workExperiences.map((we, i) => (
                 <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Experience {i + 1}</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-zinc-400">Experience {i + 1}</span>
                     <button type="button" onClick={() => setWorkExperiences((arr) => arr.filter((_, idx) => idx !== i))} className="text-sm text-red-600 hover:underline">Remove</button>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Company</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Company</label>
                       <input value={we.company_name} onChange={(e) => setWorkExperiences((arr) => arr.map((w, idx) => idx === i ? { ...w, company_name: e.target.value } : w))} className={inputClass} placeholder="Company name" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Job Title</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Job Title</label>
                       <input value={we.job_title} onChange={(e) => setWorkExperiences((arr) => arr.map((w, idx) => idx === i ? { ...w, job_title: e.target.value } : w))} className={inputClass} placeholder="Job title" />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Start Date</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Start Date</label>
                       <input type="month" value={we.start_date} onChange={(e) => setWorkExperiences((arr) => arr.map((w, idx) => idx === i ? { ...w, start_date: e.target.value } : w))} className={inputClass} />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">End Date</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">End Date</label>
                       <input type="month" value={we.end_date} onChange={(e) => setWorkExperiences((arr) => arr.map((w, idx) => idx === i ? { ...w, end_date: e.target.value } : w))} className={inputClass} placeholder="Present" />
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Description</label>
                     <textarea value={we.description} onChange={(e) => setWorkExperiences((arr) => arr.map((w, idx) => idx === i ? { ...w, description: e.target.value } : w))} rows={2} className={inputClass} placeholder="Brief description" />
                   </div>
                 </div>
@@ -447,20 +447,20 @@ export default function RegisterPage() {
           {/* Step 4 - Education */}
           {step === 4 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">Add your education. You can skip this and add later.</p>
+              <p className="text-sm text-gray-600 dark:text-zinc-400">Add your education. You can skip this and add later.</p>
               {educations.map((ed, i) => (
                 <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Education {i + 1}</span>
+                    <span className="text-sm font-medium text-gray-600 dark:text-zinc-400">Education {i + 1}</span>
                     <button type="button" onClick={() => setEducations((arr) => arr.filter((_, idx) => idx !== i))} className="text-sm text-red-600 hover:underline">Remove</button>
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-gray-600">Institution</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Institution</label>
                     <input value={ed.institution} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, institution: e.target.value } : e2))} className={inputClass} placeholder="University / School" />
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Degree</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Degree</label>
                       <select value={ed.degree_type} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, degree_type: e.target.value } : e2))} className={inputClass}>
                         <option value="bachelor">Bachelor</option>
                         <option value="master">Master</option>
@@ -470,17 +470,17 @@ export default function RegisterPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Field of Study</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Field of Study</label>
                       <input value={ed.field_of_study} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, field_of_study: e.target.value } : e2))} className={inputClass} placeholder="e.g. Computer Science" />
                     </div>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Start Year</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Start Year</label>
                       <input type="number" min={1950} max={2030} value={ed.start_year} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, start_year: e.target.value } : e2))} className={inputClass} placeholder="2020" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">End Year</label>
+                      <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">End Year</label>
                       <input type="number" min={1950} max={2030} value={ed.end_year} onChange={(e) => setEducations((arr) => arr.map((e2, idx) => idx === i ? { ...e2, end_year: e.target.value } : e2))} className={inputClass} placeholder="2024" />
                     </div>
                   </div>
@@ -496,7 +496,7 @@ export default function RegisterPage() {
           {step === 5 && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Job search status</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Job search status</label>
                 <select value={jobSearchStatus} onChange={(e) => setJobSearchStatus(e.target.value)} className={inputClass}>
                   <option value="actively_looking">Actively looking</option>
                   <option value="open">Open to opportunities</option>
@@ -504,7 +504,7 @@ export default function RegisterPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">When can you start?</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">When can you start?</label>
                 <select value={availableStart} onChange={(e) => setAvailableStart(e.target.value)} className={inputClass}>
                   <option value="immediately">Immediately</option>
                   <option value="within_1_month">Within 1 month</option>
@@ -512,7 +512,7 @@ export default function RegisterPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Domain</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Domain</label>
                 <select value={domain} onChange={(e) => setDomain(e.target.value)} className={inputClass}>
                   <option value="engineering">Engineering</option>
                   <option value="marketing">Marketing</option>
@@ -528,25 +528,25 @@ export default function RegisterPage() {
           {step === 6 && (
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">LinkedIn <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">LinkedIn <span className="text-red-500">*</span></label>
                 <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className={inputClass} placeholder="https://linkedin.com/in/..." />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">GitHub (optional)</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">GitHub (optional)</label>
                 <input value={github} onChange={(e) => setGithub(e.target.value)} className={inputClass} placeholder="https://github.com/..." />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Portfolio (optional)</label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Portfolio (optional)</label>
                 <input value={portfolio} onChange={(e) => setPortfolio(e.target.value)} className={inputClass} placeholder="https://..." />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Upload CV <span className="text-red-500">*</span></label>
+                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-100">Upload CV <span className="text-red-500">*</span></label>
                 <input ref={fileInputRef} type="file" accept=".pdf,.txt" onChange={handleFileChange} className="hidden" />
                 {cvFile ? (
                   <div className="flex items-center gap-3 rounded-[10px] border border-green-200 bg-green-50 p-3">
                     <FileText className="h-5 w-5 text-green-600" />
                     <span className="flex-1 truncate text-sm font-medium text-green-800">{cvFile.name}</span>
-                    <button type="button" onClick={() => { setCvFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-gray-400 hover:text-red-500">
+                    <button type="button" onClick={() => { setCvFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-gray-400 hover:text-red-500 dark:text-zinc-500 dark:hover:text-red-400">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -554,7 +554,7 @@ export default function RegisterPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary"
+                    className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:border-primary dark:hover:text-primary"
                   >
                     <Upload className="h-5 w-5" />
                     Click to upload PDF or TXT (max 10MB)
@@ -580,11 +580,11 @@ export default function RegisterPage() {
             )}
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
+          <p className="mt-6 text-center text-sm text-gray-500 dark:text-zinc-400">
             Already have an account?{" "}
             <Link href="/login" className="font-medium text-primary hover:underline">Log in</Link>
           </p>
-          <p className="mt-2 text-center text-sm text-gray-500">
+          <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
             Hiring?{" "}
             <Link href="/employer/register" className="font-medium text-primary hover:underline">Register as employer</Link>
           </p>

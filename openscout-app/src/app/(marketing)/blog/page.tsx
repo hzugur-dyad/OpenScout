@@ -23,18 +23,18 @@ const posts = [
 
 export default function BlogPage() {
   return (
-    <div className="py-12">
+    <div className="py-12 dark:bg-transparent">
       <Container>
-      <h1 className="text-3xl font-bold">Blog</h1>
-      <p className="mt-2 text-gray-600">
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">Blog</h1>
+      <p className="mt-2 text-gray-600 dark:text-zinc-400">
         How Scout Score works and why it matters.
       </p>
       <ul className="mt-10 space-y-6">
         {posts.map((p) => (
           <li key={p.slug}>
-            <Link href={`/blog/${p.slug}`} className="block rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card">
-              <h2 className="text-xl font-semibold">{p.title}</h2>
-              <p className="mt-2 text-gray-600">{p.excerpt}</p>
+            <Link href={`/blog/${p.slug}`} className="block rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.06] dark:bg-zinc-900 dark:hover:shadow-card">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{p.title}</h2>
+              <p className="mt-2 text-gray-600 dark:text-zinc-400">{p.excerpt}</p>
               <span className="mt-3 inline-block text-sm font-medium" style={{ color: "var(--primary)" }}>
                 Read more →
               </span>

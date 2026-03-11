@@ -340,7 +340,7 @@ export default function MockInterviewSessionPage() {
   if (step === "mic-test") {
     return (
       <div className="mx-auto max-w-md">
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
           <div
             className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
             style={{ backgroundColor: "var(--primary-muted)" }}
@@ -401,7 +401,7 @@ export default function MockInterviewSessionPage() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:border dark:border-zinc-700 dark:bg-zinc-900"
+            className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:border dark:border-white/[0.06] dark:bg-zinc-900"
           >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto dark:bg-red-950/50">
               <PhoneOff className="h-6 w-6 text-red-600 dark:text-red-400" />
@@ -439,7 +439,7 @@ export default function MockInterviewSessionPage() {
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-zinc-700 dark:bg-zinc-900 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-zinc-900 sm:p-4">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
           <div

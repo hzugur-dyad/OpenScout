@@ -82,7 +82,7 @@ export default async function EmployerApplicationDetailPage({
       </p>
 
       <div className="mt-8 space-y-6">
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
           <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Candidate</h2>
           <p className="mt-1 font-medium text-gray-900 dark:text-zinc-200">{name}</p>
           {profile?.email && (
@@ -91,7 +91,7 @@ export default async function EmployerApplicationDetailPage({
           <p className="mt-2 font-mono text-xs text-gray-400 dark:text-zinc-500">{application.user_id}</p>
         </div>
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
           <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Scores</h2>
           <div className="mt-3 flex flex-wrap gap-6">
             <div>
@@ -115,7 +115,7 @@ export default async function EmployerApplicationDetailPage({
         </div>
 
         {hasReportContent && (
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft space-y-6 dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft space-y-6 dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Interview Report</h2>
 
             <section>

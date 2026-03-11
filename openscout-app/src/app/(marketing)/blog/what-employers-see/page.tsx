@@ -10,18 +10,18 @@ export const metadata: Metadata = {
 
 export default function WhatEmployersSeePage() {
   return (
-    <div className="py-12">
+    <div className="py-12 dark:bg-transparent">
       <Container>
       <article className="mx-auto max-w-2xl">
-        <Link href="/blog" className="text-sm text-gray-500 hover:underline">
+        <Link href="/blog" className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300">
           ← Blog
         </Link>
-        <h1 className="mt-4 text-3xl font-bold">
+        <h1 className="mt-4 text-3xl font-bold text-gray-900 dark:text-zinc-100">
           What employers see in your Scout report
         </h1>
-        <p className="mt-2 text-gray-500">Transparent, structured, and comparable.</p>
+        <p className="mt-2 text-gray-500 dark:text-zinc-400">Transparent, structured, and comparable.</p>
 
-        <div className="mt-8 space-y-6 text-gray-700">
+        <div className="mt-8 space-y-6 text-gray-700 dark:text-zinc-300">
           <p>
             When you apply with your Scout Score, employers don't see a blank resume. They see a <strong>CV score</strong> (0–100) based on your profile and uploaded CV, an <strong>interview score</strong> (0–100) from your AI interview, and a short <strong>report</strong> with strengths and areas to improve.
           </p>

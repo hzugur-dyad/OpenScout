@@ -35,7 +35,7 @@ export function InviteFriendCard() {
   };
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
       <div className="flex items-center gap-3">
         <div
           className="flex h-12 w-12 items-center justify-center rounded-full"

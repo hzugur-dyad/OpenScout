@@ -54,7 +54,7 @@ export default function LoginPage() {
           <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
           <h1 className="mb-2 text-2xl font-bold text-gray-900 dark:text-zinc-100">Log In</h1>
           <p className="mb-6 text-gray-500 dark:text-zinc-400">Sign in to your account</p>
 

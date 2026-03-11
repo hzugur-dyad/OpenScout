@@ -114,7 +114,7 @@ export default function CandidatePricingPage() {
       <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Upgrade Your Plan</h1>
       <p className="mt-1 text-gray-500 dark:text-zinc-400">Get more CV analyses and mock interviews each week.</p>
 
-      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4 dark:border-white/[0.06] dark:bg-zinc-900">
         <p className="text-sm text-gray-600 dark:text-zinc-300">
           Current plan: <span className="font-semibold capitalize">{currentPlan}</span>
           {" — "}
@@ -133,7 +133,7 @@ export default function CandidatePricingPage() {
               className={`relative flex flex-col rounded-[10px] border bg-white p-6 shadow-soft dark:bg-zinc-900 ${
                 plan.popular
                   ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/20 dark:border-[var(--primary)]"
-                  : "border-[var(--border)] dark:border-zinc-700"
+                  : "border-[var(--border)] dark:border-white/[0.06]"
               }`}
             >
               {plan.popular && (

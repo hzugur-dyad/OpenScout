@@ -105,7 +105,7 @@ export default function MockInterviewPage() {
             </select>
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">What to Expect</h3>
             <ul className="mt-3 space-y-2 text-sm text-gray-600 dark:text-zinc-400">
               <li>• ~20 minute conversation-style interview</li>

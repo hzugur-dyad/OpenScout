@@ -76,7 +76,7 @@ export function Sidebar({
         fixed left-0 top-0 z-50 flex h-screen shrink-0 flex-col overflow-x-hidden
         border-r border-[var(--border)] bg-white
         transition-[width] duration-200 ease-in-out
-        dark:border-zinc-700 dark:bg-zinc-900
+        dark:border-zinc-800 dark:bg-black
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0
         ${collapsed ? "lg:w-[72px]" : "lg:w-[240px]"}
@@ -86,7 +86,7 @@ export function Sidebar({
       {/* Header: logo only (no toggle - hover expands) */}
       <div
         className={`
-          flex h-16 shrink-0 items-center border-b border-[var(--border)] dark:border-zinc-700
+          flex h-16 shrink-0 items-center border-b border-[var(--border)] dark:border-zinc-800
           ${collapsed ? "lg:justify-center lg:px-0" : "px-4"}
         `}
       >

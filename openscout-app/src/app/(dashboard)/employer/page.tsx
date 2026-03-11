@@ -105,7 +105,7 @@ export default async function EmployerHomePage() {
       </div>
 
       {!listings || listings.length === 0 ? (
-        <div className="mt-10 rounded-[10px] border border-dashed border-gray-300 bg-white p-10 text-center dark:border-zinc-600 dark:bg-zinc-900">
+        <div className="mt-10 rounded-[10px] border border-dashed border-gray-300 bg-white p-10 text-center dark:border-white/[0.06] dark:bg-zinc-900">
           <p className="text-gray-600 dark:text-zinc-300">No job listings yet.</p>
           <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">Create your first listing to start receiving applications.</p>
           <div className="mt-6">
@@ -119,7 +119,7 @@ export default async function EmployerHomePage() {
           {listings.map((job) => (
             <div
               key={job.id}
-              className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
+              className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
             >
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <div>

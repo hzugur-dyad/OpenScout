@@ -232,7 +232,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-800 dark:bg-black"
+                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
               >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"

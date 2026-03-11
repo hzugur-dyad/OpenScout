@@ -70,7 +70,7 @@ export function MockInterviewResultView({
         </div>
       ) : (
         <>
-          <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <div className="flex items-center gap-6">
               <div
                 className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
@@ -126,7 +126,7 @@ export function MockInterviewResultView({
             </div>
           )}
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Strengths</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {strengths.map((s, i) => (
@@ -138,7 +138,7 @@ export function MockInterviewResultView({
             </ul>
           </div>
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Improvement Suggestions</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {improvements.map((s, i) => (

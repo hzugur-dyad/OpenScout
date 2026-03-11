@@ -18,7 +18,7 @@ export function SEOPageLayout({ title, children, faqItems }: Props) {
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">{title}</h1>
           <div className="mt-8 space-y-10 text-gray-700 dark:text-zinc-300">{children}</div>
 
-          <section className="mt-12 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="mt-12 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">Prepare with OpenScout</h2>
             <p className="mt-2 text-gray-600 dark:text-zinc-400">
               Practice with AI, get your CV scored, and create a free account to stand out to employers.

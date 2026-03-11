@@ -33,7 +33,7 @@ export default async function DashboardJobsPage() {
         <div className="mt-8 space-y-4">
           {listings.map((job: { id: string; title: string; description: string | null; min_cv_score: number | null; companies: unknown }) => (
             <Link key={job.id} href={`/dashboard/jobs/${job.id}`}>
-              <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+              <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{job.title}</h3>

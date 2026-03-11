@@ -77,7 +77,7 @@ export function UsageBanner({ feature }: UsageBannerProps) {
   }
 
   return (
-    <div className="mb-6 rounded-[10px] border border-[var(--border)] bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+    <div className="mb-6 rounded-[10px] border border-[var(--border)] bg-white p-3 dark:border-white/[0.06] dark:bg-zinc-900">
       <p className="text-sm text-gray-600 dark:text-zinc-300">
         <span className="font-medium capitalize">{plan}</span> plan — {remaining} of {limit} {label} {limit === 1 ? "use" : "uses"} remaining this week.
         {plan === "free" && (

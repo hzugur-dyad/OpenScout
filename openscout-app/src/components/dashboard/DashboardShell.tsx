@@ -132,7 +132,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50 dark:bg-zinc-950">
+    <div className="flex min-h-screen bg-gray-50/50 dark:bg-black">
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
@@ -158,7 +158,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 dark:border-zinc-700 dark:bg-zinc-900 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 dark:border-zinc-800 dark:bg-black lg:px-8">
           <button
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}

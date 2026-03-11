@@ -11,7 +11,7 @@ const Card = forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border border-[var(--border)] bg-white shadow-soft dark:border-zinc-800 dark:bg-black",
+      "rounded-xl border border-[var(--border)] bg-white shadow-soft dark:border-white/[0.06] dark:bg-zinc-900",
       className
     )}
     {...props}
@@ -29,7 +29,7 @@ const CardInteractive = forwardRef<
     whileTap={{ scale: 0.99 }}
     transition={{ type: "spring", stiffness: 400, damping: 25 }}
     className={cn(
-      "cursor-pointer rounded-xl border border-[var(--border)] bg-white shadow-soft transition-shadow hover:shadow-card dark:border-zinc-800 dark:bg-black",
+      "cursor-pointer rounded-xl border border-[var(--border)] bg-white shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.06] dark:bg-zinc-900",
       className
     )}
     {...props}

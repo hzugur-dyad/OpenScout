@@ -199,7 +199,7 @@ function CVAnalysisContent() {
           className="mt-8 space-y-6"
         >
           {result.cv_holder && (result.cv_holder.full_name || result.cv_holder.current_role || result.cv_holder.summary_line) && (
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-zinc-100">CV summary</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 text-gray-700 dark:text-zinc-300">
                 {result.cv_holder.full_name && (
@@ -242,7 +242,7 @@ function CVAnalysisContent() {
           )}
 
           {result.detailed_report && (
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+            <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
               <h3 className="mb-3 text-lg font-semibold text-gray-900 dark:text-zinc-100">Expert assessment</h3>
               <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-zinc-300">
                 {result.detailed_report}
@@ -250,7 +250,7 @@ function CVAnalysisContent() {
             </div>
           )}
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <div className="flex items-center gap-3">
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-bold text-white"
@@ -274,7 +274,7 @@ function CVAnalysisContent() {
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Category scores and feedback</h3>
             <div className="mt-4 space-y-5">
               {Object.entries(result.category_scores).map(([key, score]) => (
@@ -309,7 +309,7 @@ function CVAnalysisContent() {
             </div>
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Strengths</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {result.strengths.map((s, i) => (
@@ -321,7 +321,7 @@ function CVAnalysisContent() {
             </ul>
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-zinc-700 dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Improvement Suggestions</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {result.improvements.map((s, i) => (

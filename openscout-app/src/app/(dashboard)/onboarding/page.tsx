@@ -315,7 +315,7 @@ export default function OnboardingPage() {
         </div>
 
         <div className="mt-8 space-y-8">
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">About</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
@@ -343,7 +343,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Work Experience</h2>
             {form.work_experiences.length === 0 ? (
               <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No work experience added yet.</p>
@@ -362,7 +362,7 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Education</h2>
             {form.educations.length === 0 ? (
               <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No education added yet.</p>
@@ -381,7 +381,7 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Job Preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
@@ -399,7 +399,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
@@ -417,7 +417,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">
@@ -511,7 +511,7 @@ export default function OnboardingPage() {
         <OnboardingStepper currentStep={step} />
       </div>
 
-      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
+      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
         {validationError && (
           <div
             role="alert"
