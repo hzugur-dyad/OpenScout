@@ -439,7 +439,7 @@ export default function MockInterviewSessionPage() {
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-zinc-900 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-black sm:p-4">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
           <div
