@@ -1,13 +1,25 @@
 "use client";
 
 import { ReactNode } from "react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface TooltipProps {
   content: ReactNode;
   children: ReactNode;
   side?: "left" | "right" | "top" | "bottom";
-  /** When true, tooltip is shown on hover (e.g. only when sidebar is collapsed) */
   enabled?: boolean;
+}
+
+const sideOffset = 8;
+
+export function TooltipProvider({ children }: { children: ReactNode }) {
+  return (
+    <TooltipPrimitive.Provider delayDuration={200} skipDelayDuration={100}>
+      {children}
+    </TooltipPrimitive.Provider>
+  );
 }
 
 export function Tooltip({
@@ -16,26 +28,26 @@ export function Tooltip({
   side = "right",
   enabled = true,
 }: TooltipProps) {
-  if (!enabled) {
-    return <>{children}</>;
-  }
-
-  const positionClasses = {
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-  };
+  if (!enabled) return <>{children}</>;
 
   return (
-    <div className="group relative inline-flex">
-      {children}
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute z-[100] whitespace-nowrap rounded-lg bg-zinc-800 px-3 py-2 text-sm font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 dark:bg-zinc-700 ${positionClasses[side]}`}
-      >
-        {content}
-      </span>
-    </div>
+    <TooltipPrimitive.Root>
+      <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content side={side} sideOffset={sideOffset} asChild>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              "z-[100] whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium shadow-lg",
+              "bg-zinc-800 text-white dark:bg-black dark:border dark:border-zinc-800 dark:text-zinc-100"
+            )}
+          >
+            {content}
+          </motion.div>
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   );
 }

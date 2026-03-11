@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileText, MessageCircle, Briefcase, ArrowRight, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Card, CardInteractive } from "@/components/ui/Card";
 import { InviteFriendCard } from "@/components/dashboard/InviteFriendCard";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -168,7 +169,7 @@ export default function DashboardPage() {
         Complete your profile and take an AI interview.
       </p>
 
-      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+      <Card className="mt-4 p-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600 dark:text-zinc-300">
             <span className="font-semibold capitalize">{plan}</span> plan
@@ -186,11 +187,11 @@ export default function DashboardPage() {
             </Link>
           )}
         </div>
-      </div>
+      </Card>
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Link href="/onboarding">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
+          <CardInteractive className="p-6">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
@@ -204,11 +205,11 @@ export default function DashboardPage() {
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
               Start <ArrowRight className="ml-1 h-4 w-4" />
             </div>
-          </div>
+          </CardInteractive>
         </Link>
 
         <Link href="/cv-analysis">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
+          <CardInteractive className="p-6">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
@@ -222,11 +223,11 @@ export default function DashboardPage() {
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
               Start <ArrowRight className="ml-1 h-4 w-4" />
             </div>
-          </div>
+          </CardInteractive>
         </Link>
 
         <Link href="/mock-interview">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
+          <CardInteractive className="p-6">
             <div
               className="mb-4 flex h-12 w-12 items-center justify-center rounded-full"
               style={{ backgroundColor: "var(--primary-muted)" }}
@@ -240,11 +241,11 @@ export default function DashboardPage() {
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
               Start <ArrowRight className="ml-1 h-4 w-4" />
             </div>
-          </div>
+          </CardInteractive>
         </Link>
 
         <Link href="/dashboard/jobs" className="sm:col-span-2 lg:col-span-3">
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-zinc-700 dark:bg-zinc-900 dark:hover:shadow-card">
+          <CardInteractive className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div
@@ -264,7 +265,7 @@ export default function DashboardPage() {
                 View Listings
               </Button>
             </div>
-          </div>
+          </CardInteractive>
         </Link>
 
         <div className="sm:col-span-2 lg:col-span-3">

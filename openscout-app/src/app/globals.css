@@ -18,7 +18,7 @@
 }
 
 .dark {
-  --background: #18181b;
+  --background: #000000;
   --foreground: #fafafa;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.12);
@@ -58,8 +58,38 @@ body {
   border-radius: 10px;
 }
 
+/* View Transition API: circular reveal for animated theme toggle */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 /* Dark mode: ensure body uses theme variables */
 .dark body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Accordion open/close (Radix) */
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+@theme inline {
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { TooltipProvider } from "@/components/ui/Tooltip";
 
 export function ThemeProviderWrapper({
   children,
@@ -15,7 +16,7 @@ export function ThemeProviderWrapper({
       storageKey="openscout-theme"
       disableTransitionOnChange={false}
     >
-      {children}
+      <TooltipProvider>{children}</TooltipProvider>
     </NextThemesProvider>
   );
 }

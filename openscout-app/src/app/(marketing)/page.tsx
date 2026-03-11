@@ -5,6 +5,8 @@ import { ChevronDown, FileText, MessageCircle, Briefcase, Play, Users, Building2
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/Accordion";
+import { useTheme } from "next-themes";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
 
 const faqs = [
@@ -31,8 +33,10 @@ const faqs = [
 ];
 
 export default function LandingPage() {
+  const { resolvedTheme } = useTheme();
   const { userType } = useLandingUserType();
   const isEmployer = userType === "employer";
+  const isDark = resolvedTheme === "dark";
 
   return (
     <>
@@ -40,7 +44,7 @@ export default function LandingPage() {
       <section
         className="relative overflow-hidden pt-16 pb-24 sm:pt-24 sm:pb-32"
         style={{
-          background: "linear-gradient(180deg, var(--primary-lighter) 0%, var(--background) 60%)",
+          background: resolvedTheme === "light" ? "linear-gradient(180deg, var(--primary-lighter) 0%, var(--background) 60%)" : "var(--background)",
         }}
       >
         <Container>
@@ -109,7 +113,7 @@ export default function LandingPage() {
       </section>
 
       {/* Stats/Benefits */}
-      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-700 dark:bg-zinc-900">
+      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-800 dark:bg-black">
         <Container>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
@@ -203,7 +207,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why OpenScout - different heading and cards for employer */}
-      <section className="border-t border-[var(--border)] bg-gray-50/50 py-20 dark:border-zinc-700 dark:bg-zinc-900/50">
+      <section className="border-t border-[var(--border)] bg-gray-50/50 py-20 dark:border-zinc-800 dark:bg-black">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             {!isEmployer ? "Why Candidates Choose OpenScout" : "Why Employers Use OpenScout"}
@@ -228,7 +232,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
+                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-zinc-800 dark:bg-black"
               >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
@@ -250,25 +254,19 @@ export default function LandingPage() {
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             Frequently Asked Questions
           </h2>
-          <div className="mx-auto mt-12 max-w-2xl space-y-4">
+          <Accordion type="single" collapsible className="mx-auto mt-12 max-w-2xl space-y-4">
             {faqs.map((faq, i) => (
-              <details
-                key={i}
-                className="group rounded-[10px] border border-[var(--border)] bg-white p-4 shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
-              >
-                <summary className="flex cursor-pointer list-none items-center justify-between font-medium text-gray-900 dark:text-zinc-100">
-                  {faq.q}
-                  <ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 text-gray-500 dark:text-zinc-400" />
-                </summary>
-                <p className="mt-3 text-sm text-gray-600 dark:text-zinc-400">{faq.a}</p>
-              </details>
+              <AccordionItem key={i} value={`faq-${i}`}>
+                <AccordionTrigger>{faq.q}</AccordionTrigger>
+                <AccordionContent>{faq.a}</AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </Container>
       </section>
 
       {/* For employers */}
-      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-700 dark:bg-zinc-900">
+      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-black">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">
@@ -288,7 +286,7 @@ export default function LandingPage() {
       <section
         className="py-20"
         style={{
-          background: "linear-gradient(180deg, var(--background) 0%, var(--primary-lighter) 100%)",
+          background: resolvedTheme === "light" ? "linear-gradient(180deg, var(--background) 0%, var(--primary-lighter) 100%)" : "var(--background)",
         }}
       >
         <Container>

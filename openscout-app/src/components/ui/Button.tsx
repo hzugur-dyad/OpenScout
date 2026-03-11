@@ -1,6 +1,9 @@
 "use client";
 
+import { forwardRef } from "react";
+import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost";
@@ -11,37 +14,44 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
 }
 
-export function Button({
-  variant = "primary",
-  size = "md",
-  icon: Icon,
-  iconPosition = "right",
-  isLoading = false,
-  children,
-  className = "",
-  disabled,
-  ...props
-}: ButtonProps) {
-  const base =
-    "inline-flex items-center justify-center gap-2 font-medium rounded-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-zinc-950";
+const base =
+  "inline-flex items-center justify-center gap-2 font-medium rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-black";
 
-  const variants = {
-    primary: "bg-primary text-white hover:bg-primary-dark active:bg-primary-dark",
-    secondary: "bg-primary-lighter text-primary-dark hover:bg-primary-muted dark:bg-primary-muted dark:text-primary-dark dark:hover:bg-primary-lighter",
-    outline:
-      "border border-[var(--border-strong)] bg-transparent hover:bg-gray-50 dark:border-zinc-600 dark:hover:bg-zinc-800",
-    ghost: "bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800",
-  };
+const variants = {
+  primary: "bg-primary text-white hover:bg-primary-dark active:bg-primary-dark",
+  secondary:
+    "bg-primary-lighter text-primary-dark hover:bg-primary-muted dark:bg-primary-muted dark:text-primary-dark dark:hover:bg-primary-lighter",
+  outline:
+    "border border-[var(--border-strong)] bg-transparent hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800",
+  ghost: "bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800",
+};
 
-  const sizes = {
-    sm: "h-9 px-4 text-sm",
-    md: "h-11 px-6 text-base",
-    lg: "h-12 px-8 text-lg",
-  };
+const sizes = {
+  sm: "h-9 px-4 text-sm",
+  md: "h-11 px-6 text-base",
+  lg: "h-12 px-8 text-lg",
+};
 
-  return (
-    <button
-      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      variant = "primary",
+      size = "md",
+      icon: Icon,
+      iconPosition = "right",
+      isLoading = false,
+      children,
+      className,
+      disabled,
+      ...props
+    },
+    ref
+  ) => (
+    <motion.button
+      ref={ref}
+      whileTap={disabled || isLoading ? undefined : { scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className={cn(base, variants[variant], sizes[size], className)}
       disabled={disabled || isLoading}
       {...props}
     >
@@ -54,6 +64,8 @@ export function Button({
           {Icon && iconPosition === "right" && <Icon className="h-4 w-4" />}
         </>
       )}
-    </button>
-  );
-}
+    </motion.button>
+  )
+);
+
+Button.displayName = "Button";

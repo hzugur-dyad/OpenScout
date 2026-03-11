@@ -33,3 +33,14 @@ export const SKILLS_TECH_OPTIONS = [
   "Agile",
   "Scrum",
 ] as const;
+
+export const WORK_TRAIT_OPTIONS = [
+  "Communication",
+  "Leadership",
+  "Problem solving",
+  "Teamwork",
+  "Time management",
+  "Adaptability",
+  "Attention to detail",
+  "Self-motivation",
+] as const;
