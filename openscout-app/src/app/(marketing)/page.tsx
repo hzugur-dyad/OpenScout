@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, FileText, MessageCircle, Briefcase, Users, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -38,6 +39,8 @@ export default function LandingPage() {
   const { userType } = useLandingUserType();
   const isEmployer = userType === "employer";
   const isDark = resolvedTheme === "dark";
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   return (
     <>
@@ -214,11 +217,13 @@ export default function LandingPage() {
         </Container>
       </section>
 
-      {/* CTA */}
+      {/* CTA — style only depends on theme after mount to avoid hydration mismatch */}
       <section
         className="py-20"
         style={{
-          background: resolvedTheme === "light" ? "linear-gradient(180deg, var(--background) 0%, var(--primary-lighter) 100%)" : "var(--background)",
+          background: mounted && resolvedTheme === "light"
+            ? "linear-gradient(180deg, var(--background) 0%, var(--primary-lighter) 100%)"
+            : "var(--background)",
         }}
       >
         <Container>

@@ -18,7 +18,7 @@ export default function MockInterviewSessionPage() {
   const cvScoreParam = searchParams.get("cvScore");
   const cvScoreForApplication = cvScoreParam !== null && cvScoreParam !== "" ? Number(cvScoreParam) : null;
 
-  const [step, setStep] = useState<"mic-test" | "interview" | "processing">("mic-test");
+  const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
   const [micOk, setMicOk] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
@@ -28,7 +28,19 @@ export default function MockInterviewSessionPage() {
   const [isListening, setIsListening] = useState(false);
   const [userName, setUserName] = useState("Candidate");
 
+  const recognitionRef = useRef<{ start: () => void; stop: () => void; abort: () => void } | null>(null);
+  const endedRef = useRef(false); // true when user ended interview or left page → skip recognition callbacks
+  const ttsStopRef = useRef<(() => void) | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const interviewStartTimeRef = useRef<number | null>(null);
+  const micAnalyserRef = useRef<{ analyser: AnalyserNode; ctx: AudioContext } | null>(null);
+  const micAnimationRef = useRef<number | null>(null);
+  const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const RESPONSE_LIMIT_MS = 30_000;
+
   const tts = useTTS();
+  ttsStopRef.current = tts.stop;
+  micStreamRef.current = micStream;
   const isAiSpeaking = tts.loading;
   const supabase = useMemo(() => createClient(), []);
 
@@ -54,11 +66,6 @@ export default function MockInterviewSessionPage() {
       });
     });
   }, [supabase]);
-
-  const recognitionRef = useRef<{ start: () => void; stop: () => void; abort: () => void } | null>(null);
-  const interviewStartTimeRef = useRef<number | null>(null);
-  const micAnalyserRef = useRef<{ analyser: AnalyserNode; ctx: AudioContext } | null>(null);
-  const micAnimationRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (step !== "mic-test") return;
@@ -106,6 +113,11 @@ export default function MockInterviewSessionPage() {
 
   const sendToAI = useCallback(
     async (userMessage: string) => {
+      if (responseLimitTimerRef.current) {
+        clearTimeout(responseLimitTimerRef.current);
+        responseLimitTimerRef.current = null;
+      }
+
       const newMessages = [
         ...transcript.map((t) => ({ role: t.role as "user" | "assistant", content: t.content })),
         { role: "user" as const, content: userMessage },
@@ -125,9 +137,9 @@ export default function MockInterviewSessionPage() {
       const data = await res.json();
       const content = data.content || "";
       setTranscript((t) => [...t, { role: "assistant", content }]);
-      setAiMessage(content);
-
       const hasEndSignal = content.includes("INTERVIEW_ENDED") && content.includes('"score"');
+      setAiMessage(hasEndSignal ? content.split("INTERVIEW_ENDED")[0].trim() : content);
+
       if (hasEndSignal) {
         setStep("processing");
         const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
@@ -172,6 +184,11 @@ export default function MockInterviewSessionPage() {
         router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
         return;
       }
+
+      responseLimitTimerRef.current = setTimeout(() => {
+        responseLimitTimerRef.current = null;
+        sendToAI("[Candidate did not respond within the time limit.]");
+      }, RESPONSE_LIMIT_MS);
 
       tts.play(content);
     },
@@ -218,6 +235,7 @@ export default function MockInterviewSessionPage() {
     };
 
     recognition.onerror = ((event?: unknown) => {
+      if (endedRef.current) return;
       const err = (event ?? {}) as { error?: string };
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (err.error === "no-speech" || err.error === "audio-capture") {
@@ -227,6 +245,7 @@ export default function MockInterviewSessionPage() {
     }) as (e: unknown) => void;
 
     recognition.onend = () => {
+      if (endedRef.current) return;
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       const text = finalTranscriptRef.current;
       finalTranscriptRef.current = "";
@@ -246,6 +265,7 @@ export default function MockInterviewSessionPage() {
   }, [step, sendToAI]);
 
   const startInterview = useCallback(async () => {
+    endedRef.current = false;
     interviewStartTimeRef.current = Date.now();
     setStep("interview");
     setAiMessage("Nova is preparing your interview...");
@@ -263,8 +283,14 @@ export default function MockInterviewSessionPage() {
     const content = data.content || "Hello, welcome. Tell me about yourself.";
     setAiMessage(content);
     setTranscript([{ role: "assistant", content }]);
+
+    responseLimitTimerRef.current = setTimeout(() => {
+      responseLimitTimerRef.current = null;
+      sendToAI("[Candidate did not respond within the time limit.]");
+    }, RESPONSE_LIMIT_MS);
+
     tts.play(content);
-  }, [jobCategory, jobId, tts.play, userName]);
+  }, [jobCategory, jobId, tts.play, userName, sendToAI]);
 
   const toggleListen = () => {
     if (!recognitionRef.current) return;
@@ -277,19 +303,26 @@ export default function MockInterviewSessionPage() {
   };
 
   const MIN_INTERVIEW_MS = 5 * 60 * 1000;
+  const GOODBYE_MS = 3500;
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const goodbyeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleEndInterview = useCallback(async () => {
-    setShowEndConfirm(false);
+  const doEvaluateAndRedirect = useCallback(async () => {
     setStep("processing");
     const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
     const tooShort = durationMs < MIN_INTERVIEW_MS;
 
     if (tooShort) {
-      router.push(
-        `/mock-interview/${sessionId}/result?tooShort=1&score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify([]))}`
-      );
+      const q = new URLSearchParams({
+        tooShort: "1",
+        score: "0",
+        strengths: "[]",
+        improvements: "[]",
+        category: jobCategory,
+      });
+      if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
+      router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
       return;
     }
 
@@ -336,6 +369,56 @@ export default function MockInterviewSessionPage() {
       router.push(`/mock-interview/${sessionId}/result?score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify(["Could not process the interview. Please try again."]))}`);
     }
   }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router]);
+
+  const handleEndInterview = useCallback(() => {
+    endedRef.current = true;
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    tts.stop();
+    if (responseLimitTimerRef.current) {
+      clearTimeout(responseLimitTimerRef.current);
+      responseLimitTimerRef.current = null;
+    }
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    setShowEndConfirm(false);
+
+    const farewellMessage = "Thanks for your time today. I'll get your results ready—see you in a moment. Take care!";
+    setAiMessage(farewellMessage);
+    setStep("goodbye");
+    tts.play(farewellMessage);
+
+    if (goodbyeTimeoutRef.current) clearTimeout(goodbyeTimeoutRef.current);
+    goodbyeTimeoutRef.current = setTimeout(() => {
+      goodbyeTimeoutRef.current = null;
+      doEvaluateAndRedirect();
+    }, GOODBYE_MS);
+  }, [tts, doEvaluateAndRedirect]);
+
+  // On unmount or when leaving the page: release mic, stop TTS, abort recognition
+  useEffect(() => {
+    return () => {
+      endedRef.current = true;
+      if (goodbyeTimeoutRef.current) {
+        clearTimeout(goodbyeTimeoutRef.current);
+        goodbyeTimeoutRef.current = null;
+      }
+      recognitionRef.current?.abort();
+      recognitionRef.current = null;
+      ttsStopRef.current?.();
+      if (responseLimitTimerRef.current) {
+        clearTimeout(responseLimitTimerRef.current);
+        responseLimitTimerRef.current = null;
+      }
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+      micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
 
   if (step === "mic-test") {
     return (
@@ -430,13 +513,15 @@ export default function MockInterviewSessionPage() {
 
       <div className="mb-1 flex shrink-0 items-center justify-between">
         <h2 className="font-semibold text-gray-900 dark:text-zinc-100">{jobCategory} Interview</h2>
-        <button
-          onClick={() => setShowEndConfirm(true)}
-          className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
-        >
-          <PhoneOff className="h-4 w-4" />
-          End
-        </button>
+        {step !== "goodbye" && (
+          <button
+            onClick={() => setShowEndConfirm(true)}
+            className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+          >
+            <PhoneOff className="h-4 w-4" />
+            End
+          </button>
+        )}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-black sm:p-4">
@@ -468,7 +553,7 @@ export default function MockInterviewSessionPage() {
 
           {/* Mic button */}
           <div className="relative mt-1 flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
-            {isListening && (
+            {step !== "goodbye" && isListening && (
               <>
                 <motion.div
                   className="absolute inset-0 rounded-full border-2 border-[var(--primary)]"
@@ -488,7 +573,7 @@ export default function MockInterviewSessionPage() {
             )}
             <button
               onClick={toggleListen}
-              disabled={isAiSpeaking}
+              disabled={isAiSpeaking || step === "goodbye"}
               className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 sm:h-14 sm:w-14 ${
                 isListening ? "bg-red-500 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30" : "text-white"
               } disabled:cursor-not-allowed disabled:opacity-50`}
@@ -498,7 +583,13 @@ export default function MockInterviewSessionPage() {
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-zinc-400 sm:text-sm">
-            {isAiSpeaking ? "Wait for Nova to finish..." : isListening ? "Listening..." : "Click to respond"}
+            {step === "goodbye"
+              ? "Wrapping up..."
+              : isAiSpeaking
+                ? "Wait for Nova to finish..."
+                : isListening
+                  ? "Listening..."
+                  : "Click to respond"}
           </p>
           {tts.error && (
             <p className="mt-1 max-w-md text-center text-xs text-red-600 dark:text-red-400 sm:text-sm">

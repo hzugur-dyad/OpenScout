@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
+import { LandingLottie } from "@/components/landing/LandingLottie";
 import { useHeroEntrance } from "@/contexts/HeroEntranceContext";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
 
@@ -116,57 +117,76 @@ export function AnimatedHero() {
                   initial="hidden"
                   animate="visible"
                   exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
-                  className="mx-auto max-w-3xl text-center"
+                  className="relative"
                 >
-                  <motion.h1
-                    variants={fadeUp}
-                    className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl"
-                  >
-                    Get your{" "}
-                    <span style={{ color: "var(--primary-dark)" }}>
-                      Scout Score
-                    </span>
-                  </motion.h1>
+                  <div className="mx-auto max-w-3xl text-center">
+                    <motion.h1
+                      variants={fadeUp}
+                      className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl"
+                    >
+                      Get your{" "}
+                      <span style={{ color: "var(--primary-dark)" }}>
+                        Scout Score
+                      </span>
+                    </motion.h1>
 
-                  <motion.p
-                    variants={fadeUp}
-                    className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl"
-                  >
-                    One credential, many companies. Take one AI interview, get a
-                    shareable score and report — stand out to every employer.
-                  </motion.p>
+                    <motion.p
+                      variants={fadeUp}
+                      className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl"
+                    >
+                      One credential, many companies. Take one AI interview, get
+                      a shareable score and report — stand out to every
+                      employer.
+                    </motion.p>
 
+                    <motion.div
+                      variants={fadeUp}
+                      className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+                    >
+                      <Link href="/register">
+                        <Button
+                          variant="primary"
+                          size="lg"
+                          icon={Play}
+                          iconPosition="left"
+                        >
+                          Get my Scout Score
+                        </Button>
+                      </Link>
+                      <Link href="/jobs">
+                        <Button variant="outline" size="lg">
+                          View Job Listings
+                        </Button>
+                      </Link>
+                    </motion.div>
+
+                    <motion.div
+                      variants={fadeUp}
+                      className="mt-12 flex items-center justify-center gap-5"
+                    >
+                      {techIcons.map((Icon, i) => (
+                        <Icon
+                          key={i}
+                          className="h-5 w-5 text-gray-400 dark:text-zinc-500"
+                        />
+                      ))}
+                    </motion.div>
+                  </div>
                   <motion.div
                     variants={fadeUp}
-                    className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center"
+                    className="absolute left-[-125] top-20 hidden lg:block -rotate-[1deg]"
                   >
-                    <Link href="/register">
-                      <Button
-                        variant="primary"
-                        size="lg"
-                        icon={Play}
-                        iconPosition="left"
-                      >
-                        Get my Scout Score
-                      </Button>
-                    </Link>
-                    <Link href="/jobs">
-                      <Button variant="outline" size="lg">
-                        View Job Listings
-                      </Button>
-                    </Link>
+                    <LandingLottie
+                      animationPath="/animations/landing-scene-left.json"
+                      wrapperClassName="shrink-0 w-full max-w-[240px] sm:max-w-[274px] lg:max-w-[308px]"
+                      loop={false}
+                    />
                   </motion.div>
-
                   <motion.div
                     variants={fadeUp}
-                    className="mt-12 flex items-center justify-center gap-5"
+                    className="absolute -right-28 top-12 hidden lg:block"
                   >
-                    {techIcons.map((Icon, i) => (
-                      <Icon
-                        key={i}
-                        className="h-5 w-5 text-gray-400 dark:text-zinc-500"
-                      />
-                    ))}
+                    <LandingLottie />
                   </motion.div>
                 </motion.div>
               ) : (
@@ -176,8 +196,9 @@ export function AnimatedHero() {
                   initial="hidden"
                   animate="visible"
                   exit={{ opacity: 0, y: -10, transition: { duration: 0.2 } }}
-                  className="mx-auto max-w-3xl text-center"
+                  className="relative"
                 >
+                  <div className="mx-auto max-w-3xl text-center">
                   <motion.h1
                     variants={fadeUp}
                     className="text-4xl font-bold tracking-tight text-gray-900 dark:text-zinc-100 sm:text-5xl lg:text-6xl"
@@ -229,6 +250,23 @@ export function AnimatedHero() {
                         className="h-5 w-5 text-gray-400 dark:text-zinc-500"
                       />
                     ))}
+                  </motion.div>
+                  </div>
+                  <motion.div
+                    variants={fadeUp}
+                    className="absolute left-[-125] top-20 hidden lg:block -rotate-[1deg]"
+                  >
+                    <LandingLottie
+                      animationPath="/animations/landing-scene-left.json"
+                      wrapperClassName="shrink-0 w-full max-w-[240px] sm:max-w-[274px] lg:max-w-[308px]"
+                      loop={false}
+                    />
+                  </motion.div>
+                  <motion.div
+                    variants={fadeUp}
+                    className="absolute -right-28 top-12 hidden lg:block"
+                  >
+                    <LandingLottie />
                   </motion.div>
                 </motion.div>
               )}

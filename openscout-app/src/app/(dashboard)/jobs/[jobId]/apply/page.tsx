@@ -122,10 +122,10 @@ export default function JobApplyPage() {
   if (notFound || !job) {
     return (
       <div className="mx-auto max-w-2xl">
-        <Link href="/dashboard/jobs" className="text-sm text-gray-500 hover:underline">← Back to jobs</Link>
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 text-center">
-          <h2 className="text-lg font-semibold text-amber-800">Job not found</h2>
-          <p className="mt-2 text-sm text-amber-700">This listing may have been removed or is no longer accepting applications.</p>
+        <Link href="/dashboard/jobs" className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200">← Back to jobs</Link>
+        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-950/30">
+          <h2 className="text-lg font-semibold text-amber-800 dark:text-amber-200">Job not found</h2>
+          <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">This listing may have been removed or is no longer accepting applications.</p>
           <Link href="/dashboard/jobs" className="mt-4 inline-block"><Button variant="outline">Browse jobs</Button></Link>
         </div>
       </div>
@@ -139,20 +139,20 @@ export default function JobApplyPage() {
   if (guard && !guard.canApply) {
     return (
       <div className="mx-auto max-w-2xl">
-        <Link href={`/dashboard/jobs/${jobId}`} className="text-sm text-gray-500 hover:underline">← Back to job</Link>
-        <h1 className="mt-6 text-2xl font-bold">{job.title} - Application</h1>
-        <p className="mt-1 text-gray-500">{(job.companies as { name: string })?.name || "Company"}</p>
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6">
-          <div className="flex items-start gap-3 text-amber-800">
+        <Link href={`/dashboard/jobs/${jobId}`} className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200">← Back to job</Link>
+        <h1 className="mt-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">{job.title} - Application</h1>
+        <p className="mt-1 text-gray-500 dark:text-zinc-400">{(job.companies as { name: string })?.name || "Company"}</p>
+        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
             <AlertCircle className="h-6 w-6 shrink-0" />
             <div>
               <h3 className="font-semibold">Profile and CV required</h3>
-              <p className="mt-1 text-sm">
+              <p className="mt-1 text-sm dark:text-amber-300">
                 {!guard.profileComplete && "Complete your profile (name, email, location). "}
                 {!guard.hasCv && "Upload your CV in your profile before applying."}
               </p>
               {guard.missingProfileFields.length > 0 && (
-                <p className="mt-2 text-sm">Missing: {guard.missingProfileFields.join(", ")}.</p>
+                <p className="mt-2 text-sm dark:text-amber-300">Missing: {guard.missingProfileFields.join(", ")}.</p>
               )}
             </div>
           </div>
@@ -167,20 +167,20 @@ export default function JobApplyPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <Link href={`/dashboard/jobs/${jobId}`} className="text-sm text-gray-500 hover:underline">← Back to job</Link>
-      <h1 className="mt-6 text-2xl font-bold">{job.title} - Application</h1>
-      <p className="mt-1 text-gray-500">{(job.companies as { name: string })?.name || "Company"}</p>
+      <Link href={`/dashboard/jobs/${jobId}`} className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200">← Back to job</Link>
+      <h1 className="mt-6 text-2xl font-bold text-gray-900 dark:text-zinc-100">{job.title} - Application</h1>
+      <p className="mt-1 text-gray-500 dark:text-zinc-400">{(job.companies as { name: string })?.name || "Company"}</p>
 
-      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card">
+      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
         {/* Step 1: Analyze CV */}
         {cvScore === null && !analyzing && (
           <>
-            <h3 className="font-semibold text-gray-900">Step 1: CV Analysis</h3>
-            <p className="mt-1 text-sm text-gray-600">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Step 1: CV Analysis</h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
               We will analyze your uploaded CV against this job position to check if you meet the minimum requirements.
             </p>
             {analyzeError && (
-              <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{analyzeError}</div>
+              <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{analyzeError}</div>
             )}
             <Button variant="primary" className="mt-4" onClick={runAutoAnalysis}>
               Analyze my CV for this role
@@ -192,13 +192,13 @@ export default function JobApplyPage() {
         {analyzing && (
           <div className="flex flex-col items-center gap-3 py-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-gray-600">Analyzing your CV against this position...</p>
+            <p className="text-sm text-gray-600 dark:text-zinc-400">Analyzing your CV against this position...</p>
           </div>
         )}
 
         {/* Score too low */}
         {cvScore !== null && !canProceed && (
-          <div className="flex items-start gap-3 text-amber-700">
+          <div className="flex items-start gap-3 text-amber-700 dark:text-amber-300">
             <AlertCircle className="h-6 w-6 shrink-0" />
             <div>
               <h3 className="font-semibold">Your CV score does not meet the minimum requirement for this position.</h3>
@@ -218,11 +218,11 @@ export default function JobApplyPage() {
         {/* Qualified - proceed to interview */}
         {canProceed && (
           <>
-            <div className="flex items-center gap-3 text-green-700">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-sm font-bold">OK</span>
+            <div className="flex items-center gap-3 text-green-700 dark:text-green-300">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-sm font-bold dark:bg-green-900/40 dark:border dark:border-green-700/50 dark:text-green-300">OK</span>
               <div>
                 <h3 className="font-semibold">You qualify for the interview</h3>
-                <p className="text-sm">Your CV meets the requirements for this position.</p>
+                <p className="text-sm dark:text-zinc-400">Your CV meets the requirements for this position.</p>
               </div>
             </div>
             <Button
