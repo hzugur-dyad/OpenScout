@@ -80,10 +80,15 @@ export default function MockInterviewSessionPage() {
   useEffect(() => {
     if (step !== "mic-test") return;
     setMicError(null);
+    let active = true;
     let stream: MediaStream | null = null;
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((s) => {
+        if (!active) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
         stream = s;
         setMicStream(s);
         setMicError(null);
@@ -113,8 +118,12 @@ export default function MockInterviewSessionPage() {
       });
 
     return () => {
+      active = false;
       if (micAnimationRef.current) cancelAnimationFrame(micAnimationRef.current);
-      micAnalyserRef.current = null;
+      if (micAnalyserRef.current) {
+        micAnalyserRef.current.ctx.close().catch(() => {});
+        micAnalyserRef.current = null;
+      }
       stream?.getTracks().forEach((t) => t.stop());
       setMicStream(null);
       setMicLevel(0);
@@ -214,6 +223,7 @@ export default function MockInterviewSessionPage() {
 
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finalTranscriptRef = useRef("");
+  const endingRef = useRef(false);
 
   useEffect(() => {
     if (step !== "interview") return;
@@ -321,10 +331,30 @@ export default function MockInterviewSessionPage() {
   };
 
   const MIN_INTERVIEW_MS = 5 * 60 * 1000;
-  const GOODBYE_MS = 3500;
-
   const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const goodbyeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const releaseMicrophoneResources = useCallback(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+    setIsListening(false);
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (micAnimationRef.current) {
+      cancelAnimationFrame(micAnimationRef.current);
+      micAnimationRef.current = null;
+    }
+    if (micAnalyserRef.current) {
+      micAnalyserRef.current.ctx.close().catch(() => {});
+      micAnalyserRef.current = null;
+    }
+    micStreamRef.current?.getTracks().forEach((t) => t.stop());
+    micStreamRef.current = null;
+    setMicStream(null);
+    setMicLevel(0);
+  }, []);
 
   const doEvaluateAndRedirect = useCallback(async () => {
     setStep("processing");
@@ -393,55 +423,37 @@ export default function MockInterviewSessionPage() {
     }
   }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, locale, copy.resultErrorImprovement]);
 
-  const handleEndInterview = useCallback(() => {
+  const handleEndInterview = useCallback(async () => {
+    if (endingRef.current) return;
+    endingRef.current = true;
     endedRef.current = true;
-    recognitionRef.current?.abort();
-    recognitionRef.current = null;
+    releaseMicrophoneResources();
     tts.stop();
     if (responseLimitTimerRef.current) {
       clearTimeout(responseLimitTimerRef.current);
       responseLimitTimerRef.current = null;
-    }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
     }
     setShowEndConfirm(false);
 
     const farewellMessage = copy.farewell;
     setAiMessage(farewellMessage);
     setStep("goodbye");
-    tts.play(farewellMessage, locale);
-
-    if (goodbyeTimeoutRef.current) clearTimeout(goodbyeTimeoutRef.current);
-    goodbyeTimeoutRef.current = setTimeout(() => {
-      goodbyeTimeoutRef.current = null;
-      doEvaluateAndRedirect();
-    }, GOODBYE_MS);
-  }, [tts, doEvaluateAndRedirect, copy.farewell, locale]);
+    await tts.play(farewellMessage, locale);
+    await doEvaluateAndRedirect();
+  }, [releaseMicrophoneResources, tts, doEvaluateAndRedirect, copy.farewell, locale]);
 
   // On unmount or when leaving the page: release mic, stop TTS, abort recognition
   useEffect(() => {
     return () => {
       endedRef.current = true;
-      if (goodbyeTimeoutRef.current) {
-        clearTimeout(goodbyeTimeoutRef.current);
-        goodbyeTimeoutRef.current = null;
-      }
-      recognitionRef.current?.abort();
-      recognitionRef.current = null;
+      releaseMicrophoneResources();
       ttsStopRef.current?.();
       if (responseLimitTimerRef.current) {
         clearTimeout(responseLimitTimerRef.current);
         responseLimitTimerRef.current = null;
       }
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-      micStreamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, []);
+  }, [releaseMicrophoneResources]);
 
   if (step === "mic-test") {
     return (
