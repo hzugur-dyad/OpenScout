@@ -42,3 +42,5 @@ testsprite_tests/tmp/config.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel

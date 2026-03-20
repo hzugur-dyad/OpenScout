@@ -5,14 +5,14 @@ import { ChevronDown } from "lucide-react";
 
 export type CustomSelectOption = { value: string; label: string } | string;
 
-function normalizeOptions(options: CustomSelectOption[]): { value: string; label: string }[] {
+function normalizeOptions(options: readonly CustomSelectOption[]): { value: string; label: string }[] {
   return options.map((opt) =>
     typeof opt === "string" ? { value: opt, label: opt } : opt
   );
 }
 
 type CustomSelectProps = {
-  options: CustomSelectOption[];
+  options: readonly CustomSelectOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;

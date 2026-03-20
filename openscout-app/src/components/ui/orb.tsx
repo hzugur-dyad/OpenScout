@@ -180,10 +180,11 @@ function Scene({
       if (live[1]) targetColor2Ref.current.set(live[1]);
     }
     const u = mat.uniforms as Record<string, { value: number | THREE.Color }>;
-    u.uTime.value += delta * 0.5;
+    u.uTime.value = (u.uTime.value as number) + delta * 0.5;
 
-    if (u.uOpacity.value < 1) {
-      u.uOpacity.value = Math.min(1, u.uOpacity.value + delta * 2);
+    const uOpacity = u.uOpacity.value as number;
+    if (uOpacity < 1) {
+      u.uOpacity.value = Math.min(1, uOpacity + delta * 2);
     }
 
     let targetIn = 0;
@@ -196,7 +197,7 @@ function Scene({
         manualOutput ?? outputVolumeRef?.current ?? getOutputVolume?.() ?? 0
       );
     } else {
-      const t = u.uTime.value * 2;
+      const t = (u.uTime.value as number) * 2;
       if (agentRef.current === null) {
         targetIn = 0;
         targetOut = 0.3;
@@ -220,7 +221,7 @@ function Scene({
     const targetSpeed = 0.1 + (1 - Math.pow(curOutRef.current - 1, 2)) * 0.9;
     animSpeedRef.current += (targetSpeed - animSpeedRef.current) * 0.12;
 
-    u.uAnimation.value += delta * animSpeedRef.current;
+    u.uAnimation.value = (u.uAnimation.value as number) + delta * animSpeedRef.current;
     u.uInputVolume.value = curInRef.current;
     u.uOutputVolume.value = curOutRef.current;
     (u.uColor1.value as THREE.Color).lerp(targetColor1Ref.current, 0.08);

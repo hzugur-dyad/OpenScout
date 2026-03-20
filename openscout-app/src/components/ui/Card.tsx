@@ -21,7 +21,7 @@ Card.displayName = "Card";
 
 const CardInteractive = forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
+  React.ComponentPropsWithoutRef<typeof motion.div>
 >(({ className, ...props }, ref) => (
   <motion.div
     ref={ref}
