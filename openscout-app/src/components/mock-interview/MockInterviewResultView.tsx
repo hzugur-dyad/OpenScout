@@ -6,6 +6,7 @@ import { CheckCircle, AlertCircle, Share2, Copy } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ShareScoutScoreModal } from "@/components/dashboard/ShareScoutScoreModal";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
+import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 
 type Props = {
   tooShort: boolean;
@@ -14,6 +15,7 @@ type Props = {
   improvements: string[];
   category: string;
   cvScore: number | null;
+  locale?: InterviewLocale;
 };
 
 export function MockInterviewResultView({
@@ -23,7 +25,9 @@ export function MockInterviewResultView({
   improvements,
   category,
   cvScore,
+  locale: _localeProp,
 }: Props) {
+  const ui = interviewUi.en;
   const [passUrl, setPassUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -57,15 +61,15 @@ export function MockInterviewResultView({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Interview Result</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{ui.resultTitle}</h1>
       <p className="mt-1 text-gray-500 dark:text-zinc-400">
-        {tooShort ? "The interview was too short to analyze." : "Your AI evaluation is ready."}
+        {tooShort ? ui.resultTooShortLead : ui.resultReadyLead}
       </p>
 
       {tooShort ? (
         <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-8 shadow-card dark:border-amber-800 dark:bg-amber-950/40">
           <p className="text-center text-amber-800 dark:text-amber-200">
-            The interview was shorter than 5 minutes, so it could not be analyzed. Please try again with a longer conversation to receive feedback and a score.
+            {ui.resultTooShortBox}
           </p>
         </div>
       ) : (
@@ -82,8 +86,10 @@ export function MockInterviewResultView({
                 {score}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Overall Score: {score}/100</h2>
-                <p className="text-sm text-gray-500 dark:text-zinc-400">Your interview performance</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-zinc-100">
+                  {ui.overallScore}: {score}/100
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-zinc-400">{ui.performanceSubtitle}</p>
               </div>
             </div>
           </div>
@@ -111,13 +117,13 @@ export function MockInterviewResultView({
                   iconPosition="left"
                   onClick={handleCopyPassUrl}
                 >
-                  {shareCopied ? "Copied!" : "Copy link"}
+                  {shareCopied ? ui.copied : ui.copyLink}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setShareModalOpen(true)}>
-                  Share on LinkedIn / X
+                  {ui.shareSocial}
                 </Button>
                 <Link href={passUrl} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" size="sm">View pass</Button>
+                  <Button variant="outline" size="sm">{ui.viewPass}</Button>
                 </Link>
               </div>
               {shareModalOpen && (
@@ -127,7 +133,7 @@ export function MockInterviewResultView({
           )}
 
           <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Strengths</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.strengths}</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {strengths.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -139,7 +145,7 @@ export function MockInterviewResultView({
           </div>
 
           <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Improvement Suggestions</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.improvements}</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {improvements.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -154,10 +160,10 @@ export function MockInterviewResultView({
 
       <div className="mt-8 flex gap-4">
         <Link href="/mock-interview">
-          <Button variant="outline">New Interview</Button>
+          <Button variant="outline">{ui.newInterview}</Button>
         </Link>
         <Link href="/dashboard">
-          <Button variant="primary">Dashboard</Button>
+          <Button variant="primary">{ui.dashboard}</Button>
         </Link>
       </div>
     </div>

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { CustomSelect } from "@/components/ui/CustomSelect";
+import { INTERVIEW_LOCALE_LABEL, type InterviewLocale } from "@/lib/interview-locale";
 
 export default function JobApplyPage() {
   const params = useParams();
@@ -26,6 +28,7 @@ export default function JobApplyPage() {
   const [guard, setGuard] = useState<{ profileComplete: boolean; hasCv: boolean; canApply: boolean; missingProfileFields: string[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [interviewLang, setInterviewLang] = useState<InterviewLocale>("tr");
 
   useEffect(() => {
     async function load() {
@@ -225,12 +228,26 @@ export default function JobApplyPage() {
                 <p className="text-sm dark:text-zinc-400">Your CV meets the requirements for this position.</p>
               </div>
             </div>
+            <div className="mt-6 max-w-xs">
+              <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">
+                Interview language
+              </label>
+              <CustomSelect
+                options={[
+                  { value: "en", label: INTERVIEW_LOCALE_LABEL.en },
+                  { value: "tr", label: INTERVIEW_LOCALE_LABEL.tr },
+                ]}
+                value={interviewLang}
+                onChange={(value) => setInterviewLang(value === "tr" ? "tr" : "en")}
+                aria-label="Interview language"
+              />
+            </div>
             <Button
               variant="primary"
               className="mt-6"
               onClick={() =>
                 router.push(
-                  `/mock-interview/${crypto.randomUUID()}?category=${encodeURIComponent(job.title)}&jobId=${jobId}&cvScore=${cvScore ?? ""}`
+                  `/mock-interview/${crypto.randomUUID()}?category=${encodeURIComponent(job.title)}&jobId=${jobId}&cvScore=${cvScore ?? ""}&lang=${encodeURIComponent(interviewLang)}`
                 )
               }
             >

@@ -7,6 +7,13 @@ import { motion } from "framer-motion";
 import { useTTS } from "@/hooks/useTTS";
 import { createClient } from "@/lib/supabase/client";
 import { Orb, type AgentState } from "@/components/ui/orb";
+import {
+  interviewCopy,
+  interviewUi,
+  parseInterviewLocale,
+  interviewLocaleConfig,
+  type InterviewLocale,
+} from "@/lib/interview-locale";
 
 export default function MockInterviewSessionPage() {
   const params = useParams();
@@ -17,6 +24,9 @@ export default function MockInterviewSessionPage() {
   const jobId = searchParams.get("jobId") || "";
   const cvScoreParam = searchParams.get("cvScore");
   const cvScoreForApplication = cvScoreParam !== null && cvScoreParam !== "" ? Number(cvScoreParam) : null;
+  const locale: InterviewLocale = parseInterviewLocale(searchParams.get("lang"));
+  const ui = interviewUi.en;
+  const copy = interviewCopy[locale];
 
   const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
   const [micOk, setMicOk] = useState(false);
@@ -51,7 +61,7 @@ export default function MockInterviewSessionPage() {
       step === "interview" &&
       transcript.length > 0 &&
       transcript[transcript.length - 1]?.role === "user";
-    const initializing = step === "interview" && transcript.length === 0 && aiMessage === "Nova is preparing your interview...";
+    const initializing = step === "interview" && transcript.length === 0 && aiMessage === copy.preparing;
     if (waitingForAi || initializing) return "thinking";
     if (isAiSpeaking) return "talking";
     return null;
@@ -98,7 +108,7 @@ export default function MockInterviewSessionPage() {
         micAnimationRef.current = requestAnimationFrame(updateLevel);
       })
       .catch((err) => {
-        setMicError(err.message || "Microphone access denied. Please allow microphone and try again.");
+        setMicError(err.message || copy.micDenied);
         setMicStream(null);
       });
 
@@ -131,6 +141,7 @@ export default function MockInterviewSessionPage() {
           messages: newMessages,
           jobCategory,
           userName,
+          interviewLanguage: locale,
           ...(jobId && { jobId }),
         }),
       });
@@ -145,7 +156,7 @@ export default function MockInterviewSessionPage() {
         const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
         const minMs = 5 * 60 * 1000;
         if (durationMs < minMs) {
-          const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory });
+          const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory, lang: locale });
           if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
           router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
           return;
@@ -157,7 +168,12 @@ export default function MockInterviewSessionPage() {
         const resultRes = await fetch("/api/mock-interview/result", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transcript: transcriptText, jobCategory, ...(jobId && { jobId }) }),
+          body: JSON.stringify({
+            transcript: transcriptText,
+            jobCategory,
+            interviewLanguage: locale,
+            ...(jobId && { jobId }),
+          }),
         });
         const result = await resultRes.json();
         const score = result.score ?? 0;
@@ -179,6 +195,7 @@ export default function MockInterviewSessionPage() {
           strengths: JSON.stringify(report.strengths),
           improvements: JSON.stringify(report.improvements),
           category: jobCategory,
+          lang: locale,
         });
         if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
         router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
@@ -187,12 +204,12 @@ export default function MockInterviewSessionPage() {
 
       responseLimitTimerRef.current = setTimeout(() => {
         responseLimitTimerRef.current = null;
-        sendToAI("[Candidate did not respond within the time limit.]");
+        sendToAI(copy.noResponseCue);
       }, RESPONSE_LIMIT_MS);
 
-      tts.play(content);
+      tts.play(content, locale);
     },
-    [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName]
+    [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName, locale, copy.noResponseCue]
   );
 
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -212,7 +229,7 @@ export default function MockInterviewSessionPage() {
     };
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-US";
+    recognition.lang = interviewLocaleConfig[locale].speechRecognitionLang;
 
     const SILENCE_TIMEOUT_MS = 2500;
 
@@ -239,7 +256,7 @@ export default function MockInterviewSessionPage() {
       const err = (event ?? {}) as { error?: string };
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (err.error === "no-speech" || err.error === "audio-capture") {
-        sendToAI("[User was silent or speech was not recognized. Please ask them to repeat naturally.]");
+        sendToAI(copy.notHeardCue);
       }
       setIsListening(false);
     }) as (e: unknown) => void;
@@ -252,7 +269,7 @@ export default function MockInterviewSessionPage() {
       if (text) {
         sendToAI(text);
       } else {
-        sendToAI("[User was silent or speech was not recognized. Please ask them to repeat naturally.]");
+        sendToAI(copy.notHeardCue);
       }
       setIsListening(false);
     };
@@ -262,35 +279,36 @@ export default function MockInterviewSessionPage() {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       recognition.abort();
     };
-  }, [step, sendToAI]);
+  }, [step, sendToAI, locale, copy.notHeardCue]);
 
   const startInterview = useCallback(async () => {
     endedRef.current = false;
     interviewStartTimeRef.current = Date.now();
     setStep("interview");
-    setAiMessage("Nova is preparing your interview...");
+    setAiMessage(copy.preparing);
     const res = await fetch("/api/mock-interview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        messages: [{ role: "user", content: "Hello, I'm ready for the interview." }],
+        messages: [{ role: "user", content: copy.readyPhrase }],
         jobCategory,
         userName,
+        interviewLanguage: locale,
         ...(jobId && { jobId }),
       }),
     });
     const data = await res.json();
-    const content = data.content || "Hello, welcome. Tell me about yourself.";
+    const content = data.content || copy.fallbackOpening;
     setAiMessage(content);
     setTranscript([{ role: "assistant", content }]);
 
     responseLimitTimerRef.current = setTimeout(() => {
       responseLimitTimerRef.current = null;
-      sendToAI("[Candidate did not respond within the time limit.]");
+      sendToAI(copy.noResponseCue);
     }, RESPONSE_LIMIT_MS);
 
-    tts.play(content);
-  }, [jobCategory, jobId, tts.play, userName, sendToAI]);
+    tts.play(content, locale);
+  }, [jobCategory, jobId, tts.play, userName, sendToAI, locale, copy.preparing, copy.readyPhrase, copy.fallbackOpening, copy.noResponseCue]);
 
   const toggleListen = () => {
     if (!recognitionRef.current) return;
@@ -320,6 +338,7 @@ export default function MockInterviewSessionPage() {
         strengths: "[]",
         improvements: "[]",
         category: jobCategory,
+        lang: locale,
       });
       if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
       router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
@@ -336,6 +355,7 @@ export default function MockInterviewSessionPage() {
         body: JSON.stringify({
           transcript: transcriptText || "No conversation recorded.",
           jobCategory,
+          interviewLanguage: locale,
           ...(jobId && { jobId }),
         }),
       });
@@ -361,14 +381,17 @@ export default function MockInterviewSessionPage() {
         strengths: JSON.stringify(strengths),
         improvements: JSON.stringify(improvements),
         category: jobCategory,
+        lang: locale,
       });
       if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
       router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
     } catch (e) {
       console.error("Failed to evaluate interview:", e);
-      router.push(`/mock-interview/${sessionId}/result?score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify(["Could not process the interview. Please try again."]))}`);
+      router.push(
+        `/mock-interview/${sessionId}/result?score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify([copy.resultErrorImprovement]))}&lang=${locale}`
+      );
     }
-  }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router]);
+  }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, locale, copy.resultErrorImprovement]);
 
   const handleEndInterview = useCallback(() => {
     endedRef.current = true;
@@ -385,17 +408,17 @@ export default function MockInterviewSessionPage() {
     }
     setShowEndConfirm(false);
 
-    const farewellMessage = "Thanks for your time today. I'll get your results ready—see you in a moment. Take care!";
+    const farewellMessage = copy.farewell;
     setAiMessage(farewellMessage);
     setStep("goodbye");
-    tts.play(farewellMessage);
+    tts.play(farewellMessage, locale);
 
     if (goodbyeTimeoutRef.current) clearTimeout(goodbyeTimeoutRef.current);
     goodbyeTimeoutRef.current = setTimeout(() => {
       goodbyeTimeoutRef.current = null;
       doEvaluateAndRedirect();
     }, GOODBYE_MS);
-  }, [tts, doEvaluateAndRedirect]);
+  }, [tts, doEvaluateAndRedirect, copy.farewell, locale]);
 
   // On unmount or when leaving the page: release mic, stop TTS, abort recognition
   useEffect(() => {
@@ -430,9 +453,9 @@ export default function MockInterviewSessionPage() {
           >
             <Mic className="h-8 w-8" style={{ color: "var(--primary-dark)" }} />
           </div>
-          <h2 className="text-center text-xl font-bold text-gray-900 dark:text-zinc-100">Test Your Microphone</h2>
+          <h2 className="text-center text-xl font-bold text-gray-900 dark:text-zinc-100">{ui.testMicTitle}</h2>
           <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
-            Speak into your microphone. The bar below should move when you talk.
+            {ui.testMicHint}
           </p>
           <div className="mt-6 h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
             <div
@@ -448,7 +471,7 @@ export default function MockInterviewSessionPage() {
           )}
           {micStream && !micError && (
             <p className="mt-4 text-center text-sm text-green-600 dark:text-green-400">
-              Microphone working! Speak to see the level, then continue.
+              {ui.micWorking}
             </p>
           )}
           <button
@@ -460,7 +483,7 @@ export default function MockInterviewSessionPage() {
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-white disabled:cursor-not-allowed disabled:opacity-50"
             style={{ backgroundColor: "var(--primary)" }}
           >
-            Continue
+            {ui.continue}
           </button>
         </div>
       </div>
@@ -471,7 +494,7 @@ export default function MockInterviewSessionPage() {
     return (
       <div className="flex min-h-[400px] flex-col items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="mt-4 font-medium text-gray-900 dark:text-zinc-100">Processing your interview...</p>
+        <p className="mt-4 font-medium text-gray-900 dark:text-zinc-100">{ui.processing}</p>
       </div>
     );
   }
@@ -489,22 +512,22 @@ export default function MockInterviewSessionPage() {
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto dark:bg-red-950/50">
               <PhoneOff className="h-6 w-6 text-red-600 dark:text-red-400" />
             </div>
-            <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">End interview?</h3>
+            <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{ui.endInterviewTitle}</h3>
             <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
-              Your responses will be evaluated and scored. This action cannot be undone.
+              {ui.endInterviewBody}
             </p>
             <div className="mt-6 flex gap-3">
               <button
                 onClick={() => setShowEndConfirm(false)}
                 className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
               >
-                Continue interview
+                {ui.continueInterview}
               </button>
               <button
                 onClick={handleEndInterview}
                 className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
               >
-                End &amp; evaluate
+                {ui.endEvaluate}
               </button>
             </div>
           </motion.div>
@@ -512,14 +535,16 @@ export default function MockInterviewSessionPage() {
       )}
 
       <div className="mb-1 flex shrink-0 items-center justify-between">
-        <h2 className="font-semibold text-gray-900 dark:text-zinc-100">{jobCategory} Interview</h2>
+        <h2 className="font-semibold text-gray-900 dark:text-zinc-100">
+          {`${jobCategory} ${ui.interviewSuffix}`}
+        </h2>
         {step !== "goodbye" && (
           <button
             onClick={() => setShowEndConfirm(true)}
             className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
           >
             <PhoneOff className="h-4 w-4" />
-            End
+            {ui.end}
           </button>
         )}
       </div>
@@ -584,16 +609,16 @@ export default function MockInterviewSessionPage() {
           </div>
           <p className="text-xs text-gray-500 dark:text-zinc-400 sm:text-sm">
             {step === "goodbye"
-              ? "Wrapping up..."
+              ? ui.statusWrapping
               : isAiSpeaking
-                ? "Wait for Nova to finish..."
+                ? ui.statusWaitNova
                 : isListening
-                  ? "Listening..."
-                  : "Click to respond"}
+                  ? ui.statusListening
+                  : ui.statusClickToRespond}
           </p>
           {tts.error && (
             <p className="mt-1 max-w-md text-center text-xs text-red-600 dark:text-red-400 sm:text-sm">
-              Voice error: {tts.error}
+              {ui.voiceErrorPrefix}: {tts.error}
             </p>
           )}
         </div>

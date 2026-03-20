@@ -9,11 +9,34 @@ import { CustomSelect } from "@/components/ui/CustomSelect";
 import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
 import { createClient } from "@/lib/supabase/client";
+import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+
+const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
+  en: {
+    first_name: "First name",
+    last_name: "Last name",
+    email: "Email",
+    location: "Location",
+  },
+  tr: {
+    first_name: "Ad",
+    last_name: "Soyad",
+    email: "E-posta",
+    location: "Konum",
+  },
+};
 
 export default function MockInterviewPage() {
   const [jobCategory, setJobCategory] = useState<string>(JOB_TITLES[0]);
+  const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
+  const ui = interviewUi.en;
   const [showMicTest, setShowMicTest] = useState(false);
-  const [guard, setGuard] = useState<{ profileComplete: boolean; hasCv: boolean; canApplyOrInterview: boolean; missingProfileFields: string[] } | null>(null);
+  const [guard, setGuard] = useState<{
+    profileComplete: boolean;
+    hasCv: boolean;
+    canApplyOrInterview: boolean;
+    missingProfileFieldKeys: string[];
+  } | null>(null);
   const [guardLoading, setGuardLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
@@ -31,16 +54,16 @@ export default function MockInterviewPage() {
       ]);
       const profile = profileRes.data as { first_name?: string; last_name?: string; email?: string; location?: string } | null;
       const required = ["first_name", "last_name", "email", "location"] as const;
-      const missingProfileFields: string[] = [];
+      const missingProfileFieldKeys: string[] = [];
       for (const field of required) {
         const v = profile?.[field];
         if (v === undefined || v === null || String(v).trim() === "") {
-          missingProfileFields.push(field === "first_name" ? "First name" : field === "last_name" ? "Last name" : field === "email" ? "Email" : "Location");
+          missingProfileFieldKeys.push(field);
         }
       }
-      const profileComplete = missingProfileFields.length === 0;
+      const profileComplete = missingProfileFieldKeys.length === 0;
       const hasCv = cvRes.data != null;
-      setGuard({ profileComplete, hasCv, canApplyOrInterview: profileComplete && hasCv, missingProfileFields });
+      setGuard({ profileComplete, hasCv, canApplyOrInterview: profileComplete && hasCv, missingProfileFieldKeys });
       setGuardLoading(false);
     }
     loadGuard();
@@ -48,16 +71,18 @@ export default function MockInterviewPage() {
 
   function handleStart() {
     const id = crypto.randomUUID();
-    router.push(`/mock-interview/${id}?category=${encodeURIComponent(jobCategory)}`);
+    router.push(
+      `/mock-interview/${id}?category=${encodeURIComponent(jobCategory)}&lang=${encodeURIComponent(interviewLang)}`
+    );
   }
 
   const showGate = guard && !guard.canApplyOrInterview;
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">AI Mock Interview</h1>
+      <h1 className="text-2xl font-bold">{ui.mockInterviewTitle}</h1>
       <p className="mt-1 text-gray-500">
-        Select job category and practice with AI.
+        {ui.mockInterviewSubtitle}
       </p>
 
       <UsageBanner feature="mock_interview" />
@@ -71,43 +96,60 @@ export default function MockInterviewPage() {
           <div className="flex items-start gap-3 text-amber-800">
             <AlertCircle className="h-6 w-6 shrink-0" />
             <div>
-              <h3 className="font-semibold">Profile and CV required</h3>
+              <h3 className="font-semibold">{ui.profileRequiredTitle}</h3>
               <p className="mt-1 text-sm">
-                Complete your profile (name, email, location) and run at least one CV analysis before starting a mock interview.
+                {ui.profileRequiredBody}
               </p>
-              {guard.missingProfileFields.length > 0 && (
-                <p className="mt-2 text-sm">Missing: {guard.missingProfileFields.join(", ")}.</p>
+              {guard.missingProfileFieldKeys.length > 0 && (
+                <p className="mt-2 text-sm">
+                  {ui.missingPrefix}:{" "}
+                  {guard.missingProfileFieldKeys
+                    .map((k) => PROFILE_FIELD_LABEL.en[k] ?? k)
+                    .join(", ")}
+                  .
+                </p>
               )}
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-4">
             <Link href="/onboarding">
-              <Button variant="primary">Complete profile</Button>
+              <Button variant="primary">{ui.completeProfile}</Button>
             </Link>
             <Link href="/cv-analysis">
-              <Button variant="outline">Run CV analysis</Button>
+              <Button variant="outline">{ui.runCvAnalysis}</Button>
             </Link>
           </div>
         </div>
       ) : (
         <div className="mt-8 space-y-6">
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">Job Category</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.interviewLanguage}</label>
+            <CustomSelect
+              options={[
+                { value: "en", label: "English" },
+                { value: "tr", label: "Türkçe" },
+              ]}
+              value={interviewLang}
+              onChange={(v) => setInterviewLang(v === "tr" ? "tr" : "en")}
+              aria-label={ui.interviewLanguage}
+            />
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.jobCategory}</label>
             <CustomSelect
               options={JOB_TITLES}
               value={jobCategory}
               onChange={setJobCategory}
-              aria-label="Job category"
+              aria-label={ui.jobCategory}
             />
           </div>
 
           <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">What to Expect</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.whatToExpect}</h3>
             <ul className="mt-3 space-y-2 text-sm text-gray-600 dark:text-zinc-400">
-              <li>• ~20 minute conversation-style interview</li>
-              <li>• Questions about your background and career goals</li>
-              <li>• Role-specific technical questions</li>
-              <li>• Session is recorded and a report is generated</li>
+              {ui.expectBullets.map((line) => (
+                <li key={line}>• {line}</li>
+              ))}
             </ul>
           </div>
 
@@ -118,7 +160,7 @@ export default function MockInterviewPage() {
               onClick={handleStart}
               icon={MessageCircle}
             >
-              Start Interview
+              {ui.startInterview}
             </Button>
           </div>
         </div>

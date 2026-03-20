@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import type { InterviewLocale } from "@/lib/interview-locale";
 
 function formatTtsError(raw: string): string {
   try {
@@ -31,7 +32,7 @@ export function useTTS() {
     setLoading(false);
   }, []);
 
-  const play = useCallback(async (text: string) => {
+  const play = useCallback(async (text: string, locale: InterviewLocale = "en") => {
     if (!text.trim()) return;
 
     stop();
@@ -43,7 +44,7 @@ export function useTTS() {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text: text.trim(), locale }),
       });
 
       if (!res.ok) {

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { canUseFeature, logUsage, getUserPlan } from "@/lib/usage";
 import { checkProfileAndCv } from "@/lib/profile-guard";
+import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview result request received");
@@ -22,7 +23,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { transcript, jobCategory, jobId } = await request.json();
+    const { transcript, jobCategory, jobId, interviewLanguage } = await request.json();
+    const locale: InterviewLocale = parseInterviewLocale(
+      typeof interviewLanguage === "string" ? interviewLanguage : undefined
+    );
     if (!transcript) {
       logWarn("mock-interview result validation failed", { reason: "transcript required" });
       return NextResponse.json(
@@ -32,15 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const groq = getGroq();
-    let completion;
-    try {
-      completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: `You are an interview evaluation expert. Evaluate the following interview transcript for the ${jobCategory} position.
+    const evalSystemEn = `You are an interview evaluation expert. Evaluate the following interview transcript for the ${jobCategory} position.
 Respond ONLY in this JSON format, no other text:
 {
   "overall_score": 0-100,
@@ -51,7 +47,32 @@ Respond ONLY in this JSON format, no other text:
   "improvements": ["improvement1", "improvement2", "improvement3"]
 }
 All score fields are numbers from 0 to 100. overall_score should reflect the overall performance; technical_score for technical accuracy and depth; communication_score for clarity and articulation; problem_solving_score for reasoning and approach.
-Return ONLY valid JSON. Do not include explanations.`,
+The "strengths" and "improvements" array strings must be in English.
+Return ONLY valid JSON. Do not include explanations.`;
+
+    const evalSystemTr = `Sen bir mülakat değerlendirme uzmanısın. Aşağıdaki mülakat transkriptini ${jobCategory} pozisyonu için değerlendir.
+YALNIZCA şu JSON biçiminde yanıt ver, başka metin ekleme:
+{
+  "overall_score": 0-100,
+  "technical_score": 0-100,
+  "communication_score": 0-100,
+  "problem_solving_score": 0-100,
+  "strengths": ["güçlü1", "güçlü2", "güçlü3"],
+  "improvements": ["öneri1", "öneri2", "öneri3"]
+}
+Tüm puan alanları 0 ile 100 arasında sayı olmalı. overall_score genel performansı; technical_score teknik doğruluk ve derinliği; communication_score netlik ve ifadeyi; problem_solving_score akıl yürütme ve yaklaşımı yansıtmalı.
+"strengths" ve "improvements" dizilerindeki metinler Türkçe olmalı.
+YALNIZCA geçerli JSON döndür. Açıklama ekleme.`;
+
+    let completion;
+    try {
+      completion = await groq.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.2,
+        messages: [
+          {
+            role: "system",
+            content: locale === "tr" ? evalSystemTr : evalSystemEn,
           },
           {
             role: "user",

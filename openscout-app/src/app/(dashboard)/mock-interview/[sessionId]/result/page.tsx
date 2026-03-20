@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { MockInterviewResultView } from "@/components/mock-interview/MockInterviewResultView";
+import { parseInterviewLocale } from "@/lib/interview-locale";
 
 type PageProps = {
   params: Promise<{ sessionId: string }>;
@@ -12,6 +13,8 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   const { sessionId } = await routeParams;
   const params = await searchParams;
   const tooShort = params.tooShort === "1";
+  const langRaw = typeof params.lang === "string" ? params.lang : Array.isArray(params.lang) ? params.lang[0] : undefined;
+  const resultLocale = parseInterviewLocale(langRaw);
 
   if (tooShort) {
     return (
@@ -22,6 +25,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
         improvements={[]}
         category=""
         cvScore={null}
+        locale={resultLocale}
       />
     );
   }
@@ -138,6 +142,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       improvements={improvements}
       category={category}
       cvScore={cvScore}
+      locale={resultLocale}
     />
   );
 }
