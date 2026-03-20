@@ -44,6 +44,24 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
 }
 
+/* Text selection: very light yellow */
+::selection {
+  background-color: #fffbeb;
+  color: inherit;
+}
+::-moz-selection {
+  background-color: #fffbeb;
+  color: inherit;
+}
+.dark ::selection {
+  background-color: rgba(254, 243, 199, 0.45);
+  color: inherit;
+}
+.dark ::-moz-selection {
+  background-color: rgba(254, 243, 199, 0.45);
+  color: inherit;
+}
+
 /* Subtle shadows - UI Master Skill: avoid harsh shadows */
 .shadow-soft {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -107,4 +125,42 @@ body {
 @theme inline {
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+}
+
+/* Premium skeleton shimmer (CV analysis, interview processing) */
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+.dark .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
 }

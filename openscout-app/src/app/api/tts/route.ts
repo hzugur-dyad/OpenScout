@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { parseInterviewLocale } from "@/lib/interview-locale";
 import { synthesizeInterviewSpeech } from "@/lib/tts";
-
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return "unknown";
-}
 
 export async function POST(request: NextRequest) {
   logInfo("tts request received");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const key = user
-    ? `tts-user:${user.id}`
-    : `tts-ip:${getClientIp(request)}`;
-  if (!checkRateLimit(key, RATE_LIMITS.tts.limit, RATE_LIMITS.tts.windowMs)) {
-    return NextResponse.json(
-      { error: "Too many TTS requests. Please try again later." },
-      { status: 429 }
-    );
-  }
+  const rlId = getRateLimitIdentifier(request, user?.id);
+  const limited = await rateLimitForKind("tts", rlId);
+  if (!limited.success) return tooManyRequestsResponse(limited);
 
   const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
   if (!apiKey) {

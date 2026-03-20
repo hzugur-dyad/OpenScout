@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
+import { CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 
@@ -88,8 +89,8 @@ export default function MockInterviewPage() {
       <UsageBanner feature="mock_interview" />
 
       {guardLoading ? (
-        <div className="mt-8 flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="mt-8">
+          <CVAnalysisPageSkeleton />
         </div>
       ) : showGate ? (
         <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6">

@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -13,6 +15,7 @@ export async function GET(request: Request) {
       let redirectPath = nextParam ?? "/dashboard";
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        await captureServer(user.id, ANALYTICS_EVENTS.email_confirmed, {});
         const { data: profile } = await supabase
           .from("profiles")
           .select("role")

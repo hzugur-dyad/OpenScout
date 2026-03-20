@@ -44,3 +44,6 @@ testsprite_tests/tmp/config.json
 next-env.d.ts
 
 .vercel
+
+.vercel
+.env*.local

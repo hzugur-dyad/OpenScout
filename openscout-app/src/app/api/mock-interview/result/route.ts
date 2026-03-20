@@ -5,6 +5,11 @@ import { logError, logInfo, logWarn } from "@/lib/logger";
 import { canUseFeature, logUsage, getUserPlan } from "@/lib/usage";
 import { checkProfileAndCv } from "@/lib/profile-guard";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
+import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
+import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview result request received");
@@ -14,6 +19,10 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rlId = getRateLimitIdentifier(request, user.id);
+    const limited = await rateLimitForKind("interviewResult", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
 
     const guard = await checkProfileAndCv(supabase, user.id);
     if (!guard.canApplyOrInterview) {
@@ -36,43 +45,21 @@ export async function POST(request: NextRequest) {
     }
 
     const groq = getGroq();
-    const evalSystemEn = `You are an interview evaluation expert. Evaluate the following interview transcript for the ${jobCategory} position.
-Respond ONLY in this JSON format, no other text:
-{
-  "overall_score": 0-100,
-  "technical_score": 0-100,
-  "communication_score": 0-100,
-  "problem_solving_score": 0-100,
-  "strengths": ["strength1", "strength2", "strength3"],
-  "improvements": ["improvement1", "improvement2", "improvement3"]
-}
-All score fields are numbers from 0 to 100. overall_score should reflect the overall performance; technical_score for technical accuracy and depth; communication_score for clarity and articulation; problem_solving_score for reasoning and approach.
-The "strengths" and "improvements" array strings must be in English.
-Return ONLY valid JSON. Do not include explanations.`;
-
-    const evalSystemTr = `Sen bir mülakat değerlendirme uzmanısın. Aşağıdaki mülakat transkriptini ${jobCategory} pozisyonu için değerlendir.
-YALNIZCA şu JSON biçiminde yanıt ver, başka metin ekleme:
-{
-  "overall_score": 0-100,
-  "technical_score": 0-100,
-  "communication_score": 0-100,
-  "problem_solving_score": 0-100,
-  "strengths": ["güçlü1", "güçlü2", "güçlü3"],
-  "improvements": ["öneri1", "öneri2", "öneri3"]
-}
-Tüm puan alanları 0 ile 100 arasında sayı olmalı. overall_score genel performansı; technical_score teknik doğruluk ve derinliği; communication_score netlik ve ifadeyi; problem_solving_score akıl yürütme ve yaklaşımı yansıtmalı.
-"strengths" ve "improvements" dizilerindeki metinler Türkçe olmalı.
-YALNIZCA geçerli JSON döndür. Açıklama ekleme.`;
+    const evalSystem = buildInterviewEvaluationSystemPrompt(
+      typeof jobCategory === "string" ? jobCategory : "the role",
+      locale
+    );
 
     let completion;
     try {
       completion = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         temperature: 0.2,
+        response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
         messages: [
           {
             role: "system",
-            content: locale === "tr" ? evalSystemTr : evalSystemEn,
+            content: evalSystem,
           },
           {
             role: "user",
@@ -94,43 +81,28 @@ YALNIZCA geçerli JSON döndür. Açıklama ekleme.`;
       throw new Error("No response from model");
     }
 
-    type EvaluationResult = {
-      overall_score?: number;
-      score?: number;
-      technical_score?: number;
-      communication_score?: number;
-      problem_solving_score?: number;
-      strengths?: string[];
-      improvements?: string[];
-    };
-    let result: EvaluationResult;
-    try {
-      result = JSON.parse(text) as EvaluationResult;
-    } catch {
-      logError("mock-interview result invalid JSON from model", undefined);
-      return NextResponse.json(
-        { error: "Invalid JSON from model" },
-        { status: 500 }
-      );
+    const normalized = parseInterviewEvaluationModelOutput(text);
+    if (normalized.usedFallback) {
+      logWarn("mock-interview result: parser used fallback scores", { jobCategory });
     }
 
-    const overallScore =
-      typeof result.overall_score === "number" ? result.overall_score
-      : typeof result.score === "number" ? result.score
-      : 0;
-    const technicalScore = typeof result.technical_score === "number" ? result.technical_score : null;
-    const communicationScore = typeof result.communication_score === "number" ? result.communication_score : null;
-    const problemSolvingScore = typeof result.problem_solving_score === "number" ? result.problem_solving_score : null;
-    const strengths = Array.isArray(result.strengths) ? result.strengths.filter((s) => typeof s === "string") : [];
-    const improvements = Array.isArray(result.improvements) ? result.improvements.filter((s) => typeof s === "string") : [];
+    const overallScore = normalized.overallScore;
+    const technicalScore = normalized.technicalScore;
+    const communicationScore = normalized.communicationScore;
+    const problemSolvingScore = normalized.problemSolvingScore;
+    const strengths = normalized.strengths;
+    const improvements = normalized.improvements;
+    const justification = normalized.justification;
 
     const report: {
       strengths: string[];
       improvements: string[];
+      justification?: string;
       technical_score?: number;
       communication_score?: number;
       problem_solving_score?: number;
     } = { strengths, improvements };
+    if (justification) report.justification = justification;
     if (technicalScore !== null) report.technical_score = technicalScore;
     if (communicationScore !== null) report.communication_score = communicationScore;
     if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
@@ -169,11 +141,18 @@ YALNIZCA geçerli JSON döndür. Açıklama ekleme.`;
 
     await logUsage(supabase, user.id, "mock_interview");
 
+    await captureServer(user.id, ANALYTICS_EVENTS.interview_completed, {
+      job_category: jobCategory,
+      score: overallScore,
+      ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+    });
+
     const responsePayload = {
       score: overallScore,
       overall_score: overallScore,
       strengths,
       improvements,
+      ...(justification && { justification }),
       ...(technicalScore !== null && { technical_score: technicalScore }),
       ...(communicationScore !== null && { communication_score: communicationScore }),
       ...(problemSolvingScore !== null && { problem_solving_score: problemSolvingScore }),

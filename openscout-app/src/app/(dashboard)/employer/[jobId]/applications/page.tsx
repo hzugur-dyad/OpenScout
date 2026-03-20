@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function EmployerApplicationsPage({
   params,
@@ -90,12 +92,19 @@ export default async function EmployerApplicationsPage({
           </Link>
         </div>
       ) : !applications || applications.length === 0 ? (
-        <div className="mt-10 rounded-[10px] border border-dashed border-gray-300 bg-white p-10 text-center dark:border-zinc-600 dark:bg-zinc-900">
-          <p className="text-gray-600 dark:text-zinc-300">No applications yet.</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-zinc-500">
-            Once candidates pass the CV score gate and take the interview, their results will appear here.
-          </p>
-        </div>
+        <EmptyState
+          className="mt-10"
+          icon={Inbox}
+          title="No applications yet"
+          description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
+        >
+          <Link href="/employer">
+            <Button variant="primary">Back to dashboard</Button>
+          </Link>
+          <Link href={`/employer/${jobId}/edit`}>
+            <Button variant="outline">Edit listing</Button>
+          </Link>
+        </EmptyState>
       ) : (
         <div className="mt-8 overflow-hidden rounded-[10px] border border-[var(--border)] bg-white shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
           <table className="w-full text-left text-sm">

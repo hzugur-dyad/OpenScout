@@ -14,6 +14,8 @@ import {
   interviewLocaleConfig,
   type InterviewLocale,
 } from "@/lib/interview-locale";
+import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 
 type InterviewControl = {
   questionId: string;
@@ -73,7 +75,7 @@ export default function MockInterviewSessionPage() {
   const cvScoreParam = searchParams.get("cvScore");
   const cvScoreForApplication = cvScoreParam !== null && cvScoreParam !== "" ? Number(cvScoreParam) : null;
   const locale: InterviewLocale = parseInterviewLocale(searchParams.get("lang"));
-  const ui = interviewUi.en;
+  const ui = interviewUi[locale];
   const copy = interviewCopy[locale];
 
   const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
@@ -224,6 +226,12 @@ export default function MockInterviewSessionPage() {
         const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
         const minMs = 5 * 60 * 1000;
         if (durationMs < minMs) {
+          trackClient(ANALYTICS_EVENTS.interview_too_short, {
+            job_category: jobCategory,
+            session_id: sessionId,
+            duration_ms: durationMs,
+            ...(jobId ? { job_id: jobId } : {}),
+          });
           const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory, lang: locale });
           if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
           router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
@@ -353,6 +361,11 @@ export default function MockInterviewSessionPage() {
   const startInterview = useCallback(async () => {
     endedRef.current = false;
     interviewStartTimeRef.current = Date.now();
+    trackClient(ANALYTICS_EVENTS.interview_started, {
+      job_category: jobCategory,
+      session_id: sessionId,
+      ...(jobId ? { job_id: jobId } : {}),
+    });
     setStep("interview");
     setAiMessage(copy.preparing);
     const res = await fetch("/api/mock-interview", {
@@ -381,7 +394,7 @@ export default function MockInterviewSessionPage() {
     }, RESPONSE_LIMIT_MS);
 
     tts.play(content, locale);
-  }, [jobCategory, jobId, tts.play, userName, sendToAI, locale, copy.preparing, copy.readyPhrase, copy.fallbackOpening, copy.noResponseCue]);
+  }, [jobCategory, jobId, sessionId, tts.play, userName, sendToAI, locale, copy.preparing, copy.readyPhrase, copy.fallbackOpening, copy.noResponseCue]);
 
   const toggleListen = () => {
     if (!recognitionRef.current) return;
@@ -425,6 +438,12 @@ export default function MockInterviewSessionPage() {
     const tooShort = durationMs < MIN_INTERVIEW_MS;
 
     if (tooShort) {
+      trackClient(ANALYTICS_EVENTS.interview_too_short, {
+        job_category: jobCategory,
+        session_id: sessionId,
+        duration_ms: durationMs,
+        ...(jobId ? { job_id: jobId } : {}),
+      });
       const q = new URLSearchParams({
         tooShort: "1",
         score: "0",
@@ -567,10 +586,7 @@ export default function MockInterviewSessionPage() {
 
   if (step === "processing") {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        <p className="mt-4 font-medium text-gray-900 dark:text-zinc-100">{ui.processing}</p>
-      </div>
+      <MockInterviewProcessingSkeleton title={ui.processing} subtitle={ui.processingSubtitle} />
     );
   }
 
@@ -627,7 +643,7 @@ export default function MockInterviewSessionPage() {
       <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-black sm:p-4">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
-          <div
+          <motion.div
             className="relative flex shrink-0 items-center justify-center"
             style={{
               clipPath: "circle(50% at 50% 50%)",
@@ -635,9 +651,35 @@ export default function MockInterviewSessionPage() {
               width: "min(380px, 48vmin)",
               height: "min(380px, 48vmin)",
             }}
+            animate={
+              step !== "interview"
+                ? { scale: 1, opacity: 1 }
+                : agentState === "listening"
+                  ? { scale: 1 + (micLevel / 100) * 0.12, opacity: 1 }
+                  : agentState === "thinking"
+                    ? { scale: [1, 1.06, 1], opacity: [0.88, 1, 0.92] }
+                    : agentState === "talking"
+                      ? { scale: [1, 1.09, 1.04, 1], opacity: 1 }
+                      : { scale: [1, 1.025, 1], opacity: [0.96, 1, 0.98] }
+            }
+            transition={
+              agentState === "listening"
+                ? { duration: 0.12, ease: "easeOut" }
+                : {
+                    duration: agentState === "talking" ? 0.78 : 1.45,
+                    repeat:
+                      step === "interview" &&
+                      (agentState === null ||
+                        agentState === "thinking" ||
+                        agentState === "talking")
+                        ? Infinity
+                        : 0,
+                    ease: "easeInOut",
+                  }
+            }
           >
             <Orb agentState={agentState} colors={["#FFE066", "#FFCB05"]} className="relative z-10 h-full w-full" />
-          </div>
+          </motion.div>
 
           <motion.div
             key={aiMessage}

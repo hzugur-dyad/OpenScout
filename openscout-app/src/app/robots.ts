@@ -1,16 +1,24 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl, getSiteUrl } from "@/lib/seo/site";
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://openscout.app");
+function siteHost(): string | undefined {
+  try {
+    return new URL(getSiteUrl()).host;
+  } catch {
+    return undefined;
+  }
+}
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: {
-      userAgent: "*",
-      allow: "/",
-      disallow: ["/api/", "/dashboard/", "/auth/callback"],
-    },
-    sitemap: `${BASE_URL}/sitemap.xml`,
+    rules: [
+      {
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/api/"],
+      },
+    ],
+    sitemap: absoluteUrl("/sitemap.xml"),
+    host: siteHost(),
   };
 }

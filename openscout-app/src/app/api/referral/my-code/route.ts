@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import type { ReferralMyCodeResponse } from "@/lib/types";
 
 function generateCode(): string {
@@ -11,10 +12,15 @@ function generateCode(): string {
   return code;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const limited = await enforceRateLimit(request, user?.id, {
+      namespace: "referral-my-code",
+      preset: "lenient",
+    });
+    if (limited) return limited;
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

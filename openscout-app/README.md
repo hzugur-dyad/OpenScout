@@ -2,6 +2,18 @@
 
 AI-powered job search and interview platform.
 
+## CI/CD
+
+GitHub Actions runs lint, TypeScript, tests, and production build on pushes to `main` and PRs targeting `main`. Vercel is supported via **GitHub integration** (recommended) or optional **CLI deploy** from Actions.
+
+See **[docs/CI_CD.md](../docs/CI_CD.md)** for required GitHub Secrets, the `ENABLE_VERCEL_CLI` variable, Vercel setup (`openscout-app` as root directory), and **branching** (`main` vs `guncelleme`).
+
+### Branching (short)
+
+- **`main`** — production; merge only when ready to release.
+- **`guncelleme`** — ongoing updates and integration; merge to `main` via PR when stable.
+- Optional **feature branches** off `guncelleme` → PR back into `guncelleme`; then **`guncelleme` → `main`** for releases. CI runs on PRs **into `main`**.
+
 ## Setup
 
 1. Install dependencies:

@@ -6,11 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { ChevronDown, X, Plus } from "lucide-react";
 import { JOB_TITLES, SKILLS_TECH_OPTIONS, WORK_TRAIT_OPTIONS } from "@/constants/jobFormOptions";
-
-export type AiInterviewConfig = {
-  custom_questions?: string[];
-  cv_required_items?: string[];
-};
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+import {
+  jobListingCreatePayloadSchema,
+  type AiInterviewConfig,
+} from "@/types/schemas";
 
 type JobListing = {
   id: string;
@@ -111,15 +111,25 @@ export function EmployerJobForm(props: {
         ai_interview_config: Object.keys(ai_interview_config).length ? ai_interview_config : {},
       };
 
+      const validated = jobListingCreatePayloadSchema.safeParse(payload);
+      if (!validated.success) {
+        throw new Error(validated.error.issues.map((i) => i.message).join("; "));
+      }
+      const row = validated.data;
+
       if (mode === "create") {
         const { error: insertError } = await supabase.from("job_listings").insert({
           company_id: companyId,
-          ...payload,
+          ...row,
         });
         if (insertError) throw insertError;
+        trackClient(ANALYTICS_EVENTS.employer_job_created, {
+          company_id: companyId,
+          title: trimmedTitle,
+        });
       } else {
         if (!initial?.id) throw new Error("Missing job id");
-        const { error: updateError } = await supabase.from("job_listings").update(payload).eq("id", initial.id);
+        const { error: updateError } = await supabase.from("job_listings").update(row).eq("id", initial.id);
         if (updateError) throw updateError;
       }
 

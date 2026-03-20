@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import Stripe from "stripe";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const growthPriceId = process.env.STRIPE_EMPLOYER_GROWTH_PRICE_ID || process.env.STRIPE_PRICE_ID;
@@ -25,6 +28,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const limited = await enforceRateLimit(request, user.id, {
+      namespace: "employer-checkout",
+      preset: "strict",
+    });
+    if (limited) return limited;
 
     const body = await request.json().catch(() => ({}));
     const planParam = typeof (body as { plan?: string }).plan === "string"
@@ -92,6 +101,12 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create(sessionParams);
 
     if (session.url) {
+      await captureServer(user.id, ANALYTICS_EVENTS.subscription_started, {
+        scope: "employer",
+        plan: planParam,
+        company_id: company.id,
+        checkout_session_id: session.id,
+      });
       return NextResponse.json({ url: session.url });
     }
     return NextResponse.json({ error: "Could not create checkout session" }, { status: 500 });

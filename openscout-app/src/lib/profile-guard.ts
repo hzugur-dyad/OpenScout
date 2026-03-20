@@ -14,10 +14,15 @@ export async function checkProfileAndCv(
   supabase: SupabaseClient,
   userId: string
 ): Promise<ProfileGuardResult> {
-  const [profileRes, cvRes] = await Promise.all([
+  const [profileRes, privateRes, cvRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name, last_name, email, location, cv_file_url, cv_raw_text")
+      .select("first_name, last_name, email, location")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    supabase
+      .from("profile_private")
+      .select("cv_file_url, cv_raw_text")
       .eq("user_id", userId)
       .maybeSingle(),
     supabase
@@ -33,6 +38,9 @@ export async function checkProfileAndCv(
     last_name?: string | null;
     email?: string | null;
     location?: string | null;
+  } | null;
+
+  const privateRow = privateRes.data as {
     cv_file_url?: string | null;
     cv_raw_text?: string | null;
   } | null;
@@ -53,7 +61,8 @@ export async function checkProfileAndCv(
     }
   }
   const profileComplete = missingProfileFields.length === 0;
-  const hasCv = cvRes.data != null || !!(profile?.cv_file_url) || !!(profile?.cv_raw_text);
+  const hasCv =
+    cvRes.data != null || !!(privateRow?.cv_file_url) || !!(privateRow?.cv_raw_text);
   const canApplyOrInterview = profileComplete && hasCv;
 
   return {

@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import type { ScoutPassData } from "@/lib/types";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const limited = await enforceRateLimit(request, null, {
+      namespace: "scout-pass-public",
+      preset: "lenient",
+    });
+    if (limited) return limited;
+
     const { slug } = await params;
     if (!slug?.trim()) {
       return NextResponse.json({ error: "Slug required" }, { status: 400 });

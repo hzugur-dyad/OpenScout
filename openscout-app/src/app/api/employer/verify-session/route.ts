@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import Stripe from "stripe";
 import type { EmployerVerifySessionBody } from "@/lib/types";
 
@@ -16,6 +17,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const limited = await enforceRateLimit(request, user.id, {
+      namespace: "employer-verify-session",
+      preset: "strict",
+    });
+    if (limited) return limited;
 
     const body = (await request.json().catch(() => ({}))) as Partial<EmployerVerifySessionBody>;
     const sessionId = typeof body.session_id === "string" ? body.session_id.trim() : "";

@@ -2,53 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getGroq } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 import { logError, logInfo } from "@/lib/logger";
-
-const CATEGORY_KEYS = [
-  "professional_summary",
-  "work_experience",
-  "skills",
-  "education",
-  "online_presence",
-  "highlights",
-] as const;
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { buildCvAnalysisAutoSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
+import { parseAutoCvAnalysisModelOutput } from "@/lib/ai/structured-output";
 
 const WEIGHTS: Record<string, number> = {
   professional_summary: 0.15,
-  work_experience: 0.30,
+  work_experience: 0.3,
   skills: 0.25,
   education: 0.15,
   online_presence: 0.05,
-  highlights: 0.10,
+  highlights: 0.1,
 };
-
-function clampScore(n: number): number {
-  return Math.round(Math.min(100, Math.max(0, Number(n))));
-}
-
-function computeOverallScore(categoryScores: Record<string, number>): number {
-  let sum = 0;
-  let totalWeight = 0;
-  for (const key of CATEGORY_KEYS) {
-    const v = categoryScores[key];
-    if (typeof v === "number" && !Number.isNaN(v)) {
-      sum += clampScore(v) * (WEIGHTS[key] ?? 0.1);
-      totalWeight += WEIGHTS[key] ?? 0.1;
-    }
-  }
-  if (totalWeight <= 0) return 50;
-  return Math.round(sum / totalWeight);
-}
-
-function extractJsonFromText(raw: string): string {
-  let s = raw.trim();
-  const codeBlock = /^```(?:json)?\s*([\s\S]*?)```\s*$/m;
-  const m = s.match(codeBlock);
-  if (m) s = m[1].trim();
-  const start = s.indexOf("{");
-  const end = s.lastIndexOf("}");
-  if (start !== -1 && end !== -1 && end > start) return s.slice(start, end + 1);
-  return s;
-}
 
 /**
  * Auto CV analysis for job applications.
@@ -63,6 +30,10 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rlId = getRateLimitIdentifier(request, user.id);
+    const limited = await rateLimitForKind("cvAnalysis", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
 
     const body = await request.json().catch(() => ({}));
     const jobId = typeof (body as { jobId?: string }).jobId === "string"
@@ -84,21 +55,27 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existing) {
+      await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_completed, {
+        source: "auto",
+        job_id: jobId,
+        cached: true,
+        overall_score: existing.overall_score,
+      });
       return NextResponse.json({ overall_score: existing.overall_score, cached: true });
     }
 
     // Load user CV text
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: privateRow } = await supabase
+      .from("profile_private")
       .select("cv_raw_text, cv_file_url")
       .eq("user_id", user.id)
       .maybeSingle();
 
-    let cvText = (profile as { cv_raw_text?: string } | null)?.cv_raw_text ?? "";
+    let cvText = (privateRow as { cv_raw_text?: string } | null)?.cv_raw_text ?? "";
 
     // If no raw text but file URL exists, try to extract from storage
-    if (!cvText && (profile as { cv_file_url?: string } | null)?.cv_file_url) {
-      const fileUrl = (profile as { cv_file_url: string }).cv_file_url;
+    if (!cvText && (privateRow as { cv_file_url?: string } | null)?.cv_file_url) {
+      const fileUrl = (privateRow as { cv_file_url: string }).cv_file_url;
       const pathMatch = fileUrl.match(/cvs\/(.+)$/);
       if (pathMatch) {
         const { data: fileData } = await supabase.storage.from("cvs").download(pathMatch[1]);
@@ -115,7 +92,17 @@ export async function POST(request: NextRequest) {
             } catch {}
           }
           if (cvText) {
-            await supabase.from("profiles").update({ cv_raw_text: cvText }).eq("user_id", user.id);
+            await supabase
+              .from("profile_private")
+              .upsert(
+                {
+                  user_id: user.id,
+                  cv_raw_text: cvText,
+                  cv_file_url: fileUrl,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "user_id" }
+              );
           }
         }
       }
@@ -149,10 +136,7 @@ export async function POST(request: NextRequest) {
       cvRequiredBlock = `\nThe employer requires the following in the CV. Score the CV considering presence or absence of these: reward if clearly present, penalize if missing.\n${items.map((s) => `- ${s}`).join("\n")}\n\n`;
     }
 
-    const systemPrompt = `You are a senior HR expert. Score this CV ONLY for fit to "${jobTitle}".
-${cvRequiredBlock}
-Score each category 0-100. Output ONLY valid JSON:
-{"category_scores":{"professional_summary":0,"work_experience":0,"skills":0,"education":0,"online_presence":0,"highlights":0},"strengths":[],"improvements":[]}`;
+    const systemPrompt = buildCvAnalysisAutoSystemPrompt(jobTitle, cvRequiredBlock);
 
     const groq = getGroq();
     let completion;
@@ -160,6 +144,7 @@ Score each category 0-100. Output ONLY valid JSON:
       completion = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         temperature: 0,
+        response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `TARGET ROLE: "${jobTitle}"\n\nCV text:\n\n${cvText}` },
@@ -167,37 +152,35 @@ Score each category 0-100. Output ONLY valid JSON:
       });
     } catch (groqError) {
       logError("cv-analysis/auto Groq failed", groqError);
+      await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
+        reason: "groq_error",
+        source: "auto",
+        job_id: jobId,
+      });
       return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
     }
 
     const text = completion.choices[0]?.message?.content;
     if (!text) {
+      await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
+        reason: "empty_model_response",
+        source: "auto",
+        job_id: jobId,
+      });
       return NextResponse.json({ error: "No response from model" }, { status: 500 });
     }
 
-    const jsonStr = extractJsonFromText(text);
-    let parsed: {
-      category_scores?: Record<string, number>;
-      strengths?: string[];
-      improvements?: string[];
-    };
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      logError("cv-analysis/auto invalid JSON", { raw: text });
-      return NextResponse.json({ error: "Invalid response from model" }, { status: 500 });
+    const normalized = parseAutoCvAnalysisModelOutput(text, WEIGHTS);
+    if (normalized.usedFallback) {
+      logError("cv-analysis/auto model parse fallback", { job_id: jobId, preview: text.slice(0, 200) });
     }
 
-    const categoryScores: Record<string, number> = {};
-    for (const k of CATEGORY_KEYS) {
-      const v = parsed.category_scores?.[k];
-      categoryScores[k] = typeof v === "number" && !Number.isNaN(v) ? clampScore(v) : 50;
-    }
-    const overall_score = computeOverallScore(categoryScores);
-    const strengths = Array.isArray(parsed.strengths) ? parsed.strengths.filter((s) => typeof s === "string").slice(0, 5) : [];
-    const improvements = Array.isArray(parsed.improvements) ? parsed.improvements.filter((s) => typeof s === "string").slice(0, 5) : [];
+    const categoryScores = normalized.category_scores;
+    const overall_score = normalized.overall_score;
+    const strengths = normalized.strengths;
+    const improvements = normalized.improvements;
 
-    await supabase.from("cv_analyses").insert({
+    const { error: insertErr } = await supabase.from("cv_analyses").insert({
       user_id: user.id,
       job_category: jobTitle,
       job_id: jobId,
@@ -205,6 +188,22 @@ Score each category 0-100. Output ONLY valid JSON:
       category_scores: categoryScores,
       strengths,
       improvements,
+    });
+    if (insertErr) {
+      logError("cv-analysis/auto insert failed", insertErr);
+      await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
+        reason: "db_insert",
+        source: "auto",
+        job_id: jobId,
+      });
+      return NextResponse.json({ error: "Could not save analysis" }, { status: 500 });
+    }
+
+    await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_completed, {
+      source: "auto",
+      job_id: jobId,
+      job_category: jobTitle,
+      overall_score,
     });
 
     // Log to employer_usage_logs (cost is on the employer, not the candidate)
@@ -218,6 +217,18 @@ Score each category 0-100. Output ONLY valid JSON:
     return NextResponse.json({ overall_score, cached: false });
   } catch (e) {
     logError("cv-analysis/auto unexpected error", e);
+    try {
+      const supabase = await createClient();
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (u?.id) {
+        await captureServer(u.id, ANALYTICS_EVENTS.cv_analysis_failed, {
+          reason: "unexpected",
+          source: "auto",
+        });
+      }
+    } catch {
+      /* ignore */
+    }
     return NextResponse.json({ error: "Analysis failed" }, { status: 500 });
   }
 }

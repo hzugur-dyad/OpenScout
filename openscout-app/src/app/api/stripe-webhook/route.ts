@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -30,9 +32,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
+  const stripe = new Stripe(stripeSecretKey);
   let event: Stripe.Event;
   try {
-    const stripe = new Stripe(stripeSecretKey);
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -139,6 +141,11 @@ export async function POST(request: NextRequest) {
 
       if (isCandidateSub(meta) && session.mode === "subscription") {
         await handleCandidatePlanUpdate(meta!.user_id!, meta!.plan_type!, true);
+        await captureServer(meta!.user_id!, ANALYTICS_EVENTS.subscription_active, {
+          scope: "candidate",
+          plan_type: meta!.plan_type,
+          checkout_session_id: session.id,
+        });
         break;
       }
 
@@ -157,6 +164,54 @@ export async function POST(request: NextRequest) {
           ...(session.customer ? { stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer.id } : {}),
         })
         .eq("id", companyId);
+      {
+        const { data: companyRow } = await supabase
+          .from("companies")
+          .select("user_id")
+          .eq("id", companyId)
+          .maybeSingle();
+        const ownerId = (companyRow as { user_id?: string } | null)?.user_id;
+        if (ownerId) {
+          await captureServer(ownerId, ANALYTICS_EVENTS.subscription_active, {
+            scope: "employer",
+            company_id: companyId,
+            plan_type: meta?.plan_type,
+            checkout_session_id: session.id,
+          });
+        }
+      }
+      break;
+    }
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const subRef = (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription | null })
+        .subscription;
+      const subId = typeof subRef === "string" ? subRef : subRef?.id;
+      if (!subId) break;
+      const sub = await stripe.subscriptions.retrieve(subId);
+      const meta = sub.metadata as SubMeta | undefined;
+      if (isCandidateSub(meta) && meta?.user_id) {
+        await captureServer(meta.user_id, ANALYTICS_EVENTS.subscription_failed, {
+          scope: "candidate",
+          reason: "invoice_payment_failed",
+        });
+        break;
+      }
+      const companyId = await resolveCompanyId(meta?.company_id, subId);
+      if (!companyId) break;
+      const { data: companyRow } = await supabase
+        .from("companies")
+        .select("user_id")
+        .eq("id", companyId)
+        .maybeSingle();
+      const ownerId = (companyRow as { user_id?: string } | null)?.user_id;
+      if (ownerId) {
+        await captureServer(ownerId, ANALYTICS_EVENTS.subscription_failed, {
+          scope: "employer",
+          company_id: companyId,
+          reason: "invoice_payment_failed",
+        });
+      }
       break;
     }
     default:

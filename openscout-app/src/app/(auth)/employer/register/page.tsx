@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 import { Compass } from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
@@ -25,6 +26,7 @@ const SECTORS = [
 ] as const;
 
 export default function EmployerRegisterPage() {
+  const signupStartedTracked = useRef(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,6 +37,12 @@ export default function EmployerRegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    if (signupStartedTracked.current) return;
+    signupStartedTracked.current = true;
+    trackClient(ANALYTICS_EVENTS.auth_signup_started, { role: "employer" });
+  }, []);
 
   async function completeEmployerRegistration(userId: string, name: string, sec: string) {
     await supabase.from("companies").insert({
@@ -75,6 +83,13 @@ export default function EmployerRegisterPage() {
         },
       });
       if (signUpError) throw signUpError;
+
+      if (data?.user) {
+        trackClient(ANALYTICS_EVENTS.auth_signup_completed, {
+          role: "employer",
+          email_confirmation_pending: !data.session,
+        });
+      }
 
       const name = companyName.trim();
       const sec = sector;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
 
 function generateSlug(): string {
@@ -13,6 +14,12 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const limited = await enforceRateLimit(request, user.id, {
+      namespace: "scout-credential",
+      preset: "moderate",
+    });
+    if (limited) return limited;
 
     const body = (await request.json().catch(() => ({}))) as Partial<ScoutCredentialCreateBody>;
     const jobCategory = typeof body.jobCategory === "string" ? body.jobCategory.trim() : "";

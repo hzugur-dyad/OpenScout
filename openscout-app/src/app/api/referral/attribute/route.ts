@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import type { ReferralAttributeBody } from "@/lib/types";
-
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return "unknown";
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = getClientIp(request);
-    const key = `referral:${ip}`;
-    if (!checkRateLimit(key, RATE_LIMITS.referralAttribute.limit, RATE_LIMITS.referralAttribute.windowMs)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 }
-      );
-    }
-
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+    const rlId = getRateLimitIdentifier(request, user?.id);
+    const limited = await rateLimitForKind("referralAttribute", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function DashboardJobsPage() {
   const supabase = await createClient();
@@ -25,10 +26,19 @@ export default async function DashboardJobsPage() {
       </p>
 
       {!listings || listings.length === 0 ? (
-        <div className="mt-12 rounded-[10px] border border-dashed border-gray-300 p-12 text-center dark:border-zinc-600">
-          <Briefcase className="mx-auto h-12 w-12 text-gray-400 dark:text-zinc-500" />
-          <p className="mt-4 text-gray-500 dark:text-zinc-400">No open listings yet.</p>
-        </div>
+        <EmptyState
+          className="mt-10"
+          icon={Briefcase}
+          title="No open roles yet"
+          description="There are no active job listings right now. Check back soon, or go to your dashboard to keep preparing your profile and CV."
+        >
+          <Link href="/dashboard">
+            <Button variant="primary">Get started</Button>
+          </Link>
+          <Link href="/cv-analysis">
+            <Button variant="outline">Run CV analysis</Button>
+          </Link>
+        </EmptyState>
       ) : (
         <div className="mt-8 space-y-4">
           {listings.map((job: { id: string; title: string; description: string | null; min_cv_score: number | null; companies: unknown }) => (

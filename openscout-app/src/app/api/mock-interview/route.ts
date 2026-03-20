@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGroq } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { checkProfileAndCv } from "@/lib/profile-guard";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
@@ -10,6 +10,8 @@ import {
   buildEmployerQuestionsBlockTr,
   buildInterviewerSystemPrompt,
 } from "@/lib/mock-interview-prompt";
+import { parseJsonBody } from "@/lib/api-validation";
+import { interviewResponseSchema } from "@/types/schemas";
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview request received");
@@ -31,25 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const key = `mock-int:${user.id}`;
-    if (!checkRateLimit(key, RATE_LIMITS.mockInterview.limit, RATE_LIMITS.mockInterview.windowMs)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 }
-      );
-    }
+    const rlId = getRateLimitIdentifier(request, user.id);
+    const limited = await rateLimitForKind("mockInterview", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
 
-    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } = await request.json();
-    const locale: InterviewLocale = parseInterviewLocale(
-      typeof interviewLanguage === "string" ? interviewLanguage : undefined
-    );
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      logWarn("mock-interview validation failed", { reason: "messages required" });
-      return NextResponse.json(
-        { error: "messages required" },
-        { status: 400 }
-      );
+    const parsed = await parseJsonBody(request, interviewResponseSchema);
+    if (!parsed.ok) {
+      logWarn("mock-interview validation failed", { reason: "body schema" });
+      return parsed.response;
     }
+    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } =
+      parsed.data;
+    const locale: InterviewLocale = parseInterviewLocale(interviewLanguage);
 
     let customQuestionsBlock = "";
     if (jobId && typeof jobId === "string") {

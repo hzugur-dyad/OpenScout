@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { Compass, Upload, FileText, X, Check } from "lucide-react";
@@ -74,6 +75,7 @@ export default function RegisterPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const signupStartedTracked = useRef(false);
 
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -114,6 +116,12 @@ export default function RegisterPage() {
       try { sessionStorage.setItem("referral_ref", ref.trim()); } catch {}
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (signupStartedTracked.current) return;
+    signupStartedTracked.current = true;
+    trackClient(ANALYTICS_EVENTS.auth_signup_started, { role: "candidate" });
+  }, []);
 
   const inputClass = "w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500";
 
@@ -263,10 +271,15 @@ export default function RegisterPage() {
         // For PDF: text extraction will happen server-side on first use
       } catch {}
 
-      await supabase.from("profiles").update({
-        cv_file_url: urlData?.publicUrl || filePath,
-        ...(cvRawText ? { cv_raw_text: cvRawText } : {}),
-      }).eq("user_id", userId);
+      await supabase.from("profile_private").upsert(
+        {
+          user_id: userId,
+          cv_file_url: urlData?.publicUrl || filePath,
+          ...(cvRawText ? { cv_raw_text: cvRawText } : {}),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
     }
   }
 
@@ -285,6 +298,13 @@ export default function RegisterPage() {
         },
       });
       if (signUpError) throw signUpError;
+
+      if (data?.user) {
+        trackClient(ANALYTICS_EVENTS.auth_signup_completed, {
+          role: "candidate",
+          email_confirmation_pending: !data.session,
+        });
+      }
 
       if (data?.user && !data?.session) {
         // Email confirmation required -- store profile in sessionStorage

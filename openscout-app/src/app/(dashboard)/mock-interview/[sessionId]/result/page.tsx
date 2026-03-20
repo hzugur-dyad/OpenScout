@@ -97,10 +97,21 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
     );
   }
 
-  const report = (interview.report as { strengths?: string[]; improvements?: string[] }) ?? {};
+  const report = (interview.report as {
+    strengths?: string[];
+    improvements?: string[];
+    justification?: string;
+    technical_score?: number;
+    communication_score?: number;
+    problem_solving_score?: number;
+  }) ?? {};
   const score = typeof interview.score === "number" ? interview.score : 0;
   const strengths = Array.isArray(report.strengths) ? report.strengths : [];
   const improvements = Array.isArray(report.improvements) ? report.improvements : [];
+  const justification = typeof report.justification === "string" ? report.justification : null;
+  const technicalScore = typeof report.technical_score === "number" ? report.technical_score : null;
+  const communicationScore = typeof report.communication_score === "number" ? report.communication_score : null;
+  const problemSolvingScore = typeof report.problem_solving_score === "number" ? report.problem_solving_score : null;
   const category = typeof interview.job_category === "string" ? interview.job_category : "";
 
   let cvScore: number | null = null;
@@ -143,6 +154,10 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       category={category}
       cvScore={cvScore}
       locale={resultLocale}
+      justification={justification}
+      technicalScore={technicalScore}
+      communicationScore={communicationScore}
+      problemSolvingScore={problemSolvingScore}
     />
   );
 }

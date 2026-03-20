@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { OnboardingStepper } from "@/components/onboarding/OnboardingStepper";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
@@ -117,12 +118,14 @@ export default function OnboardingPage() {
       } catch (_) {}
       const [
         { data: profile },
+        { data: privateRow },
         { data: workList },
         { data: eduList },
         { data: prefs },
         { data: links },
       ] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profile_private").select("cv_file_url").eq("user_id", user.id).maybeSingle(),
         supabase.from("work_experiences").select("*").eq("user_id", user.id).order("sort_order"),
         supabase.from("educations").select("*").eq("user_id", user.id).order("sort_order"),
         supabase.from("job_preferences").select("*").eq("user_id", user.id).maybeSingle(),
@@ -281,6 +284,8 @@ export default function OnboardingPage() {
         other_highlights: form.other_highlights,
         updated_at: new Date().toISOString(),
       });
+
+      trackClient(ANALYTICS_EVENTS.onboarding_completed, {});
 
       setEditing(false);
       setStep(1);
@@ -447,7 +452,10 @@ export default function OnboardingPage() {
                     const ext = file.name.split(".").pop() || "pdf";
                     const filePath = `${user.id}/cv.${ext}`;
                     await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
-                    await supabase.from("profiles").update({ cv_file_url: filePath }).eq("user_id", user.id);
+                    await supabase
+                      .from("profile_private")
+                      .update({ cv_file_url: filePath, updated_at: new Date().toISOString() })
+                      .eq("user_id", user.id);
                     setCvFileUrl(filePath);
                     try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
                   } finally { setCvUploading(false); }
@@ -471,7 +479,10 @@ export default function OnboardingPage() {
                     const ext = file.name.split(".").pop() || "pdf";
                     const filePath = `${user.id}/cv.${ext}`;
                     await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
-                    await supabase.from("profiles").update({ cv_file_url: filePath }).eq("user_id", user.id);
+                    await supabase
+                      .from("profile_private")
+                      .update({ cv_file_url: filePath, updated_at: new Date().toISOString() })
+                      .eq("user_id", user.id);
                     setCvFileUrl(filePath);
                     try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
                   } finally { setCvUploading(false); }

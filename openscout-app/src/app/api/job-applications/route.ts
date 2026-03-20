@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { checkProfileAndCv } from "@/lib/profile-guard";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { parseJsonBody } from "@/lib/api-validation";
+import { jobApplicationSchema } from "@/types/schemas";
 
 export async function POST(request: NextRequest) {
   logInfo("job-applications request received");
@@ -24,21 +28,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const key = `job-app:${user.id}`;
-    if (!checkRateLimit(key, RATE_LIMITS.jobApplications.limit, RATE_LIMITS.jobApplications.windowMs)) {
-      return NextResponse.json(
-        { error: "Too many requests. Please try again later." },
-        { status: 429 }
-      );
-    }
+    const rlId = getRateLimitIdentifier(request, user.id);
+    const limited = await rateLimitForKind("jobApplications", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
 
-    const body = await request.json().catch(() => ({}));
-    const jobId = typeof body.jobId === "string" ? body.jobId.trim() : "";
-
-    if (!jobId) {
-      logWarn("job-applications validation failed", { reason: "jobId required" });
-      return NextResponse.json({ error: "jobId is required" }, { status: 400 });
+    const parsed = await parseJsonBody(request, jobApplicationSchema);
+    if (!parsed.ok) {
+      logWarn("job-applications validation failed", { reason: "body schema" });
+      return parsed.response;
     }
+    const { jobId } = parsed.data;
 
     const { data: job } = await supabase
       .from("job_listings")
@@ -197,6 +196,27 @@ export async function POST(request: NextRequest) {
     if (error) {
       logError("job-applications upsert failed", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    await captureServer(user.id, ANALYTICS_EVENTS.application_completed, {
+      job_id: jobId,
+      cv_score: cvScore,
+      interview_score: interviewScore,
+    });
+
+    if (companyId) {
+      const { data: companyRow } = await supabase
+        .from("companies")
+        .select("user_id")
+        .eq("id", companyId)
+        .maybeSingle();
+      const employerUserId = (companyRow as { user_id?: string } | null)?.user_id;
+      if (employerUserId) {
+        await captureServer(employerUserId, ANALYTICS_EVENTS.employer_received_application, {
+          job_id: jobId,
+          applicant_user_id: user.id,
+        });
+      }
     }
 
     return NextResponse.json({ ok: true });

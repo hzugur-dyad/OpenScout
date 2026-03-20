@@ -1,8 +1,24 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { slugifyJobTitle, getJobTitleBySlug } from "@/lib/seo/job-titles";
+import { fetchActiveJobForSeo } from "@/lib/seo/jobs-fetch";
+import { buildJobDetailMetadata } from "@/lib/seo/job-metadata";
+import { buildJobPostingJsonLd } from "@/lib/seo/job-posting-schema";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ jobId: string }>;
+}): Promise<Metadata> {
+  const { jobId } = await params;
+  const job = await fetchActiveJobForSeo(jobId);
+  if (!job) {
+    return { title: "Job not found", robots: { index: false, follow: false } };
+  }
+  return buildJobDetailMetadata(job);
+}
 
 export default async function JobDetailPage({
   params,
@@ -10,36 +26,28 @@ export default async function JobDetailPage({
   params: Promise<{ jobId: string }>;
 }) {
   const { jobId } = await params;
-  const supabase = await createClient();
-  const { data: job } = await supabase
-    .from("job_listings")
-    .select(`
-      id,
-      title,
-      description,
-      requirements,
-      min_cv_score,
-      companies(name)
-    `)
-    .eq("id", jobId)
-    .eq("is_active", true)
-    .single();
+  const job = await fetchActiveJobForSeo(jobId);
 
   if (!job) notFound();
 
-  const jobTitle = job.title as string;
+  const jobTitle = job.title;
   const slug = slugifyJobTitle(jobTitle);
   const knownTitle = getJobTitleBySlug(slug);
+  const jobPostingJsonLd = buildJobPostingJsonLd(job);
 
   return (
     <div className="mx-auto max-w-3xl dark:bg-transparent">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingJsonLd) }}
+      />
       <Link href="/jobs" className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300">
         ← Back to listings
       </Link>
       <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{jobTitle}</h1>
         <p className="mt-1 text-gray-500 dark:text-zinc-400">
-          {String((job.companies as { name?: string } | null)?.name ?? "Company")}
+          {job.companies?.name ?? "Company"}
         </p>
         {job.min_cv_score != null && (
           <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">

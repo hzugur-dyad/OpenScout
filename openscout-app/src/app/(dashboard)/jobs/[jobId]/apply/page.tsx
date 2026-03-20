@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { INTERVIEW_LOCALE_LABEL, type InterviewLocale } from "@/lib/interview-locale";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+import { CVAnalysisLoadingSkeleton, JobApplyPageSkeleton } from "@/components/ui/Skeleton";
 
 export default function JobApplyPage() {
   const params = useParams();
@@ -29,6 +31,7 @@ export default function JobApplyPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("tr");
+  const applicationStartedTracked = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -50,14 +53,21 @@ export default function JobApplyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      // Check profile and CV file
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, email, location, cv_file_url, cv_raw_text")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const [{ data: profile }, { data: privateRow }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, email, location")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("profile_private")
+          .select("cv_file_url, cv_raw_text")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
 
-      const p = profile as { first_name?: string; last_name?: string; email?: string; location?: string; cv_file_url?: string; cv_raw_text?: string } | null;
+      const p = profile as { first_name?: string; last_name?: string; email?: string; location?: string } | null;
+      const pv = privateRow as { cv_file_url?: string; cv_raw_text?: string } | null;
       const required = ["first_name", "last_name", "email", "location"] as const;
       const missingProfileFields: string[] = [];
       for (const field of required) {
@@ -67,7 +77,7 @@ export default function JobApplyPage() {
         }
       }
       const profileComplete = missingProfileFields.length === 0;
-      const hasCv = !!(p?.cv_file_url || p?.cv_raw_text);
+      const hasCv = !!(pv?.cv_file_url || pv?.cv_raw_text);
 
       setGuard({ profileComplete, hasCv, canApply: profileComplete && hasCv, missingProfileFields });
 
@@ -87,6 +97,11 @@ export default function JobApplyPage() {
         }
       }
 
+      if (user && jobData && !applicationStartedTracked.current) {
+        applicationStartedTracked.current = true;
+        trackClient(ANALYTICS_EVENTS.application_started, { job_id: jobId });
+      }
+
       setLoading(false);
     }
     load();
@@ -95,6 +110,7 @@ export default function JobApplyPage() {
   async function runAutoAnalysis() {
     setAnalyzing(true);
     setAnalyzeError(null);
+    trackClient(ANALYTICS_EVENTS.cv_analysis_started, { source: "auto", job_id: jobId });
     try {
       const res = await fetch("/api/cv-analysis/auto", {
         method: "POST",
@@ -193,9 +209,11 @@ export default function JobApplyPage() {
 
         {/* Analyzing */}
         {analyzing && (
-          <div className="flex flex-col items-center gap-3 py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-gray-600 dark:text-zinc-400">Analyzing your CV against this position...</p>
+          <div className="py-4">
+            <p className="mb-4 text-center text-sm font-medium text-gray-700 dark:text-zinc-300">
+              Analyzing your CV against this position…
+            </p>
+            <CVAnalysisLoadingSkeleton />
           </div>
         )}
 

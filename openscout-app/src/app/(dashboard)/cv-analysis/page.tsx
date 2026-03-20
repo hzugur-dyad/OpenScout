@@ -8,25 +8,9 @@ import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion } from "framer-motion";
 import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
-
-type CVHolder = {
-  full_name: string;
-  current_role: string;
-  department_or_field: string;
-  location: string;
-  email: string;
-  summary_line: string;
-};
-
-type AnalysisResult = {
-  cv_holder?: CVHolder;
-  overall_score: number;
-  category_scores: Record<string, number>;
-  category_feedback?: Record<string, string>;
-  detailed_report?: string;
-  strengths: string[];
-  improvements: string[];
-};
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+import type { AnalysisResult } from "@/types/schemas";
+import { CVAnalysisLoadingSkeleton, CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 
 function CVAnalysisContent() {
   const searchParams = useSearchParams();
@@ -89,6 +73,11 @@ function CVAnalysisContent() {
     }
     setError(null);
     setIsLoading(true);
+    trackClient(ANALYTICS_EVENTS.cv_analysis_started, {
+      source: "manual",
+      job_category: jobCategory,
+      ...(jobIdFromUrl ? { job_id: jobIdFromUrl } : {}),
+    });
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -121,6 +110,9 @@ function CVAnalysisContent() {
       <UsageBanner feature="cv_analysis" />
 
       {!result ? (
+        isLoading ? (
+          <CVAnalysisLoadingSkeleton />
+        ) : (
         <div className="mt-8 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">Job Category</label>
@@ -183,11 +175,12 @@ function CVAnalysisContent() {
             variant="primary"
             className="w-full"
             onClick={handleAnalyze}
-            isLoading={isLoading}
+            disabled={isLoading}
           >
             Analyze
           </Button>
         </div>
+        )
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -340,7 +333,7 @@ function CVAnalysisContent() {
 
 export default function CVAnalysisPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-2xl p-8 text-center text-gray-500 dark:text-zinc-400">Loading…</div>}>
+    <Suspense fallback={<CVAnalysisPageSkeleton />}>
       <CVAnalysisContent />
     </Suspense>
   );

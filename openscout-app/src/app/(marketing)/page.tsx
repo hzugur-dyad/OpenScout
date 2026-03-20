@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/Accordion";
 import { AnimatedHero } from "@/components/landing/AnimatedHero";
+import { LandingPricing } from "@/components/landing/LandingPricing";
 import { useTheme } from "next-themes";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
 
@@ -182,6 +183,8 @@ export default function LandingPage() {
           </div>
         </Container>
       </section>
+
+      <LandingPricing />
 
       {/* FAQ */}
       <section className="py-20">
