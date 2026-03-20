@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { messages, jobCategory, userName, jobId, interviewLanguage } = await request.json();
+    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } = await request.json();
     const locale: InterviewLocale = parseInterviewLocale(
       typeof interviewLanguage === "string" ? interviewLanguage : undefined
     );
@@ -69,11 +69,21 @@ export async function POST(request: NextRequest) {
     }
 
     const displayName = userName && typeof userName === "string" ? userName.trim() || "there" : "there";
+    const controlHint =
+      interviewControl &&
+      typeof interviewControl === "object" &&
+      typeof (interviewControl as { questionId?: unknown }).questionId === "string" &&
+      typeof (interviewControl as { attemptCount?: unknown }).attemptCount === "number"
+        ? locale === "tr"
+          ? `\nKONTROL BAĞLAMI: Mevcut soru=${(interviewControl as { questionId: string }).questionId}, attempt=${Math.max(1, Math.min(2, (interviewControl as { attemptCount: number }).attemptCount))}. Eğer attempt=2 ve önceki yanıt hala partial/incorrect ise next_action=\"next\" seç ve yeni question_id üret.`
+          : `\nCONTROL CONTEXT: Current question=${(interviewControl as { questionId: string }).questionId}, attempt=${Math.max(1, Math.min(2, (interviewControl as { attemptCount: number }).attemptCount))}. If attempt=2 and previous answer is still partial/incorrect, set next_action=\"next\" and move to a new question_id.`
+        : "";
     const systemPrompt = buildInterviewerSystemPrompt(locale, {
       jobCategory,
       displayName,
       userName: userName && typeof userName === "string" ? userName : "",
       customQuestionsBlock,
+      controlHint,
     });
 
     const groq = getGroq();

@@ -15,6 +15,54 @@ import {
   type InterviewLocale,
 } from "@/lib/interview-locale";
 
+type InterviewControl = {
+  questionId: string;
+  attemptCount: number;
+  evaluationResult: "n/a" | "correct" | "partial" | "incorrect";
+  nextAction: "next" | "retry";
+  concept?: string;
+};
+
+function parseInterviewControlLine(content: string): { visibleText: string; control: InterviewControl | null } {
+  const marker = "INTERVIEW_CONTROL";
+  const idx = content.lastIndexOf(marker);
+  if (idx < 0) return { visibleText: content.trim(), control: null };
+
+  const jsonRaw = content.slice(idx + marker.length).trim();
+  try {
+    const parsed = JSON.parse(jsonRaw) as {
+      question_id?: string;
+      attempt_count?: number;
+      evaluation_result?: "n/a" | "correct" | "partial" | "incorrect";
+      next_action?: "next" | "retry";
+      concept?: string;
+    };
+    if (
+      typeof parsed.question_id === "string" &&
+      typeof parsed.attempt_count === "number" &&
+      (parsed.evaluation_result === "n/a" ||
+        parsed.evaluation_result === "correct" ||
+        parsed.evaluation_result === "partial" ||
+        parsed.evaluation_result === "incorrect") &&
+      (parsed.next_action === "next" || parsed.next_action === "retry")
+    ) {
+      return {
+        visibleText: content.slice(0, idx).trim(),
+        control: {
+          questionId: parsed.question_id,
+          attemptCount: Math.max(1, Math.min(2, parsed.attempt_count)),
+          evaluationResult: parsed.evaluation_result,
+          nextAction: parsed.next_action,
+          concept: typeof parsed.concept === "string" ? parsed.concept : undefined,
+        },
+      };
+    }
+  } catch {
+    // If parsing fails, treat as normal content.
+  }
+  return { visibleText: content.trim(), control: null };
+}
+
 export default function MockInterviewSessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -46,6 +94,7 @@ export default function MockInterviewSessionPage() {
   const micAnalyserRef = useRef<{ analyser: AnalyserNode; ctx: AudioContext } | null>(null);
   const micAnimationRef = useRef<number | null>(null);
   const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlStateRef = useRef<InterviewControl | null>(null);
   const RESPONSE_LIMIT_MS = 30_000;
 
   const tts = useTTS();
@@ -151,14 +200,24 @@ export default function MockInterviewSessionPage() {
           jobCategory,
           userName,
           interviewLanguage: locale,
+          interviewControl: controlStateRef.current
+            ? {
+                questionId: controlStateRef.current.questionId,
+                attemptCount: controlStateRef.current.attemptCount,
+              }
+            : undefined,
           ...(jobId && { jobId }),
         }),
       });
       const data = await res.json();
-      const content = data.content || "";
-      setTranscript((t) => [...t, { role: "assistant", content }]);
-      const hasEndSignal = content.includes("INTERVIEW_ENDED") && content.includes('"score"');
-      setAiMessage(hasEndSignal ? content.split("INTERVIEW_ENDED")[0].trim() : content);
+      const rawContent = data.content || "";
+      const hasEndSignal = rawContent.includes("INTERVIEW_ENDED") && rawContent.includes('"score"');
+      const beforeEnd = hasEndSignal ? rawContent.split("INTERVIEW_ENDED")[0].trim() : rawContent;
+      const { visibleText, control } = parseInterviewControlLine(beforeEnd);
+      if (control) controlStateRef.current = control;
+
+      setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
+      setAiMessage(visibleText);
 
       if (hasEndSignal) {
         setStep("processing");
@@ -171,7 +230,7 @@ export default function MockInterviewSessionPage() {
           return;
         }
         const transcriptText = [...transcript, { role: "user", content: userMessage }]
-          .concat([{ role: "assistant", content }])
+          .concat([{ role: "assistant", content: visibleText }])
           .map((m) => `${m.role}: ${m.content}`)
           .join("\n");
         const resultRes = await fetch("/api/mock-interview/result", {
@@ -216,7 +275,7 @@ export default function MockInterviewSessionPage() {
         sendToAI(copy.noResponseCue);
       }, RESPONSE_LIMIT_MS);
 
-      tts.play(content, locale);
+      tts.play(visibleText, locale);
     },
     [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName, locale, copy.noResponseCue]
   );
@@ -304,11 +363,15 @@ export default function MockInterviewSessionPage() {
         jobCategory,
         userName,
         interviewLanguage: locale,
+        interviewControl: undefined,
         ...(jobId && { jobId }),
       }),
     });
     const data = await res.json();
-    const content = data.content || copy.fallbackOpening;
+    const rawContent = data.content || copy.fallbackOpening;
+    const { visibleText, control } = parseInterviewControlLine(rawContent);
+    controlStateRef.current = control;
+    const content = visibleText || copy.fallbackOpening;
     setAiMessage(content);
     setTranscript([{ role: "assistant", content }]);
 
