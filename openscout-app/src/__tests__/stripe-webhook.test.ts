@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { captureServer } from "@/lib/analytics-server";
@@ -64,7 +64,15 @@ function buildWebhookSupabase() {
 }
 
 describe("POST /api/stripe-webhook", () => {
+  const savedUpstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const savedUpstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
   beforeEach(() => {
+    // Same idea as rate-limit.test.ts: CI/local env often has Upstash (or placeholders). If the
+    // route ever resolved the real `enforceRateLimit`, `limiter.limit()` would hit the network
+    // and can exceed the default test timeout when run alongside other suites in one worker.
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
     vi.resetModules();
     stripeHoisted.constructEvent.mockReset();
     vi.mocked(createAdminClient).mockReset();
@@ -75,7 +83,16 @@ describe("POST /api/stripe-webhook", () => {
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_mock";
   });
 
-  it("returns 429 when IP rate limit is exceeded", async () => {
+  afterEach(() => {
+    if (savedUpstashUrl === undefined) delete process.env.UPSTASH_REDIS_REST_URL;
+    else process.env.UPSTASH_REDIS_REST_URL = savedUpstashUrl;
+    if (savedUpstashToken === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    else process.env.UPSTASH_REDIS_REST_TOKEN = savedUpstashToken;
+  });
+
+  it(
+    "returns 429 when IP rate limit is exceeded",
+    async () => {
     webhookRlHoisted.enforceRateLimit.mockResolvedValueOnce(
       NextResponse.json({ error: "Too many requests" }, { status: 429 })
     );
@@ -93,7 +110,9 @@ describe("POST /api/stripe-webhook", () => {
       expect.objectContaining({ namespace: "stripe-webhook", preset: "lenient" })
     );
     expect(stripeHoisted.constructEvent).not.toHaveBeenCalled();
-  });
+    },
+    15_000
+  );
 
   it("returns 503 when Stripe keys are not configured", async () => {
     delete process.env.STRIPE_SECRET_KEY;
