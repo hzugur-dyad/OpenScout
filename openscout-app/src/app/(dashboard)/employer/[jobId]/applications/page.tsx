@@ -13,6 +13,7 @@ import {
   parseApplicationsListQuery,
   type EmployerApplicationListItem,
 } from "@/lib/employer-applications-list";
+import { userHasCompanyAccess } from "@/lib/employer-company";
 
 export default async function EmployerApplicationsPage({
   params,
@@ -39,11 +40,14 @@ export default async function EmployerApplicationsPage({
 
   if (!job) notFound();
 
+  const companyId = (job as { company_id: string }).company_id;
+  const hasAccess = await userHasCompanyAccess(supabase, user.id, companyId);
+  if (!hasAccess) notFound();
+
   const { data: company } = await supabase
     .from("companies")
     .select("id, stripe_subscription_status")
-    .eq("id", (job as { company_id: string }).company_id)
-    .eq("user_id", user.id)
+    .eq("id", companyId)
     .maybeSingle();
 
   if (!company) notFound();
@@ -63,6 +67,7 @@ export default async function EmployerApplicationsPage({
         cv_score,
         interview_score,
         interview_report,
+        ai_recommendation_reason,
         created_at,
         profiles(first_name, last_name, email)
       `

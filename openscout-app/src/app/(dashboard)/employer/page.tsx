@@ -11,17 +11,14 @@ import {
   computeHiringScore,
   hiringScoreInputsFromInterviewRow,
 } from "@/lib/hiring-score";
+import { getEmployerPrimaryCompany } from "@/lib/employer-company";
 
 export default async function EmployerHomePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/employer/login");
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id,name,stripe_subscription_status,trial_started_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const company = await getEmployerPrimaryCompany(supabase, user.id);
 
   if (!company) {
     return (
@@ -63,7 +60,7 @@ export default async function EmployerHomePage() {
     const jobIds = listings.map((l) => l.id);
     const { data: apps } = await supabase
       .from("job_applications")
-      .select("id, job_id, interview_score, interview_report, profiles(first_name, last_name, email)")
+      .select("id, job_id, cv_score, interview_score, interview_report, profiles(first_name, last_name, email)")
       .in("job_id", jobIds);
 
     for (const jobId of jobIds) {
@@ -133,7 +130,12 @@ export default async function EmployerHomePage() {
             Only Scout-vetted candidates — every application includes CV + interview scores and report.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link href="/employer/team">
+            <Button variant="outline" size="sm">
+              Team
+            </Button>
+          </Link>
           {isSubscribed && (
             <Link href="/employer/pricing">
               <Button variant="outline" size="sm">Billing</Button>

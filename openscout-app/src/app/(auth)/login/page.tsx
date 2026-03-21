@@ -30,7 +30,10 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       const redirectTo = searchParams.get("redirect") ?? "/dashboard";
-      const safeRedirect = /^\/[^/]/.test(redirectTo) ? redirectTo : "/dashboard";
+      const safeRedirect =
+        redirectTo.startsWith("/") && !redirectTo.startsWith("//") && !redirectTo.includes("://")
+          ? redirectTo
+          : "/dashboard";
       router.push(safeRedirect);
       router.refresh();
     } catch (err: unknown) {

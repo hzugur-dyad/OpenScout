@@ -5,6 +5,7 @@ import { employerApplicationPatchSchema } from "@/types/schemas";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { captureException } from "@/lib/monitoring";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { userCanRecruitForCompany } from "@/lib/employer-company";
 
 export async function PATCH(
   request: NextRequest,
@@ -36,7 +37,7 @@ export async function PATCH(
 
     const { data: application } = await supabase
       .from("job_applications")
-      .select("id, job_id")
+      .select("id, job_id, application_status, notes")
       .eq("id", applicationId.trim())
       .maybeSingle();
 
@@ -63,12 +64,15 @@ export async function PATCH(
       .eq("id", companyId)
       .maybeSingle();
 
-    const ownerId = (company as { user_id?: string } | null)?.user_id;
     const subscribed = (company as { stripe_subscription_status?: string } | null)?.stripe_subscription_status === "active";
+    const canRecruit = await userCanRecruitForCompany(supabase, user.id, companyId);
 
-    if (!company || ownerId !== user.id || !subscribed) {
+    if (!company || !subscribed || !canRecruit) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+
+    const prevStatus = (application as { application_status?: string }).application_status ?? "applied";
+    const prevNotes = (application as { notes?: string | null }).notes ?? "";
 
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -85,6 +89,28 @@ export async function PATCH(
     if (error) {
       logError("employer application PATCH update failed", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (parsed.data.status !== undefined && parsed.data.status !== prevStatus) {
+      const { error: evErr } = await supabase.from("application_events").insert({
+        job_application_id: applicationId.trim(),
+        actor_user_id: user.id,
+        event_type: "status_change",
+        old_status: prevStatus,
+        new_status: parsed.data.status,
+      });
+      if (evErr) logWarn("employer application event insert failed", { message: evErr.message });
+    }
+
+    if (parsed.data.notes !== undefined && parsed.data.notes !== prevNotes) {
+      const excerpt = parsed.data.notes.trim().slice(0, 240);
+      const { error: nErr } = await supabase.from("application_events").insert({
+        job_application_id: applicationId.trim(),
+        actor_user_id: user.id,
+        event_type: "note_update",
+        note_excerpt: excerpt || null,
+      });
+      if (nErr) logWarn("employer application note event insert failed", { message: nErr.message });
     }
 
     return NextResponse.json({ ok: true });

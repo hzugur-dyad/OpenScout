@@ -1,4 +1,5 @@
 import type { InterviewLocale } from "@/lib/interview-locale";
+import { INTERVIEW_CONTRACT_USER_LINES } from "@/lib/mock-interview/interview-contract-messages";
 
 /** Groq: force JSON-only completions (paired with strict user/system instructions). */
 export const GROQ_JSON_OBJECT_RESPONSE_FORMAT = { type: "json_object" as const };
@@ -96,14 +97,25 @@ OUTPUT CONTRACT:
 - category_scores: integers 0-100. strengths and improvements: short English strings (3-5 items each when possible).`;
 }
 
-export function buildInterviewEvaluationSystemPrompt(jobCategory: string, locale: InterviewLocale): string {
+export function buildInterviewEvaluationSystemPrompt(
+  jobCategory: string,
+  locale: InterviewLocale,
+  employerRubricBlock = ""
+): string {
+  const rubricTr = employerRubricBlock.trim()
+    ? `\nİşveren / ilan odağı (değerlendirmede özellikle dikkate al):\n${employerRubricBlock.trim()}\n`
+    : "";
+  const rubricEn = employerRubricBlock.trim()
+    ? `\nEmployer / job focus (weight heavily in your assessment):\n${employerRubricBlock.trim()}\n`
+    : "";
+
   if (locale === "tr") {
     return `Sen kıdemli bir teknik mülakatçı ve değerlendirme uzmanısın. Aşağıdaki mülakat transkriptini yalnızca "${jobCategory}" rolü açısından değerlendir.
 
 Kurallar:
 - Gerekçeyi transkriptteki somut ifadelere dayandır.
 - Puanları tutarlı ve adil tut.
-
+${rubricTr}
 ÇIKTI SÖZLEŞMESİ:
 - YALNIZCA tek bir JSON nesnesi döndür. Markdown yok, açıklama metni yok.
 - Şekil TAM olarak şöyle olmalı (tüm anahtarlar mevcut olsun):
@@ -125,7 +137,7 @@ Kurallar:
 Rules:
 - Ground the justification in specific evidence from the transcript.
 - Keep scores coherent and fair.
-
+${rubricEn}
 OUTPUT CONTRACT:
 - Return ONE JSON object only. No markdown, no text before or after.
 - Shape MUST match exactly (all keys present):
@@ -167,9 +179,9 @@ YANIT DEĞERLENDİRME (iç kullanım, adaya açık etme):
 
 SÜRE: Yaklaşık 8–12 soru (takipler dahil). İşveren soruları varsa önce onları bitir.
 
-ZAMAN AŞIMI: "[Aday belirlenen süre içinde yanıt vermedi.]" mesajında yorum yapmadan sonraki soruya geç.
+ZAMAN AŞIMI: "${INTERVIEW_CONTRACT_USER_LINES.tr.timeout}" mesajında yorum yapmadan sonraki soruya geç.
 UZUN YANIT: Kopyala-yapıştır veya çok uzun yanıtta: "Bunu bir örnek üzerinden, kısaca kendi cümlelerinizle özetler misiniz?"
-SESSİZLİK: "Kısaca tekrar eder misiniz?" gibi kısa, doğal bir ifade.
+SESSİZLİK: "${INTERVIEW_CONTRACT_USER_LINES.tr.silenceOrUnrecognized}" mesajında "Kısaca tekrar eder misiniz?" gibi kısa, doğal bir ifade kullan ve devam et.
 
 İLK MESAJ: "Merhaba ${displayName}, ben Nova. Mülakatı birlikte yürüteceğiz." de; hemen ardından ilk teknik soruyu sor. Bu selamı tekrarlama.${customQuestionsBlock}
 
@@ -208,9 +220,9 @@ INTERNAL ANSWER RATING (never state explicitly to the candidate):
 
 LENGTH: Roughly 8–12 questions including follow-ups. If employer questions exist, complete them first in order.
 
-TIMEOUT: If the user message is "[Candidate did not respond within the time limit.]", ask the next question with no commentary.
+TIMEOUT: If the user message is exactly "${INTERVIEW_CONTRACT_USER_LINES.en.timeout}", ask the next question with no commentary.
 LONG ANSWER: If a reply looks pasted or extremely long, ask for one brief STAR-style example in their own words.
-SILENCE: Use a short neutral phrase like "Could you repeat that briefly?"
+SILENCE: If the user message is exactly "${INTERVIEW_CONTRACT_USER_LINES.en.silenceOrUnrecognized}", use a short neutral phrase like "Could you repeat that briefly?" and continue.
 
 FIRST MESSAGE: Say: "Hi ${displayName}, I'm Nova. We'll walk through your interview together." Then ask your first substantive technical question immediately. Do not repeat this greeting later.${customQuestionsBlock}
 

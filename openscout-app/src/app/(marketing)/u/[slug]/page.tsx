@@ -108,6 +108,11 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
         <article className="mx-auto max-w-2xl">
           <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">OpenScout candidate</p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">{displayName}</h1>
+          {d.hasCompletedInterview && (
+            <p className="mt-2 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
+              Verified AI interview (OpenScout)
+            </p>
+          )}
           {roleLabel && (
             <p className="mt-1 text-lg text-gray-600 dark:text-zinc-300">{roleLabel}</p>
           )}

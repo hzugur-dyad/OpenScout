@@ -8,13 +8,16 @@ export type HiringScoreInputs = {
   technical_score: number | null;
   communication_score: number | null;
   problem_solving_score: number | null;
+  /** When set, blended into hiring score with cv weight (0–100). */
+  cv_score?: number | null;
 };
 
 const W = {
-  overall: 0.4,
-  technical: 0.3,
-  communication: 0.2,
+  overall: 0.35,
+  technical: 0.25,
+  communication: 0.15,
   problem_solving: 0.1,
+  cv: 0.15,
 } as const;
 
 type Key = keyof typeof W;
@@ -38,6 +41,9 @@ export function computeHiringScore(inputs: HiringScoreInputs): number {
   if (typeof inputs.problem_solving_score === "number" && !Number.isNaN(inputs.problem_solving_score)) {
     pairs.push({ key: "problem_solving", value: clamp0to100(inputs.problem_solving_score) });
   }
+  if (typeof inputs.cv_score === "number" && !Number.isNaN(inputs.cv_score)) {
+    pairs.push({ key: "cv", value: clamp0to100(inputs.cv_score) });
+  }
 
   if (pairs.length === 0) return 0;
 
@@ -51,6 +57,7 @@ export function computeHiringScore(inputs: HiringScoreInputs): number {
 export function hiringScoreInputsFromInterviewRow(row: {
   interview_score: number | null;
   interview_report: unknown;
+  cv_score?: number | null;
 }): HiringScoreInputs {
   const r = row.interview_report as {
     technical_score?: unknown;
@@ -62,8 +69,18 @@ export function hiringScoreInputsFromInterviewRow(row: {
     technical_score: typeof r?.technical_score === "number" ? r.technical_score : null,
     communication_score: typeof r?.communication_score === "number" ? r.communication_score : null,
     problem_solving_score: typeof r?.problem_solving_score === "number" ? r.problem_solving_score : null,
+    cv_score: typeof row.cv_score === "number" ? row.cv_score : null,
   };
 }
+
+/** Labels for transparency UI — keep in sync with W. */
+export const HIRING_SCORE_WEIGHT_LABELS: { key: keyof typeof W; label: string; weight: number }[] = [
+  { key: "overall", label: "Overall interview", weight: W.overall },
+  { key: "technical", label: "Technical depth", weight: W.technical },
+  { key: "communication", label: "Communication", weight: W.communication },
+  { key: "problem_solving", label: "Problem solving", weight: W.problem_solving },
+  { key: "cv", label: "CV fit", weight: W.cv },
+];
 
 export type HiringFitTag = "Strong Fit" | "Good Fit" | "Average" | "Weak Fit";
 

@@ -57,6 +57,7 @@ export default function MockInterviewSessionPage() {
   const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlStateRef = useRef<InterviewControl | null>(null);
   const RESPONSE_LIMIT_MS = 30_000;
+  const [providerError, setProviderError] = useState<string | null>(null);
 
   const tts = useTTS();
   ttsStopRef.current = tts.stop;
@@ -186,6 +187,20 @@ export default function MockInterviewSessionPage() {
           ...(jobId && { jobId }),
         }),
       });
+      const data = (await res.json().catch(() => ({}))) as {
+        content?: string;
+        interviewEnded?: boolean;
+        questionControl?: { questionId?: string; attempt?: number; isFollowup?: boolean };
+        retryable?: boolean;
+      };
+      if (res.status === 503 && data.retryable) {
+        setTranscript((t) =>
+          t.length > 0 && t[t.length - 1]?.role === "user" ? t.slice(0, -1) : t
+        );
+        setProviderError(ui.interviewProviderError);
+        return;
+      }
+      setProviderError(null);
       if (!res.ok) {
         captureMessage(`Mock interview turn: HTTP ${res.status}`, {
           route: "/api/mock-interview",
@@ -195,7 +210,6 @@ export default function MockInterviewSessionPage() {
           level: "warning",
         });
       }
-      const data = await res.json();
       const visibleText = (data.content ?? "").trim();
       const interviewEnded = Boolean(data.interviewEnded);
 
@@ -238,35 +252,29 @@ export default function MockInterviewSessionPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            sessionId,
             transcript: transcriptText,
             jobCategory,
             interviewLanguage: locale,
+            durationMs,
             ...(jobId && { jobId }),
           }),
         });
-        const result = await resultRes.json();
-        const score = result.score ?? 0;
-        const report = { strengths: result.strengths || [], improvements: result.improvements || [] };
+        if (!resultRes.ok) {
+          router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
+          return;
+        }
+        let applicationSaved = false;
         if (jobId) {
-          await fetch("/api/job-applications", {
+          const appRes = await fetch("/api/job-applications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jobId,
-              cvScore: cvScoreForApplication,
-              interviewScore: score,
-              interviewReport: report,
-            }),
+            body: JSON.stringify({ jobId }),
           });
+          applicationSaved = appRes.ok;
         }
-        const q = new URLSearchParams({
-          score: String(score),
-          strengths: JSON.stringify(report.strengths),
-          improvements: JSON.stringify(report.improvements),
-          category: jobCategory,
-          lang: locale,
-        });
-        if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
+        const q = new URLSearchParams({ lang: locale });
+        if (applicationSaved) q.set("applicationSaved", "1");
         router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
         return;
       }
@@ -278,7 +286,7 @@ export default function MockInterviewSessionPage() {
 
       tts.play(visibleText, locale);
     },
-    [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName, locale, copy.noResponseCue]
+    [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName, locale, copy.noResponseCue, ui.interviewProviderError]
   );
 
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -405,7 +413,20 @@ export default function MockInterviewSessionPage() {
     }, RESPONSE_LIMIT_MS);
 
     tts.play(content, locale);
-  }, [jobCategory, jobId, sessionId, tts.play, userName, sendToAI, locale, copy.preparing, copy.readyPhrase, copy.fallbackOpening, copy.noResponseCue]);
+  }, [
+    jobCategory,
+    jobId,
+    sessionId,
+    tts.play,
+    userName,
+    sendToAI,
+    locale,
+    copy.preparing,
+    copy.readyPhrase,
+    copy.fallbackOpening,
+    copy.noResponseCue,
+    ui.interviewProviderError,
+  ]);
 
   const toggleListen = () => {
     if (!recognitionRef.current) return;
@@ -472,41 +493,34 @@ export default function MockInterviewSessionPage() {
       const transcriptText = transcript
         .map((m) => `${m.role}: ${m.content}`)
         .join("\n");
+      const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
       const resultRes = await fetch("/api/mock-interview/result", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           transcript: transcriptText || "No conversation recorded.",
           jobCategory,
           interviewLanguage: locale,
+          durationMs,
           ...(jobId && { jobId }),
         }),
       });
-      const result = await resultRes.json();
-      const score = result.score ?? 0;
-      const strengths = result.strengths ?? [];
-      const improvements = result.improvements ?? [];
-      const report = { strengths, improvements };
+      if (!resultRes.ok) {
+        router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
+        return;
+      }
+      let applicationSaved = false;
       if (jobId) {
-        await fetch("/api/job-applications", {
+        const appRes = await fetch("/api/job-applications", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jobId,
-            cvScore: cvScoreForApplication,
-            interviewScore: score,
-            interviewReport: report,
-          }),
+          body: JSON.stringify({ jobId }),
         });
+        applicationSaved = appRes.ok;
       }
-      const q = new URLSearchParams({
-        score: String(score),
-        strengths: JSON.stringify(strengths),
-        improvements: JSON.stringify(improvements),
-        category: jobCategory,
-        lang: locale,
-      });
-      if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
+      const q = new URLSearchParams({ lang: locale });
+      if (applicationSaved) q.set("applicationSaved", "1");
       router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
     } catch (e) {
       captureException(e, {
@@ -514,11 +528,9 @@ export default function MockInterviewSessionPage() {
         session_id: sessionId,
         ...(jobId ? { job_id: jobId } : {}),
       });
-      router.push(
-        `/mock-interview/${sessionId}/result?score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify([copy.resultErrorImprovement]))}&lang=${locale}`
-      );
+      router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
     }
-  }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, locale, copy.resultErrorImprovement]);
+  }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, locale]);
 
   const handleEndInterview = useCallback(async () => {
     if (endingRef.current) return;
@@ -575,6 +587,9 @@ export default function MockInterviewSessionPage() {
               }}
             />
           </div>
+          {providerError && (
+            <p className="mt-4 text-center text-sm text-amber-800 dark:text-amber-200">{providerError}</p>
+          )}
           {micError && (
             <p className="mt-4 text-center text-sm text-red-600 dark:text-red-400">{micError}</p>
           )}
@@ -748,6 +763,11 @@ export default function MockInterviewSessionPage() {
                   ? ui.statusListening
                   : ui.statusClickToRespond}
           </p>
+          {providerError && step === "interview" && (
+            <p className="mt-2 max-w-md text-center text-xs text-amber-800 dark:text-amber-200 sm:text-sm">
+              {providerError}
+            </p>
+          )}
           {tts.error && (
             <p className="mt-1 max-w-md text-center text-xs text-red-600 dark:text-red-400 sm:text-sm">
               {ui.voiceErrorPrefix}: {tts.error}

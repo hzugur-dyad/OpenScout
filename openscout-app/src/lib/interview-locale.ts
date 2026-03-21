@@ -1,3 +1,5 @@
+import { INTERVIEW_CONTRACT_USER_LINES } from "@/lib/mock-interview/interview-contract-messages";
+
 export type InterviewLocale = "en" | "tr";
 
 export function parseInterviewLocale(raw: string | null | undefined): InterviewLocale {
@@ -27,9 +29,8 @@ export const interviewCopy = {
   en: {
     preparing: "Nova is preparing your interview...",
     readyPhrase: "Hello, I'm ready for the interview.",
-    noResponseCue: "[Candidate did not respond within the time limit.]",
-    notHeardCue:
-      "[User was silent or speech was not recognized. Ask them to repeat briefly.]",
+    noResponseCue: INTERVIEW_CONTRACT_USER_LINES.en.timeout,
+    notHeardCue: INTERVIEW_CONTRACT_USER_LINES.en.silenceOrUnrecognized,
     fallbackOpening: "Hi — tell me a bit about yourself.",
     micDenied: "Microphone access denied. Please allow microphone and try again.",
     farewell: "That's a wrap — I'll get your results ready. Take care!",
@@ -38,9 +39,8 @@ export const interviewCopy = {
   tr: {
     preparing: "Nova mülakatınızı hazırlıyor...",
     readyPhrase: "Merhaba, mülakata hazırım.",
-    noResponseCue: "[Aday belirlenen süre içinde yanıt vermedi.]",
-    notHeardCue:
-      "[Kullanıcı sessiz kaldı veya konuşma algılanamadı. Kısaca tekrar etmesini iste.]",
+    noResponseCue: INTERVIEW_CONTRACT_USER_LINES.tr.timeout,
+    notHeardCue: INTERVIEW_CONTRACT_USER_LINES.tr.silenceOrUnrecognized,
     fallbackOpening: "Merhaba — biraz kendinizden bahseder misiniz?",
     micDenied: "Mikrofon erişimi reddedildi. Lütfen mikrofona izin verip tekrar deneyin.",
     farewell: "Mülakatımız bitti — sonuçlarınızı hazırlıyorum. Kendinize iyi bakın!",
@@ -84,6 +84,7 @@ export const interviewUi = {
     statusListening: "Listening...",
     statusClickToRespond: "Click to respond",
     voiceErrorPrefix: "Voice error",
+    interviewProviderError: "Nova could not respond (service busy or offline). Check your connection and try again.",
     resultTitle: "Interview Result",
     resultTooShortLead: "The interview was too short to analyze.",
     resultReadyLead: "Your AI evaluation is ready.",
@@ -114,6 +115,24 @@ export const interviewUi = {
     signInCta: "Sign in",
     resultNotFoundBody:
       "Interview results not found. Please complete the interview again.",
+    resultEvalFailedBody:
+      "We could not score this interview. Please try again from the mock interview page.",
+    profileIncompleteTitle: "Complete your profile",
+    profileIncompleteBody:
+      "Add your name, email, and location before you can start a mock interview or apply to jobs.",
+    noCvMaterialTitle: "CV required",
+    noCvMaterialBody:
+      "Upload a CV from your profile, or run CV analysis once with a file. Either option puts your résumé on file.",
+    cvAnalysisNudgeTitle: "Run CV analysis first",
+    cvAnalysisNudgeBody:
+      "Your CV is uploaded. Run a quick analysis before starting the interview so Nova can tailor questions to your background.",
+    nextAfterInterviewLine: "Next: Apply to jobs or improve your score.",
+    applyToJobsCta: "Apply to jobs",
+    takeAnotherInterviewCta: "Take another interview",
+    applicationSubmittedLead: "Application submitted.",
+    applicationSubmittedNext: "Next: Track your applications or explore another role.",
+    myApplicationsCta: "My applications",
+    browseMoreJobsCta: "Browse jobs",
   },
   tr: {
     mockInterviewTitle: "Yapay Zeka Deneme Mülakatı",
@@ -150,6 +169,8 @@ export const interviewUi = {
     statusListening: "Dinleniyor...",
     statusClickToRespond: "Yanıtlamak için dokunun",
     voiceErrorPrefix: "Ses hatası",
+    interviewProviderError:
+      "Nova şu anda yanıt veremedi (servis meşgul veya çevrimdışı). Bağlantınızı kontrol edip tekrar deneyin.",
     resultTitle: "Mülakat sonucu",
     resultTooShortLead: "Mülakat analiz için çok kısaydı.",
     resultReadyLead: "Yapay zeka değerlendirmeniz hazır.",
@@ -180,5 +201,23 @@ export const interviewUi = {
     signInCta: "Giriş yap",
     resultNotFoundBody:
       "Mülakat sonucu bulunamadı. Lütfen mülakatı yeniden tamamlayın.",
+    resultEvalFailedBody:
+      "Bu mülakat puanlanamadı. Lütfen deneme mülakatı sayfasından tekrar deneyin.",
+    profileIncompleteTitle: "Profilinizi tamamlayın",
+    profileIncompleteBody:
+      "Deneme mülakatına veya başvuruya geçmeden önce adınızı, e-postanızı ve konumunuzu ekleyin.",
+    noCvMaterialTitle: "Özgeçmiş gerekli",
+    noCvMaterialBody:
+      "Profilinizden bir özgeçmiş yükleyin veya bir dosya ile özgeçmiş analizi çalıştırın. İkisi de özgeçmişinizi sisteme ekler.",
+    cvAnalysisNudgeTitle: "Önce özgeçmiş analizi yapın",
+    cvAnalysisNudgeBody:
+      "Özgeçmişiniz yüklü. Mülakata başlamadan önce kısa bir analiz çalıştırın; böylece Nova soruları geçmişinize göre uyarlayabilir.",
+    nextAfterInterviewLine: "Sırada: İşlere başvurun veya puanınızı yükseltin.",
+    applyToJobsCta: "İşlere başvur",
+    takeAnotherInterviewCta: "Başka mülakat yap",
+    applicationSubmittedLead: "Başvurunuz gönderildi.",
+    applicationSubmittedNext: "Sırada: Başvurularınızı takip edin veya başka bir rol deneyin.",
+    myApplicationsCta: "Başvurularım",
+    browseMoreJobsCta: "İlanlara göz at",
   },
 } as const;

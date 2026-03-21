@@ -8,6 +8,8 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { parseJsonBody } from "@/lib/api-validation";
 import { jobApplicationSchema } from "@/types/schemas";
 import { captureException } from "@/lib/monitoring";
+import { computeAiRecommendationReason } from "@/lib/ai-recommendation-reason";
+import { notifyEmployerNewApplication } from "@/lib/employer-notifications";
 
 export async function POST(request: NextRequest) {
   logInfo("job-applications request received");
@@ -22,9 +24,14 @@ export async function POST(request: NextRequest) {
     if (!guard.canApplyOrInterview) {
       const reasons: string[] = [];
       if (!guard.profileComplete) reasons.push("Complete required profile fields (name, email, location)");
-      if (!guard.hasCv) reasons.push("Complete at least one CV analysis");
+      if (guard.profileComplete && !guard.hasCv) {
+        reasons.push("Upload a CV in your profile or complete a CV analysis so we have your résumé on file");
+      }
       return NextResponse.json(
-        { error: "You must complete your profile and upload a CV (run CV analysis) before applying.", details: reasons },
+        {
+          error: "Complete your profile and add a CV (upload or CV analysis) before applying.",
+          details: reasons,
+        },
         { status: 403 }
       );
     }
@@ -165,6 +172,8 @@ export async function POST(request: NextRequest) {
         technical_score?: number;
         communication_score?: number;
         problem_solving_score?: number;
+        justification?: string;
+        evaluation_meta?: { used_fallback?: boolean };
       };
     }).report ?? {};
     const interviewReport: {
@@ -173,6 +182,8 @@ export async function POST(request: NextRequest) {
       technical_score?: number;
       communication_score?: number;
       problem_solving_score?: number;
+      justification?: string;
+      evaluation_meta?: { used_fallback?: boolean };
     } = {
       strengths: Array.isArray(rawReport.strengths) ? rawReport.strengths.filter((s): s is string => typeof s === "string") : [],
       improvements: Array.isArray(rawReport.improvements) ? rawReport.improvements.filter((s): s is string => typeof s === "string") : [],
@@ -180,6 +191,20 @@ export async function POST(request: NextRequest) {
     if (typeof rawReport.technical_score === "number") interviewReport.technical_score = rawReport.technical_score;
     if (typeof rawReport.communication_score === "number") interviewReport.communication_score = rawReport.communication_score;
     if (typeof rawReport.problem_solving_score === "number") interviewReport.problem_solving_score = rawReport.problem_solving_score;
+    if (typeof rawReport.justification === "string" && rawReport.justification.trim())
+      interviewReport.justification = rawReport.justification.trim();
+    if (rawReport.evaluation_meta && typeof rawReport.evaluation_meta === "object")
+      interviewReport.evaluation_meta = rawReport.evaluation_meta as { used_fallback?: boolean };
+
+    const minCv = (job as { min_cv_score: number | null }).min_cv_score ?? 0;
+    const ai_recommendation_reason = computeAiRecommendationReason({
+      cvScore,
+      interviewScore,
+      technical: interviewReport.technical_score ?? null,
+      communication: interviewReport.communication_score ?? null,
+      problemSolving: interviewReport.problem_solving_score ?? null,
+      minCvScore: minCv,
+    });
 
     const { error } = await supabase.from("job_applications").upsert(
       {
@@ -188,6 +213,7 @@ export async function POST(request: NextRequest) {
         cv_score: cvScore,
         interview_score: interviewScore,
         interview_report: interviewReport,
+        ai_recommendation_reason,
         status: "completed",
         updated_at: new Date().toISOString(),
       },
@@ -221,6 +247,11 @@ export async function POST(request: NextRequest) {
         await captureServer(employerUserId, ANALYTICS_EVENTS.employer_received_application, {
           job_id: jobId,
           applicant_user_id: user.id,
+        });
+        notifyEmployerNewApplication({
+          employerUserId,
+          jobId,
+          applicantUserId: user.id,
         });
       }
     }

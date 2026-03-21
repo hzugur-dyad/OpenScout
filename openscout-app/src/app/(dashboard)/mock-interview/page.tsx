@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { INTERVIEW_LOCALE_LABEL, interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { getJobTitleBySlug } from "@/lib/seo/job-titles";
+import { computeCvReadiness, type CvReadiness } from "@/lib/cv-readiness";
 
 const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
   en: {
@@ -46,12 +47,7 @@ function MockInterviewContent() {
   useEffect(() => {
     setInterviewLang(getDefaultInterviewLocale());
   }, []);
-  const [guard, setGuard] = useState<{
-    profileComplete: boolean;
-    hasCv: boolean;
-    canApplyOrInterview: boolean;
-    missingProfileFieldKeys: string[];
-  } | null>(null);
+  const [readiness, setReadiness] = useState<CvReadiness | null>(null);
   const [guardLoading, setGuardLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
@@ -60,25 +56,25 @@ function MockInterviewContent() {
     async function loadGuard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        setReadiness(null);
         setGuardLoading(false);
         return;
       }
-      const [profileRes, cvRes] = await Promise.all([
+      const [profileRes, privateRes, cvRes] = await Promise.all([
         supabase.from("profiles").select("first_name, last_name, email, location").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profile_private").select("cv_file_url, cv_raw_text").eq("user_id", user.id).maybeSingle(),
         supabase.from("cv_analyses").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
       ]);
       const profile = profileRes.data as { first_name?: string; last_name?: string; email?: string; location?: string } | null;
-      const required = ["first_name", "last_name", "email", "location"] as const;
-      const missingProfileFieldKeys: string[] = [];
-      for (const field of required) {
-        const v = profile?.[field];
-        if (v === undefined || v === null || String(v).trim() === "") {
-          missingProfileFieldKeys.push(field);
-        }
-      }
-      const profileComplete = missingProfileFieldKeys.length === 0;
-      const hasCv = cvRes.data != null;
-      setGuard({ profileComplete, hasCv, canApplyOrInterview: profileComplete && hasCv, missingProfileFieldKeys });
+      const pv = privateRes.data as { cv_file_url?: string | null; cv_raw_text?: string | null } | null;
+      setReadiness(
+        computeCvReadiness({
+          profile,
+          cvFileUrl: pv?.cv_file_url,
+          cvRawText: pv?.cv_raw_text,
+          hasCvAnalysisRow: cvRes.data != null,
+        })
+      );
       setGuardLoading(false);
     }
     loadGuard();
@@ -96,7 +92,11 @@ function MockInterviewContent() {
     );
   }
 
-  const showGate = guard && !guard.canApplyOrInterview;
+  const showProfileGate = !!(readiness && !readiness.profileComplete);
+  const showNoCvGate = !!(readiness && readiness.profileComplete && !readiness.canAccessFlow);
+  const showAnalysisNudge = !!(readiness && readiness.needsCvAnalysisBeforeInterview);
+  const showMainFlow =
+    !guardLoading && (!readiness || (readiness.canAccessFlow && !readiness.needsCvAnalysisBeforeInterview));
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -111,19 +111,17 @@ function MockInterviewContent() {
         <div className="mt-8">
           <CVAnalysisPageSkeleton />
         </div>
-      ) : showGate ? (
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6">
-          <div className="flex items-start gap-3 text-amber-800">
+      ) : showProfileGate && readiness ? (
+        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
             <AlertCircle className="h-6 w-6 shrink-0" />
             <div>
-              <h3 className="font-semibold">{ui.profileRequiredTitle}</h3>
-              <p className="mt-1 text-sm">
-                {ui.profileRequiredBody}
-              </p>
-              {guard.missingProfileFieldKeys.length > 0 && (
-                <p className="mt-2 text-sm">
+              <h3 className="font-semibold">{ui.profileIncompleteTitle}</h3>
+              <p className="mt-1 text-sm dark:text-amber-200/90">{ui.profileIncompleteBody}</p>
+              {readiness.missingProfileFieldKeys.length > 0 && (
+                <p className="mt-2 text-sm dark:text-amber-200/90">
                   {ui.missingPrefix}:{" "}
-                  {guard.missingProfileFieldKeys
+                  {readiness.missingProfileFieldKeys
                     .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
                     .join(", ")}
                   .
@@ -140,7 +138,43 @@ function MockInterviewContent() {
             </Link>
           </div>
         </div>
-      ) : (
+      ) : showNoCvGate && readiness ? (
+        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
+          <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
+            <AlertCircle className="h-6 w-6 shrink-0" />
+            <div>
+              <h3 className="font-semibold">{ui.noCvMaterialTitle}</h3>
+              <p className="mt-1 text-sm dark:text-amber-200/90">{ui.noCvMaterialBody}</p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <Link href="/onboarding">
+              <Button variant="primary">{ui.completeProfile}</Button>
+            </Link>
+            <Link href="/cv-analysis">
+              <Button variant="outline">{ui.runCvAnalysis}</Button>
+            </Link>
+          </div>
+        </div>
+      ) : showAnalysisNudge && readiness ? (
+        <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+          <div className="flex items-start gap-3 text-gray-800 dark:text-zinc-200">
+            <AlertCircle className="h-6 w-6 shrink-0 text-[var(--primary)]" />
+            <div>
+              <h3 className="font-semibold">{ui.cvAnalysisNudgeTitle}</h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{ui.cvAnalysisNudgeBody}</p>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-4">
+            <Link href="/cv-analysis">
+              <Button variant="primary">{ui.runCvAnalysis}</Button>
+            </Link>
+            <Link href="/onboarding">
+              <Button variant="outline">{ui.completeProfile}</Button>
+            </Link>
+          </div>
+        </div>
+      ) : showMainFlow ? (
         <div className="mt-8 space-y-6">
           <div>
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.interviewLanguage}</label>
@@ -184,7 +218,7 @@ function MockInterviewContent() {
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

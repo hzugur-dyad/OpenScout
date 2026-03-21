@@ -2,8 +2,19 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/Button";
 import { EmployerApplicationStatusBadge } from "@/components/employer/EmployerApplicationStatusBadge";
+
+const PIPELINE_STATUSES = [
+  { value: "applied", label: "Applied" },
+  { value: "screening", label: "Screening" },
+  { value: "shortlisted", label: "Shortlisted" },
+  { value: "interviewing", label: "Interviewing" },
+  { value: "offer", label: "Offer" },
+  { value: "hired", label: "Hired" },
+  { value: "rejected", label: "Rejected" },
+] as const;
+
+type PipelineStatus = (typeof PIPELINE_STATUSES)[number]["value"];
 
 type Props = {
   applicationId: string;
@@ -13,9 +24,11 @@ type Props = {
 export function EmployerApplicationStatusActions({ applicationId, currentStatus }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const st = currentStatus || "applied";
+  const [error, setError] = useState<string | null>(null);
+  const st = (currentStatus || "applied") as PipelineStatus;
 
-  async function patchStatus(status: "shortlisted" | "rejected" | "applied") {
+  async function patchStatus(status: PipelineStatus) {
+    setError(null);
     setPending(true);
     try {
       const res = await fetch(`/api/employer/applications/${applicationId}`, {
@@ -25,7 +38,7 @@ export function EmployerApplicationStatusActions({ applicationId, currentStatus 
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(typeof j.error === "string" ? j.error : "Update failed");
+        setError(typeof j.error === "string" ? j.error : "Update failed");
         return;
       }
       router.refresh();
@@ -40,35 +53,24 @@ export function EmployerApplicationStatusActions({ applicationId, currentStatus 
         <span className="text-sm text-gray-500 dark:text-zinc-500">Pipeline</span>
         <EmployerApplicationStatusBadge status={st} />
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending || st === "shortlisted"}
-          onClick={() => patchStatus("shortlisted")}
-        >
-          Shortlist
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={pending || st === "rejected"}
-          onClick={() => patchStatus("rejected")}
-        >
-          Reject
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={pending || st === "applied"}
-          onClick={() => patchStatus("applied")}
-        >
-          Mark applied
-        </Button>
-      </div>
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      )}
+      <select
+        className="w-full max-w-xs rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-900 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100"
+        disabled={pending}
+        value={st}
+        onChange={(e) => void patchStatus(e.target.value as PipelineStatus)}
+        aria-label="Update pipeline status"
+      >
+        {PIPELINE_STATUSES.map((s) => (
+          <option key={s.value} value={s.value}>
+            {s.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

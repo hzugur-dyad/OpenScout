@@ -5,21 +5,19 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmployerCheckoutButton } from "@/components/employer/EmployerCheckoutButton";
 import { getTrialStatus } from "@/lib/employer-trial";
+import { getEmployerPrimaryCompany } from "@/lib/employer-company";
 
 export default async function EmployerPricingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/employer/login");
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id,trial_started_at,stripe_subscription_status,plan")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const company = await getEmployerPrimaryCompany(supabase, user.id);
+  if (!company) redirect("/employer");
 
-  const trial = getTrialStatus((company as { trial_started_at?: string } | null)?.trial_started_at ?? null);
-  const isSubscribed = (company as { stripe_subscription_status?: string } | null)?.stripe_subscription_status === "active";
-  const currentPlan = (company as { plan?: string } | null)?.plan ?? "trial";
+  const trial = getTrialStatus(company.trial_started_at ?? null);
+  const isSubscribed = company.stripe_subscription_status === "active";
+  const currentPlan = company.plan ?? "trial";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -119,7 +117,7 @@ export default async function EmployerPricingPage() {
             {currentPlan === "growth" && isSubscribed ? (
               <Button variant="outline" className="w-full" disabled>Current plan</Button>
             ) : (
-              <EmployerCheckoutButton plan="growth" companyId={company?.id} />
+              <EmployerCheckoutButton plan="growth" companyId={company.id} />
             )}
           </div>
         </div>
@@ -156,7 +154,7 @@ export default async function EmployerPricingPage() {
             {currentPlan === "scale" && isSubscribed ? (
               <Button variant="outline" className="w-full" disabled>Current plan</Button>
             ) : (
-              <EmployerCheckoutButton plan="scale" companyId={company?.id} />
+              <EmployerCheckoutButton plan="scale" companyId={company.id} />
             )}
           </div>
         </div>

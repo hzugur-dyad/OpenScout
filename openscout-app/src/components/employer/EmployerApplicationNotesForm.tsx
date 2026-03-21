@@ -13,12 +13,14 @@ export function EmployerApplicationNotesForm({ applicationId, initialNotes }: Pr
   const router = useRouter();
   const [notes, setNotes] = useState(initialNotes ?? "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setNotes(initialNotes ?? "");
   }, [initialNotes]);
 
   async function save() {
+    setError(null);
     setSaving(true);
     try {
       const res = await fetch(`/api/employer/applications/${applicationId}`, {
@@ -28,7 +30,7 @@ export function EmployerApplicationNotesForm({ applicationId, initialNotes }: Pr
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        alert(typeof j.error === "string" ? j.error : "Could not save notes");
+        setError(typeof j.error === "string" ? j.error : "Could not save notes");
         return;
       }
       router.refresh();
@@ -39,6 +41,11 @@ export function EmployerApplicationNotesForm({ applicationId, initialNotes }: Pr
 
   return (
     <div className="space-y-2">
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
+      )}
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}

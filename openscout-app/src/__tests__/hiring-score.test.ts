@@ -14,11 +14,12 @@ describe("hiring-score", () => {
       communication_score: 70,
       problem_solving_score: 60,
     };
+    const wSum = 0.35 + 0.25 + 0.15 + 0.1;
     const blended =
-      80 * (0.4 / 1) +
-      90 * (0.3 / 1) +
-      70 * (0.2 / 1) +
-      60 * (0.1 / 1);
+      80 * (0.35 / wSum) +
+      90 * (0.25 / wSum) +
+      70 * (0.15 / wSum) +
+      60 * (0.1 / wSum);
     expect(computeHiringScore(inputs)).toBe(Math.round(blended));
   });
 
@@ -29,8 +30,8 @@ describe("hiring-score", () => {
       communication_score: 50,
       problem_solving_score: null,
     };
-    const wSum = 0.4 + 0.2;
-    const expected = Math.round((100 * (0.4 / wSum) + 50 * (0.2 / wSum)) * 1) / 1;
+    const wSum = 0.35 + 0.15;
+    const expected = Math.round(100 * (0.35 / wSum) + 50 * (0.15 / wSum));
     expect(computeHiringScore(inputs)).toBe(expected);
   });
 
@@ -46,6 +47,7 @@ describe("hiring-score", () => {
   });
 
   it("clamps inputs outside 0–100 before blending", () => {
+    const wSum = 0.35 + 0.25;
     expect(
       computeHiringScore({
         overall_score: 150,
@@ -53,9 +55,7 @@ describe("hiring-score", () => {
         communication_score: null,
         problem_solving_score: null,
       })
-    ).toBe(
-      Math.round(100 * (0.4 / 0.7) + 0 * (0.3 / 0.7))
-    );
+    ).toBe(Math.round(100 * (0.35 / wSum) + 0 * (0.25 / wSum)));
   });
 
   it("maps hiring fit tags by score thresholds", () => {
@@ -80,6 +80,7 @@ describe("hiring-score", () => {
       technical_score: 80,
       communication_score: 65,
       problem_solving_score: 70,
+      cv_score: null,
     });
   });
 });

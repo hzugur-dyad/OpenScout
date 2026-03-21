@@ -4,17 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { EmployerJobForm } from "@/components/employer/EmployerJobForm";
 import { Button } from "@/components/ui/Button";
 import { getTrialStatus } from "@/lib/employer-trial";
+import { getEmployerPrimaryCompany } from "@/lib/employer-company";
 
 export default async function EmployerNewListingPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/employer/login");
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id, stripe_subscription_status, trial_started_at")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const company = await getEmployerPrimaryCompany(supabase, user.id);
 
   if (!company) redirect("/employer");
 

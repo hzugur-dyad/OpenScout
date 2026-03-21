@@ -17,11 +17,25 @@ import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output"
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 import { captureException, captureMessage } from "@/lib/monitoring";
 
+const SESSION_UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function buildEmployerEvalRubricBlock(jobRow: { ai_interview_config?: unknown } | null): string {
+  const config = jobRow?.ai_interview_config as { custom_questions?: unknown } | undefined;
+  const qs = Array.isArray(config?.custom_questions)
+    ? config.custom_questions.filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+    : [];
+  if (qs.length === 0) return "";
+  return qs.map((q, i) => `${i + 1}. ${q.trim()}`).join("\n");
+}
+
 export async function POST(request: NextRequest) {
   logInfo("mock-interview result request received");
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -33,7 +47,10 @@ export async function POST(request: NextRequest) {
     const guard = await checkProfileAndCv(supabase, user.id);
     if (!guard.canApplyOrInterview) {
       return NextResponse.json(
-        { error: "Complete your profile and run a CV analysis before submitting interview results." },
+        {
+          error:
+            "Complete your profile and add a CV (upload or CV analysis) before submitting interview results.",
+        },
         { status: 403 }
       );
     }
@@ -51,24 +68,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { transcript, jobCategory, jobId, interviewLanguage } = (body ?? {}) as {
+    const b = body as {
       transcript?: unknown;
       jobCategory?: unknown;
       jobId?: unknown;
       interviewLanguage?: unknown;
+      sessionId?: unknown;
+      durationMs?: unknown;
     };
-    const locale: InterviewLocale = parseInterviewLocale(
-      typeof interviewLanguage === "string" ? interviewLanguage : undefined
-    );
-    if (!transcript) {
-      logWarn("mock-interview result validation failed", { reason: "transcript required" });
-      return NextResponse.json(
-        { error: "transcript required" },
-        { status: 400 }
-      );
+
+    const sessionIdRaw = typeof b.sessionId === "string" ? b.sessionId.trim() : "";
+    if (!SESSION_UUID_RE.test(sessionIdRaw)) {
+      logWarn("mock-interview result validation failed", { reason: "sessionId" });
+      return NextResponse.json({ error: "sessionId must be a valid interview session UUID" }, { status: 400 });
     }
 
-    const transcriptStr = typeof transcript === "string" ? transcript : "";
+    const transcriptStr = typeof b.transcript === "string" ? b.transcript : "";
+    if (!transcriptStr.trim()) {
+      logWarn("mock-interview result validation failed", { reason: "transcript required" });
+      return NextResponse.json({ error: "transcript required" }, { status: 400 });
+    }
+
     if (transcriptStr.trim().length < REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS) {
       logWarn("mock-interview result validation failed", { reason: "transcript too short" });
       return NextResponse.json(
@@ -77,85 +97,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const groq = getGroq();
-    const evalSystem = buildInterviewEvaluationSystemPrompt(
-      typeof jobCategory === "string" ? jobCategory : "the role",
-      locale
+    const jobCategory = typeof b.jobCategory === "string" ? b.jobCategory.trim() : "";
+    if (!jobCategory) {
+      logWarn("mock-interview result validation failed", { reason: "jobCategory required" });
+      return NextResponse.json({ error: "jobCategory required" }, { status: 400 });
+    }
+
+    const jobId = typeof b.jobId === "string" && b.jobId.trim() ? b.jobId.trim() : undefined;
+    const locale: InterviewLocale = parseInterviewLocale(
+      typeof b.interviewLanguage === "string" ? b.interviewLanguage : undefined
     );
 
-    let completion;
-    try {
-      completion = await groq.chat.completions.create({
-        model: GROQ_MOCK_INTERVIEW_MODEL,
-        temperature: 0.2,
-        response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
-        messages: [
-          {
-            role: "system",
-            content: evalSystem,
-          },
-          {
-            role: "user",
-            content: transcriptStr,
-          },
-        ],
-      });
-    } catch (groqError) {
-      logError("mock-interview result Groq request failed", groqError);
-      captureException(groqError, {
-        route: "/api/mock-interview/result",
-        user_id: user.id,
-        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
-        aiInterview: { stage: "evaluation", reason: "groq_error" },
-      });
-      return NextResponse.json(
-        { error: groqError instanceof Error ? groqError.message : "Evaluation error" },
-        { status: 500 }
-      );
+    let durationMs: number | null = null;
+    if (typeof b.durationMs === "number" && !Number.isNaN(b.durationMs) && b.durationMs >= 0) {
+      durationMs = Math.min(Math.round(b.durationMs), 6 * 60 * 60 * 1000);
     }
-
-    const text = completion.choices[0]?.message?.content ?? "";
-    if (!text.trim()) {
-      logWarn("mock-interview result Groq returned empty content — using fallback evaluation");
-      captureMessage("Mock interview result: empty model output, fallback evaluation", {
-        route: "/api/mock-interview/result",
-        user_id: user.id,
-        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
-        aiInterview: { stage: "evaluation", reason: "empty_model" },
-      });
-    }
-
-    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "");
-    if (normalized.usedFallback) {
-      logWarn("mock-interview result: parser used fallback scores", { jobCategory });
-      captureMessage("Mock interview result: fallback scoring used", {
-        route: "/api/mock-interview/result",
-        user_id: user.id,
-        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
-        aiInterview: { stage: "evaluation", reason: "fallback_scoring_used" },
-      });
-    }
-
-    const overallScore = normalized.overallScore;
-    const technicalScore = normalized.technicalScore;
-    const communicationScore = normalized.communicationScore;
-    const problemSolvingScore = normalized.problemSolvingScore;
-    const strengths = normalized.strengths;
-    const improvements = normalized.improvements;
-    const justification = normalized.justification;
-
-    const report: {
-      strengths: string[];
-      improvements: string[];
-      justification?: string;
-      technical_score?: number;
-      communication_score?: number;
-      problem_solving_score?: number;
-    } = { strengths, improvements };
-    if (justification) report.justification = justification;
-    if (technicalScore !== null) report.technical_score = technicalScore;
-    if (communicationScore !== null) report.communication_score = communicationScore;
-    if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
 
     const { data: profile } = await supabase
       .from("profiles")
@@ -178,31 +134,134 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!jobCategory) {
-      logWarn("mock-interview result validation failed", { reason: "jobCategory required" });
-      return NextResponse.json({ error: "jobCategory required" }, { status: 400 });
+    let rubricBlock = "";
+    if (jobId) {
+      const { data: jobRow } = await supabase
+        .from("job_listings")
+        .select("ai_interview_config")
+        .eq("id", jobId)
+        .maybeSingle();
+      rubricBlock = buildEmployerEvalRubricBlock(jobRow as { ai_interview_config?: unknown } | null);
     }
 
-    const { error: insertError } = await supabase.from("mock_interviews").insert({
+    const evalSystem = buildInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
+
+    const groq = getGroq();
+    let completion;
+    try {
+      completion = await groq.chat.completions.create({
+        model: GROQ_MOCK_INTERVIEW_MODEL,
+        temperature: 0.2,
+        response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
+        messages: [
+          {
+            role: "system",
+            content: evalSystem,
+          },
+          {
+            role: "user",
+            content: transcriptStr,
+          },
+        ],
+      });
+    } catch (groqError) {
+      logError("mock-interview result Groq request failed", groqError);
+      captureException(groqError, {
+        route: "/api/mock-interview/result",
+        user_id: user.id,
+        ...(jobId ? { job_id: jobId } : {}),
+        aiInterview: { stage: "evaluation", reason: "groq_error" },
+      });
+      return NextResponse.json(
+        {
+          error: groqError instanceof Error ? groqError.message : "Evaluation error",
+          retryable: true,
+          code: "evaluation_provider_error",
+        },
+        { status: 503 }
+      );
+    }
+
+    const text = completion.choices[0]?.message?.content ?? "";
+    if (!text.trim()) {
+      logWarn("mock-interview result Groq returned empty content — using fallback evaluation");
+      captureMessage("Mock interview result: empty model output, fallback evaluation", {
+        route: "/api/mock-interview/result",
+        user_id: user.id,
+        ...(jobId ? { job_id: jobId } : {}),
+        aiInterview: { stage: "evaluation", reason: "empty_model" },
+      });
+    }
+
+    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "");
+    if (normalized.usedFallback) {
+      logWarn("mock-interview result: parser used fallback scores", { jobCategory });
+      captureMessage("Mock interview result: fallback scoring used", {
+        route: "/api/mock-interview/result",
+        user_id: user.id,
+        ...(jobId ? { job_id: jobId } : {}),
+        aiInterview: { stage: "evaluation", reason: "fallback_scoring_used" },
+      });
+    }
+
+    const overallScore = normalized.overallScore;
+    const technicalScore = normalized.technicalScore;
+    const communicationScore = normalized.communicationScore;
+    const problemSolvingScore = normalized.problemSolvingScore;
+    const strengths = normalized.strengths;
+    const improvements = normalized.improvements;
+    const justification = normalized.justification;
+
+    const report: {
+      strengths: string[];
+      improvements: string[];
+      justification?: string;
+      technical_score?: number;
+      communication_score?: number;
+      problem_solving_score?: number;
+      evaluation_meta: {
+        used_fallback: boolean;
+        source: string;
+        pipeline_version: string;
+      };
+    } = {
+      strengths,
+      improvements,
+      evaluation_meta: {
+        used_fallback: normalized.usedFallback,
+        source: "post_interview_evaluation",
+        pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
+      },
+    };
+    if (justification) report.justification = justification;
+    if (technicalScore !== null) report.technical_score = technicalScore;
+    if (communicationScore !== null) report.communication_score = communicationScore;
+    if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
+
+    const upsertRow: Record<string, unknown> = {
+      id: sessionIdRaw,
       user_id: user.id,
       job_category: jobCategory,
-      ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
       score: overallScore,
       report,
       transcript: transcriptStr,
       interview_language: locale,
       model_version: GROQ_MOCK_INTERVIEW_MODEL,
       prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
-    });
+    };
+    if (jobId) upsertRow.job_id = jobId;
+    if (durationMs !== null) upsertRow.duration_ms = durationMs;
 
-    if (insertError) {
-      logError("mock-interview result insert failed", insertError);
-      captureException(insertError, {
+    const { error: upsertError } = await supabase.from("mock_interviews").upsert(upsertRow, { onConflict: "id" });
+
+    if (upsertError) {
+      logError("mock-interview result upsert failed", upsertError);
+      captureException(upsertError, {
         route: "/api/mock-interview/result",
         user_id: user.id,
-        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+        ...(jobId ? { job_id: jobId } : {}),
       });
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     if (viaBonus) {
@@ -223,14 +282,16 @@ export async function POST(request: NextRequest) {
     await captureServer(user.id, ANALYTICS_EVENTS.interview_completed, {
       job_category: jobCategory,
       score: overallScore,
-      ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+      ...(jobId ? { job_id: jobId } : {}),
     });
 
     const responsePayload = {
+      interview_id: sessionIdRaw,
       score: overallScore,
       overall_score: overallScore,
       strengths,
       improvements,
+      evaluation_used_fallback: normalized.usedFallback,
       ...(justification && { justification }),
       ...(technicalScore !== null && { technical_score: technicalScore }),
       ...(communicationScore !== null && { communication_score: communicationScore }),

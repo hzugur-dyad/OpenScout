@@ -126,6 +126,7 @@ export type MockInterviewResultSupabaseOptions = {
 
 export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewResultSupabaseOptions) {
   const insertMock = opts.insertMock ?? vi.fn().mockResolvedValue({ error: null });
+  const upsertMock = insertMock;
 
   const guardProfile =
     opts.profileGuard === "blocked"
@@ -172,11 +173,18 @@ export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewRes
       return { error: null };
     };
 
+    chain.upsert = async (payload: unknown) => {
+      if (table === "mock_interviews") {
+        (upsertMock as (p: unknown) => void)(payload);
+      }
+      return { error: null };
+    };
+
     return chain;
   };
 
   return {
-    insertMock,
+    insertMock: upsertMock,
     client: {
       auth: {
         getUser: async () => ({
@@ -221,6 +229,7 @@ export function createSupabaseForEmployerApplicationPatch(opts: EmployerApplicat
         eq: async () => ({ error: null }),
       };
     };
+    chain.insert = async () => ({ error: null });
     return chain;
   };
 

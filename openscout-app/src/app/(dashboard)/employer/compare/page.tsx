@@ -9,7 +9,9 @@ import {
   computeHiringScore,
   hiringFitTagFromScore,
   hiringScoreInputsFromInterviewRow,
+  HIRING_SCORE_WEIGHT_LABELS,
 } from "@/lib/hiring-score";
+import { userHasCompanyAccess } from "@/lib/employer-company";
 
 export default async function EmployerComparePage({
   searchParams,
@@ -48,6 +50,7 @@ export default async function EmployerComparePage({
       job_id,
       user_id,
       interview_score,
+      cv_score,
       interview_report,
       application_status,
       profiles(first_name, last_name, email)
@@ -61,6 +64,7 @@ export default async function EmployerComparePage({
     id: string;
     job_id: string;
     interview_score: number | null;
+    cv_score: number | null;
     interview_report: Record<string, unknown> | null;
     application_status?: string;
     profiles: { first_name?: string; last_name?: string; email?: string } | null;
@@ -78,14 +82,16 @@ export default async function EmployerComparePage({
 
   if (!job) notFound();
 
+  const companyId = (job as { company_id: string }).company_id;
   const { data: company } = await supabase
     .from("companies")
-    .select("user_id, stripe_subscription_status")
-    .eq("id", (job as { company_id: string }).company_id)
+    .select("stripe_subscription_status")
+    .eq("id", companyId)
     .maybeSingle();
 
   const subscribed = (company as { stripe_subscription_status?: string } | null)?.stripe_subscription_status === "active";
-  if (!company || (company as { user_id: string }).user_id !== user.id || !subscribed) notFound();
+  const hasAccess = await userHasCompanyAccess(supabase, user.id, companyId);
+  if (!company || !hasAccess || !subscribed) notFound();
 
   const ordered = ids.map((id) => rows.find((a) => a.id === id)).filter((a): a is CompareRow => Boolean(a));
 
@@ -110,6 +116,11 @@ export default async function EmployerComparePage({
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-zinc-100">Compare candidates</h1>
       <p className="mt-1 text-gray-500 dark:text-zinc-400">{(job as { title: string }).title}</p>
+      <p className="mt-3 max-w-2xl text-xs text-gray-500 dark:text-zinc-500">
+        Hiring score blends available signals with fixed weights:{" "}
+        {HIRING_SCORE_WEIGHT_LABELS.map((w) => `${w.label} ${Math.round(w.weight * 100)}%`).join(", ")}. Missing
+        dimensions are renormalized automatically.
+      </p>
 
       <div
         className="mt-8 grid gap-4"
@@ -166,6 +177,10 @@ export default async function EmployerComparePage({
                 <div className="flex justify-between gap-2">
                   <span className="text-gray-500 dark:text-zinc-500">Interview overall</span>
                   <span className="font-medium text-gray-900 dark:text-zinc-100">{overall ?? "—"}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-500 dark:text-zinc-500">CV fit</span>
+                  <span className="font-medium text-gray-900 dark:text-zinc-100">{row.cv_score ?? "—"}</span>
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-gray-500 dark:text-zinc-500">Technical</span>

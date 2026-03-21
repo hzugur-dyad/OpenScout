@@ -21,7 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 const candidateNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/onboarding", label: "Profile", icon: FileText },
+  { href: "/onboarding", label: "My profile", icon: FileText },
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
   { href: "/mock-interview", label: "Mock Interview", icon: MessageCircle },
   { href: "/dashboard/interviews", label: "Interview History", icon: History },

@@ -84,7 +84,17 @@ export type JobApplicationBody = z.infer<typeof jobApplicationSchema>;
 /** PATCH /api/employer/applications/[applicationId] */
 export const employerApplicationPatchSchema = z
   .object({
-    status: z.enum(["applied", "shortlisted", "rejected"]).optional(),
+    status: z
+      .enum([
+        "applied",
+        "screening",
+        "shortlisted",
+        "interviewing",
+        "offer",
+        "hired",
+        "rejected",
+      ])
+      .optional(),
     notes: z.string().max(20_000).optional(),
   })
   .refine((d) => d.status !== undefined || d.notes !== undefined, {
