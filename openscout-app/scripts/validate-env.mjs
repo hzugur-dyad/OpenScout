@@ -39,8 +39,15 @@ const CI_REQUIRED = [
   "UPSTASH_REDIS_REST_TOKEN",
 ];
 
-/** Same keys must be real (non-placeholder) for production. */
-const PRODUCTION_REQUIRED = [...CI_REQUIRED];
+/** Optional in production: app degrades gracefully (see rate-limit.ts, stripe-webhook route). */
+const PRODUCTION_OPTIONAL_INFRA = [
+  "STRIPE_WEBHOOK_SECRET",
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
+];
+
+/** Must be real (non-placeholder) for production; excludes optional infra above. */
+const PRODUCTION_REQUIRED = CI_REQUIRED.filter((k) => !PRODUCTION_OPTIONAL_INFRA.includes(k));
 
 const PRODUCTION_OPTIONAL_FEATURES = [
   {
@@ -77,6 +84,9 @@ function looksLikeCiPlaceholder(name, value) {
   if (name === "GROQ_API_KEY" && v === "ci-placeholder") return true;
   if (name === "GOOGLE_CLOUD_TTS_API_KEY" && v === "ci-placeholder") return true;
 
+  if (name === "UPSTASH_REDIS_REST_URL" && lower.includes("ci-placeholder")) return true;
+  if (name === "UPSTASH_REDIS_REST_TOKEN" && v === "ci-placeholder") return true;
+
   if (name === "NEXT_PUBLIC_SUPABASE_ANON_KEY" && lower.includes("placeholder")) return true;
   if (name === "SUPABASE_SERVICE_ROLE_KEY" && lower.includes("placeholder")) return true;
 
@@ -97,6 +107,51 @@ function checkCi() {
   console.log("[validate-env] CI profile: all required variables are set.");
 }
 
+function checkProductionOptionalInfra() {
+  const errors = [];
+  const warnings = [];
+
+  const wh = process.env.STRIPE_WEBHOOK_SECRET;
+  if (isBlank(wh)) {
+    warnings.push(
+      "STRIPE_WEBHOOK_SECRET (empty — /api/stripe-webhook returns 503 until you set a real signing secret)",
+    );
+  } else if (looksLikeCiPlaceholder("STRIPE_WEBHOOK_SECRET", wh)) {
+    errors.push("STRIPE_WEBHOOK_SECRET (looks like a CI/placeholder value)");
+  }
+
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const redisTok = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const urlBlank = isBlank(redisUrl);
+  const tokBlank = isBlank(redisTok);
+  if (urlBlank && tokBlank) {
+    warnings.push(
+      "Upstash Redis not configured — distributed rate limits are disabled (set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable)",
+    );
+  } else if (urlBlank !== tokBlank) {
+    errors.push(
+      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must both be set or both empty",
+    );
+  } else {
+    if (looksLikeCiPlaceholder("UPSTASH_REDIS_REST_URL", redisUrl)) {
+      errors.push("UPSTASH_REDIS_REST_URL (looks like a CI/placeholder value)");
+    }
+    if (looksLikeCiPlaceholder("UPSTASH_REDIS_REST_TOKEN", redisTok)) {
+      errors.push("UPSTASH_REDIS_REST_TOKEN (looks like a CI/placeholder value)");
+    }
+  }
+
+  if (errors.length) {
+    console.error(
+      `[validate-env] production profile: optional infra misconfigured:\n  - ${errors.join("\n  - ")}`,
+    );
+    process.exit(1);
+  }
+  for (const w of warnings) {
+    console.warn(`[validate-env] production profile: ${w}`);
+  }
+}
+
 function checkProduction() {
   const bad = [];
   for (const key of PRODUCTION_REQUIRED) {
@@ -110,6 +165,8 @@ function checkProduction() {
     );
     process.exit(1);
   }
+
+  checkProductionOptionalInfra();
 
   const optionalMissing = [];
   for (const { name, anyOf } of PRODUCTION_OPTIONAL_FEATURES) {
@@ -127,11 +184,15 @@ function checkProduction() {
 
 function reportLocal() {
   console.log("[validate-env] local profile (informational only):\n");
-  console.log("Required for a real production deploy (see docs/RELEASE_CHECKLIST.md):");
-  for (const key of PRODUCTION_REQUIRED) {
+  console.log("Production env (see docs/RELEASE_CHECKLIST.md):");
+  for (const key of CI_REQUIRED) {
     const set = !isBlank(process.env[key]);
     const suspicious = set && looksLikeCiPlaceholder(key, process.env[key]);
-    console.log(`  ${key}: ${!set ? "MISSING" : suspicious ? "SET (suspicious / placeholder-like)" : "set"}`);
+    const opt =
+      PRODUCTION_OPTIONAL_INFRA.includes(key) ? " — optional; features degrade if unset" : "";
+    console.log(
+      `  ${key}: ${!set ? "MISSING" : suspicious ? "SET (suspicious / placeholder-like)" : "set"}${opt}`,
+    );
   }
   console.log("\nOptional features (any one of each group):");
   for (const { name, anyOf } of PRODUCTION_OPTIONAL_FEATURES) {
