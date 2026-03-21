@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -28,7 +27,7 @@ export default async function DashboardJobsPage() {
       {!listings || listings.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Briefcase}
+          iconName="briefcase"
           title="No open roles yet"
           description="There are no active job listings right now. Check back soon, or go to your dashboard to keep preparing your profile and CV."
         >

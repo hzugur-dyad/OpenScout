@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -74,7 +73,7 @@ export default async function InterviewHistoryPage() {
       {interviews.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={MessageCircle}
+          iconName="messageCircle"
           title="No interviews yet"
           description="Complete a mock interview to see scores, trends, and history here."
         >

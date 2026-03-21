@@ -6,7 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
-import { Compass, Check } from "lucide-react";
+import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
+import { Check } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -99,12 +100,7 @@ export default function RegisterPage() {
       <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-            <span
-              className="flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: "var(--primary)" }}
-            >
-              <Compass className="h-6 w-6 text-white" />
-            </span>
+            <OpenScoutLogoMark className="h-16 w-16" />
             <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
           </Link>
           <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
@@ -126,12 +122,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 py-8 dark:bg-transparent">
       <div className="w-full max-w-lg">
         <Link href="/" className="mb-6 flex items-center justify-center gap-2">
-          <span
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: "var(--primary)" }}
-          >
-            <Compass className="h-6 w-6 text-white" />
-          </span>
+          <OpenScoutLogoMark className="h-16 w-16" />
           <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 

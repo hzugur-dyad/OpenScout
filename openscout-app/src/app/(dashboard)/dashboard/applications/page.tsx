@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { Briefcase, MessageCircle } from "lucide-react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
@@ -141,7 +140,7 @@ export default async function CandidateApplicationsPage({
       {applications.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Briefcase}
+          iconName="briefcase"
           title={rows.length === 0 ? "No applications yet" : "No matches for this filter"}
           description={
             rows.length === 0
@@ -152,14 +151,10 @@ export default async function CandidateApplicationsPage({
           {rows.length === 0 ? (
             <>
               <Link href="/dashboard/jobs">
-                <Button variant="primary" icon={Briefcase} iconPosition="left">
-                  Browse jobs
-                </Button>
+                <Button variant="primary">Browse jobs</Button>
               </Link>
               <Link href="/mock-interview">
-                <Button variant="outline" icon={MessageCircle} iconPosition="left">
-                  Take an interview
-                </Button>
+                <Button variant="outline">Take an interview</Button>
               </Link>
             </>
           ) : (

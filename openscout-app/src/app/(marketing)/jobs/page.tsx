@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { absoluteUrl } from "@/lib/seo/site";
@@ -51,7 +50,7 @@ export default async function JobsPage() {
       {!listings || listings.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Briefcase}
+          iconName="briefcase"
           title="No open listings yet"
           description="Check back soon for Scout-vetted roles."
         >

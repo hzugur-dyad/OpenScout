@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -115,7 +114,7 @@ export default async function EmployerApplicationsPage({
       ) : rawApplications.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Inbox}
+          iconName="inbox"
           title="No applications yet"
           description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
         >
@@ -129,7 +128,7 @@ export default async function EmployerApplicationsPage({
       ) : applications.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Inbox}
+          iconName="inbox"
           title="No applications match"
           description="Try changing status or minimum interview score filters."
         >
