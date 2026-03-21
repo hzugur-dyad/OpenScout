@@ -19,6 +19,8 @@ export const ANALYTICS_EVENTS = {
   subscription_started: "subscription_started",
   subscription_active: "subscription_active",
   subscription_failed: "subscription_failed",
+  /** User copied or used native share for a public interview result link */
+  result_shared: "result_shared",
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

@@ -50,7 +50,8 @@ export default async function EmployerApplicationsPage({
 
   const isSubscribed = (company as { stripe_subscription_status?: string }).stripe_subscription_status === "active";
 
-  let applications: EmployerApplicationListItem[] | null = null;
+  let rawApplications: EmployerApplicationListItem[] = [];
+  let applications: EmployerApplicationListItem[] = [];
   if (isSubscribed) {
     const { data } = await supabase
       .from("job_applications")
@@ -68,8 +69,8 @@ export default async function EmployerApplicationsPage({
       )
       .eq("job_id", jobId);
 
-    const raw = (data ?? []) as EmployerApplicationListItem[];
-    const filtered = filterEmployerApplications(raw, statusFilter, minScore);
+    rawApplications = (data ?? []) as EmployerApplicationListItem[];
+    const filtered = filterEmployerApplications(rawApplications, statusFilter, minScore);
     applications = sortEmployerApplications(filtered, sort);
   }
 
@@ -106,18 +107,29 @@ export default async function EmployerApplicationsPage({
             <Button variant="primary">View pricing</Button>
           </Link>
         </div>
-      ) : !applications || applications.length === 0 ? (
+      ) : rawApplications.length === 0 ? (
         <EmptyState
           className="mt-10"
           icon={Inbox}
-          title="No applications match"
-          description="Try adjusting filters, or when candidates meet your CV score requirement and complete the AI interview, they will show up here."
+          title="No applications yet"
+          description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
         >
           <Link href="/employer">
             <Button variant="primary">Back to dashboard</Button>
           </Link>
           <Link href={`/employer/${jobId}/edit`}>
             <Button variant="outline">Edit listing</Button>
+          </Link>
+        </EmptyState>
+      ) : applications.length === 0 ? (
+        <EmptyState
+          className="mt-10"
+          icon={Inbox}
+          title="No applications match"
+          description="Try changing status or minimum interview score filters."
+        >
+          <Link href={`/employer/${jobId}/applications`}>
+            <Button variant="primary">Clear filters</Button>
           </Link>
         </EmptyState>
       ) : (

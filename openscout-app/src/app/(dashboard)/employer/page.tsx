@@ -7,6 +7,10 @@ import { CompleteEmployerRegistration } from "@/components/employer/CompleteEmpl
 import { EditCompanyName } from "@/components/employer/EditCompanyName";
 import { EmployerSubscriptionSuccess } from "@/components/employer/EmployerSubscriptionSuccess";
 import { getTrialStatus } from "@/lib/employer-trial";
+import {
+  computeHiringScore,
+  hiringScoreInputsFromInterviewRow,
+} from "@/lib/hiring-score";
 
 export default async function EmployerHomePage() {
   const supabase = await createClient();
@@ -41,6 +45,50 @@ export default async function EmployerHomePage() {
   const isSubscribed = (company as { stripe_subscription_status?: string }).stripe_subscription_status === "active";
   const trial = getTrialStatus((company as { trial_started_at?: string }).trial_started_at ?? null);
   const canOperate = isSubscribed || trial.isInTrial;
+
+  type AppRow = {
+    id: string;
+    job_id: string;
+    interview_score: number | null;
+    interview_report: unknown;
+    profiles: { first_name?: string; last_name?: string; email?: string } | null;
+  };
+
+  const topCandidateByJob = new Map<
+    string,
+    { applicationId: string; displayName: string; hiringScore: number }
+  >();
+
+  if (isSubscribed && listings && listings.length > 0) {
+    const jobIds = listings.map((l) => l.id);
+    const { data: apps } = await supabase
+      .from("job_applications")
+      .select("id, job_id, interview_score, interview_report, profiles(first_name, last_name, email)")
+      .in("job_id", jobIds);
+
+    for (const jobId of jobIds) {
+      const rows = ((apps ?? []) as AppRow[]).filter((a) => a.job_id === jobId);
+      let best: AppRow | null = null;
+      let bestScore = -1;
+      for (const r of rows) {
+        const hs = computeHiringScore(hiringScoreInputsFromInterviewRow(r));
+        if (hs > bestScore) {
+          bestScore = hs;
+          best = r;
+        }
+      }
+      if (best && rows.length > 0) {
+        const p = best.profiles;
+        const displayName =
+          [p?.first_name, p?.last_name].filter(Boolean).join(" ") || p?.email || "Candidate";
+        topCandidateByJob.set(jobId, {
+          applicationId: best.id,
+          displayName,
+          hiringScore: bestScore,
+        });
+      }
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -116,7 +164,9 @@ export default async function EmployerHomePage() {
         </div>
       ) : (
         <div className="mt-8 space-y-4">
-          {listings.map((job) => (
+          {listings.map((job) => {
+            const topCandidate = topCandidateByJob.get(job.id);
+            return (
             <div
               key={job.id}
               className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
@@ -127,6 +177,22 @@ export default async function EmployerHomePage() {
                   <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
                     {job.is_active ? "Active (public)" : "Inactive (hidden)"} · Min CV score: {job.min_cv_score ?? 0}
                   </p>
+                  {isSubscribed && topCandidate && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200">
+                        Top Candidate
+                      </span>
+                      <Link
+                        href={`/employer/${job.id}/applications/${topCandidate.applicationId}`}
+                        className="font-medium text-gray-800 hover:underline dark:text-zinc-200"
+                      >
+                        {topCandidate.displayName}
+                      </Link>
+                      <span className="text-xs text-gray-500 dark:text-zinc-500">
+                        Hiring score {topCandidate.hiringScore}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link href={`/jobs/${job.id}`}>
@@ -141,7 +207,8 @@ export default async function EmployerHomePage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

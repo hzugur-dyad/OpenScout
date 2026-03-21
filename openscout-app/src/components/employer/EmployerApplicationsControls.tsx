@@ -28,10 +28,19 @@ export function EmployerApplicationsControls() {
         <span className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-500">Sort</span>
         <select
           className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          value={sort === "overall" || sort === "technical" || sort === "communication" || sort === "recent" ? sort : "recent"}
+          value={
+            sort === "overall" ||
+            sort === "technical" ||
+            sort === "communication" ||
+            sort === "recent" ||
+            sort === "best_fit"
+              ? sort
+              : "recent"
+          }
           onChange={(e) => pushQuery({ sort: e.target.value })}
         >
           <option value="recent">Most recent</option>
+          <option value="best_fit">Best fit</option>
           <option value="overall">Highest interview score</option>
           <option value="technical">Best technical score</option>
           <option value="communication">Best communication score</option>

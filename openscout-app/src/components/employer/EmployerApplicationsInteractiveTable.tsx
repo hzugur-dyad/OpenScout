@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { EmployerApplicationStatusBadge } from "@/components/employer/EmployerApplicationStatusBadge";
+import { HiringFitBadge } from "@/components/employer/HiringFitBadge";
 import type { EmployerApplicationListItem } from "@/lib/employer-applications-list";
+import {
+  computeHiringScore,
+  hiringFitTagFromScore,
+  hiringScoreInputsFromInterviewRow,
+} from "@/lib/hiring-score";
 
 type Props = {
   jobId: string;
@@ -76,6 +82,8 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
               <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Status</th>
               <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">CV</th>
               <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Interview</th>
+              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Hiring score</th>
+              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Fit</th>
               <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Created</th>
               <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Actions</th>
             </tr>
@@ -89,6 +97,8 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
               );
               const st = a.application_status || "applied";
               const busy = pendingId === a.id;
+              const hiringScore = computeHiringScore(hiringScoreInputsFromInterviewRow(a));
+              const fitTag = hiringFitTagFromScore(hiringScore);
               return (
                 <tr key={a.id} className="border-b border-[var(--border)] last:border-b-0 dark:border-zinc-700">
                   <td className="px-2 py-3 align-middle">
@@ -113,6 +123,10 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
                   </td>
                   <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">{a.cv_score ?? "-"}</td>
                   <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">{a.interview_score ?? "-"}</td>
+                  <td className="px-4 py-3 font-medium text-gray-800 dark:text-zinc-200">{hiringScore}</td>
+                  <td className="px-4 py-3 align-middle">
+                    <HiringFitBadge tag={fitTag} />
+                  </td>
                   <td className="px-4 py-3 text-gray-500 dark:text-zinc-500">
                     {a.created_at ? new Date(a.created_at).toLocaleString() : "-"}
                   </td>

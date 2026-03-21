@@ -3,7 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseCompareApplicationIds } from "@/lib/employer-applications-list";
 import { EmployerApplicationStatusBadge } from "@/components/employer/EmployerApplicationStatusBadge";
+import { HiringFitBadge } from "@/components/employer/HiringFitBadge";
 import { Button } from "@/components/ui/Button";
+import {
+  computeHiringScore,
+  hiringFitTagFromScore,
+  hiringScoreInputsFromInterviewRow,
+} from "@/lib/hiring-score";
 
 export default async function EmployerComparePage({
   searchParams,
@@ -51,8 +57,18 @@ export default async function EmployerComparePage({
 
   if (!apps || apps.length !== ids.length) notFound();
 
-  const jobId = (apps[0] as { job_id: string }).job_id;
-  if (!(apps as { job_id: string }[]).every((a) => a.job_id === jobId)) notFound();
+  type CompareRow = {
+    id: string;
+    job_id: string;
+    interview_score: number | null;
+    interview_report: Record<string, unknown> | null;
+    application_status?: string;
+    profiles: { first_name?: string; last_name?: string; email?: string } | null;
+  };
+  const rows = apps as CompareRow[];
+
+  const jobId = rows[0].job_id;
+  if (!rows.every((a) => a.job_id === jobId)) notFound();
 
   const { data: job } = await supabase
     .from("job_listings")
@@ -71,9 +87,18 @@ export default async function EmployerComparePage({
   const subscribed = (company as { stripe_subscription_status?: string } | null)?.stripe_subscription_status === "active";
   if (!company || (company as { user_id: string }).user_id !== user.id || !subscribed) notFound();
 
-  const ordered = ids
-    .map((id) => (apps as { id: string }[]).find((a) => a.id === id))
-    .filter((a): a is NonNullable<typeof a> => Boolean(a));
+  const ordered = ids.map((id) => rows.find((a) => a.id === id)).filter((a): a is CompareRow => Boolean(a));
+
+  let bestRowId: string | null = null;
+  let bestHiringScore = -1;
+  for (const row of ordered) {
+    const h = computeHiringScore(hiringScoreInputsFromInterviewRow(row));
+    if (h > bestHiringScore) {
+      bestHiringScore = h;
+      bestRowId = row.id;
+    }
+  }
+  if (bestHiringScore <= 0) bestRowId = null;
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -91,32 +116,51 @@ export default async function EmployerComparePage({
         style={{ gridTemplateColumns: `repeat(${ordered.length}, minmax(0, 1fr))` }}
       >
         {ordered.map((row) => {
-          const profile = (row as { profiles?: { first_name?: string; last_name?: string; email?: string } | null })
-            .profiles;
+          const profile = row.profiles;
           const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || "Candidate";
-          const report = (row as { interview_report?: Record<string, unknown> | null }).interview_report ?? null;
+          const report = row.interview_report ?? null;
           const tech = typeof report?.technical_score === "number" ? report.technical_score : null;
           const comm = typeof report?.communication_score === "number" ? report.communication_score : null;
           const ps = typeof report?.problem_solving_score === "number" ? report.problem_solving_score : null;
           const strengths = Array.isArray(report?.strengths)
-            ? (report!.strengths as unknown[]).filter((s): s is string => typeof s === "string")
+            ? (report.strengths as unknown[]).filter((s): s is string => typeof s === "string")
             : [];
           const improvements = Array.isArray(report?.improvements)
-            ? (report!.improvements as unknown[]).filter((s): s is string => typeof s === "string")
+            ? (report.improvements as unknown[]).filter((s): s is string => typeof s === "string")
             : [];
-          const appStatus = (row as { application_status?: string }).application_status || "applied";
-          const overall = (row as { interview_score: number | null }).interview_score;
+          const appStatus = row.application_status || "applied";
+          const overall = row.interview_score;
+          const hiringScore = computeHiringScore(hiringScoreInputsFromInterviewRow(row));
+          const fitTag = hiringFitTagFromScore(hiringScore);
+          const isBest = bestRowId !== null && row.id === bestRowId;
 
           return (
             <div
-              key={(row as { id: string }).id}
-              className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
+              key={row.id}
+              className={`rounded-[10px] border bg-white p-5 shadow-soft dark:bg-zinc-900 ${
+                isBest
+                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-white dark:border-[var(--primary)] dark:ring-offset-zinc-950"
+                  : "border-[var(--border)] dark:border-white/[0.06]"
+              }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="font-semibold text-gray-900 dark:text-zinc-100">{name}</h2>
-                <EmployerApplicationStatusBadge status={appStatus} />
+                <div className="flex flex-wrap items-center gap-2">
+                  {isBest && (
+                    <span className="rounded bg-[var(--primary)] px-2 py-0.5 text-xs font-semibold text-white">
+                      Best fit
+                    </span>
+                  )}
+                  <EmployerApplicationStatusBadge status={appStatus} />
+                </div>
               </div>
               {profile?.email && <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">{profile.email}</p>}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                <span className="text-gray-500 dark:text-zinc-500">Hiring score</span>
+                <span className="font-semibold text-gray-900 dark:text-zinc-100">{hiringScore}</span>
+                <HiringFitBadge tag={fitTag} />
+              </div>
 
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between gap-2">

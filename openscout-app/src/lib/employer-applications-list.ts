@@ -1,4 +1,9 @@
-export type ApplicationSortKey = "recent" | "overall" | "technical" | "communication";
+import {
+  computeHiringScore,
+  hiringScoreInputsFromInterviewRow,
+} from "@/lib/hiring-score";
+
+export type ApplicationSortKey = "recent" | "overall" | "technical" | "communication" | "best_fit";
 
 export type ApplicationStatusFilter = "all" | "applied" | "shortlisted" | "rejected";
 
@@ -66,6 +71,12 @@ export function sortEmployerApplications(
     );
     return copy;
   }
+  if (sort === "best_fit") {
+    const hs = (r: EmployerApplicationListItem) =>
+      computeHiringScore(hiringScoreInputsFromInterviewRow(r));
+    copy.sort((a, b) => hs(b) - hs(a));
+    return copy;
+  }
   return copy;
 }
 
@@ -80,7 +91,11 @@ export function parseApplicationsListQuery(searchParams: Record<string, string |
   };
   const sortRaw = raw("sort");
   const sort: ApplicationSortKey =
-    sortRaw === "overall" || sortRaw === "technical" || sortRaw === "communication" || sortRaw === "recent"
+    sortRaw === "overall" ||
+    sortRaw === "technical" ||
+    sortRaw === "communication" ||
+    sortRaw === "recent" ||
+    sortRaw === "best_fit"
       ? sortRaw
       : "recent";
 

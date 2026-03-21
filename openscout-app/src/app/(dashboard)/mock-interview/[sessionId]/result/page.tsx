@@ -158,6 +158,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       technicalScore={technicalScore}
       communicationScore={communicationScore}
       problemSolvingScore={problemSolvingScore}
+      shareResultId={sessionId}
     />
   );
 }

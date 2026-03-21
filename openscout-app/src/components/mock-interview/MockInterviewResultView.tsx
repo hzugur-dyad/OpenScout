@@ -6,6 +6,7 @@ import { CheckCircle, AlertCircle, Share2, Copy, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ShareScoutScoreModal } from "@/components/dashboard/ShareScoutScoreModal";
+import { InterviewResultShareBlock } from "@/components/mock-interview/InterviewResultShareBlock";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -22,6 +23,8 @@ type Props = {
   technicalScore?: number | null;
   communicationScore?: number | null;
   problemSolvingScore?: number | null;
+  /** When set, shows public `/result/[id]` share card (no transcript on shared link). */
+  shareResultId?: string;
 };
 
 function DimensionMeter({ label, value }: { label: string; value: number }) {
@@ -57,6 +60,7 @@ export function MockInterviewResultView({
   technicalScore,
   communicationScore,
   problemSolvingScore,
+  shareResultId,
 }: Props) {
   const locale: InterviewLocale = localeProp ?? "en";
   const ui = interviewUi[locale];
@@ -149,6 +153,16 @@ export function MockInterviewResultView({
               </div>
             </div>
           </motion.div>
+
+          {shareResultId?.trim() && (
+            <div className="mt-6">
+              <InterviewResultShareBlock
+                resultId={shareResultId.trim()}
+                score={score}
+                jobCategory={category}
+              />
+            </div>
+          )}
 
           {justification?.trim() && (
             <motion.div

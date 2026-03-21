@@ -16,6 +16,7 @@ COMMENT ON COLUMN public.job_applications.application_status IS 'Employer pipeli
 COMMENT ON COLUMN public.job_applications.notes IS 'Employer-private notes';
 
 -- Employers may update applications for their subscribed company jobs (e.g. status, notes)
+DROP POLICY IF EXISTS "Employers update applications for own listings" ON public.job_applications;
 CREATE POLICY "Employers update applications for own listings"
   ON public.job_applications FOR UPDATE
   USING (
