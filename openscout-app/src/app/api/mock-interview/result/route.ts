@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: "user",
-            content: transcript,
+            content: transcriptStr,
           },
         ],
       });
