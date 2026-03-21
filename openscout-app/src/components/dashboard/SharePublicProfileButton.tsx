@@ -1,17 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
+import { cn } from "@/lib/utils";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException } from "@/lib/monitoring";
 
 type Props = {
   variant?: "outline" | "primary";
   size?: "sm" | "md" | "lg";
+  /** Editorial minimal chrome (dashboard home): crisp border, flat outline. */
+  minimal?: boolean;
 };
 
-export function SharePublicProfileButton({ variant = "outline", size = "sm" }: Props) {
+export function SharePublicProfileButton({
+  variant = "outline",
+  size = "sm",
+  minimal = false,
+}: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -74,14 +81,30 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
         type="button"
         variant={variant}
         size={size}
-        icon={Share2}
+        icon={ShareNetwork}
         iconPosition="left"
         onClick={handleClick}
         disabled={busy}
+        className={cn(
+          minimal &&
+            variant === "outline" &&
+            "rounded-md border-[#EAEAEA] bg-transparent text-[#111111] shadow-none hover:bg-white hover:text-[#111111] dark:border-white/[0.12] dark:text-neutral-100 dark:hover:bg-white/[0.06]"
+        )}
       >
         {busy ? "Working…" : "Share your profile"}
       </Button>
-      {msg && <span className="text-xs text-gray-500 dark:text-zinc-400">{msg}</span>}
+      {msg && (
+        <span
+          className={cn(
+            "text-xs leading-[1.6] text-[#787774] dark:text-[#A09C98]",
+            minimal && "max-w-md"
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          {msg}
+        </span>
+      )}
     </div>
   );
 }

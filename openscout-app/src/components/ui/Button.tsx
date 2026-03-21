@@ -2,15 +2,19 @@
 
 import { forwardRef } from "react";
 import { motion } from "framer-motion";
-import { LucideIcon } from "lucide-react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type MotionButtonProps = React.ComponentPropsWithoutRef<typeof motion.button>;
 
+/** Lucide or Phosphor icons (both accept `className` on the rendered SVG). */
+export type ButtonIcon = LucideIcon | PhosphorIcon;
+
 interface ButtonProps extends Omit<MotionButtonProps, "children"> {
-  variant?: "primary" | "secondary" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "outline" | "ghost" | "charcoal";
   size?: "sm" | "md" | "lg";
-  icon?: LucideIcon;
+  icon?: ButtonIcon;
   iconPosition?: "left" | "right";
   isLoading?: boolean;
   children: React.ReactNode;
@@ -26,6 +30,8 @@ const variants = {
   outline:
     "border border-[var(--border-strong)] bg-transparent hover:bg-gray-50 dark:border-zinc-700 dark:hover:bg-zinc-800",
   ghost: "bg-transparent hover:bg-gray-100 dark:hover:bg-zinc-800",
+  charcoal:
+    "rounded-md border border-transparent bg-[#111111] text-white shadow-none hover:bg-[#333333] active:bg-[#222222] focus-visible:ring-[#111111] dark:border-transparent dark:bg-neutral-100 dark:text-neutral-950 dark:hover:bg-neutral-200 dark:active:bg-neutral-300 dark:focus-visible:ring-neutral-300",
 };
 
 const sizes = {

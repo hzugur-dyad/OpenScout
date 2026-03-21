@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { List } from "@phosphor-icons/react";
 import {
   LayoutDashboard,
   FileText,
@@ -43,6 +43,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
   const pathname = usePathname();
+  const isCandidateDashboardHome = pathname === "/dashboard";
   const { role } = useUserRole();
   const isEmployerPath = pathname.startsWith("/employer");
   const effectiveRole = role ?? (isEmployerPath ? "employer" : "candidate");
@@ -136,7 +137,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50 dark:bg-black">
+    <div
+      className={`relative flex min-h-[100dvh] dark:bg-zinc-950 ${
+        isCandidateDashboardHome ? "bg-[#F7F6F3]" : "bg-zinc-50"
+      }`}
+    >
+      {isCandidateDashboardHome ? (
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]"
+          style={{
+            background:
+              "radial-gradient(ellipse 100% 70% at 50% -25%, rgb(139 115 85), transparent)",
+          }}
+          aria-hidden
+        />
+      ) : null}
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
@@ -157,17 +172,25 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content - offset by sidebar width on desktop (hover expands/collapses) */}
       <div
-        className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
+        className={`relative z-10 flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarExpanded ? "lg:ml-[240px]" : "lg:ml-[72px]"
         }`}
       >
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 dark:border-zinc-800 dark:bg-black lg:px-8">
+        <header
+          className={`sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm lg:px-8 dark:border-zinc-800 dark:bg-zinc-950/90 ${
+            isCandidateDashboardHome
+              ? "border-[#EAEAEA] bg-[#F7F6F3]/95"
+              : "border-zinc-200/80 bg-zinc-50/95 dark:bg-zinc-950/95"
+          }`}
+        >
           <button
-            className="lg:hidden"
+            type="button"
+            className="rounded-md p-1.5 text-[#111111] transition-colors hover:bg-black/[0.04] lg:hidden dark:text-zinc-100 dark:hover:bg-white/[0.06]"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
           >
-            <Menu className="h-6 w-6 text-gray-700 dark:text-zinc-200" />
+            <List className="h-6 w-6" weight="bold" aria-hidden />
           </button>
           <div className="ml-auto flex items-center">
             <ThemeToggle />
