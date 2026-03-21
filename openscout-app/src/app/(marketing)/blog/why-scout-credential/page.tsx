@@ -26,10 +26,10 @@ export default function WhyScoutCredentialPage() {
             Job hunting is broken: you apply to dozens of companies, fill the same forms, do the same screening calls, and repeat. Employers get hundreds of raw resumes and spend hours filtering. Nobody wins.
           </p>
           <p>
-            We built the <strong>Scout Score</strong> so you do the work once. You complete your profile, take one AI interview per role type, and get a shareable credential — a link that shows your CV score, your interview score, and a structured report. When you apply to jobs on OpenScout, employers see that you're already vetted. You skip the first-round noise. They see only candidates who've already passed the bar.
+            We built the <strong>Scout Score</strong> so you do the work once. You complete your profile, take one AI interview per role type, and get a shareable credential — a link that shows your CV score, your interview score, and a structured report. When you apply to jobs on OpenScout, employers see that you&apos;re already vetted. You skip the first-round noise. They see only candidates who&apos;ve already passed the bar.
           </p>
           <p>
-            That's the promise: <strong>one credential, many companies.</strong> Not "one more job board." The product is the credential. Job listings are where you use it. Get your Scout Score, share it, and let employers come to you.
+            That&apos;s the promise: <strong>one credential, many companies.</strong> Not &quot;one more job board.&quot; The product is the credential. Job listings are where you use it. Get your Scout Score, share it, and let employers come to you.
           </p>
         </div>
 

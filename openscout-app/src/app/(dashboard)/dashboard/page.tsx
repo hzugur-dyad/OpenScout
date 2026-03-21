@@ -174,18 +174,8 @@ export default function DashboardPage() {
         Complete your profile and take an AI interview.
       </p>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-4">
         <SharePublicProfileButton />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            throw new Error("sentry client test");
-          }}
-        >
-          Test Sentry Client
-        </Button>
       </div>
 
       <Card className="mt-4 p-4">

@@ -70,7 +70,7 @@ function enforceServerQuestionControl(
 
   if (!qc) return advance;
 
-  let questionId = qc.questionId.trim() || advance.questionId;
+  const questionId = qc.questionId.trim() || advance.questionId;
   const attempt = Math.min(2, Math.max(1, Math.round(qc.attempt)));
   let isFollowup = qc.isFollowup;
 

@@ -7,8 +7,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Client bundle inlines NEXT_PUBLIC_* at build time. Set NEXT_PUBLIC_SENTRY_DSN for build,
+  // or SENTRY_DSN at build so it maps through; runtime-only SENTRY_DSN still fixes server,
+  // but the client needs one of these available when `next build` runs.
   env: {
-    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+    NEXT_PUBLIC_SENTRY_DSN: (
+      process.env.NEXT_PUBLIC_SENTRY_DSN ||
+      process.env.SENTRY_DSN ||
+      ""
+    ).trim(),
   },
 };
 

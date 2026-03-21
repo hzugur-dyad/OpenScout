@@ -69,9 +69,8 @@ describe("rate-limit", () => {
   });
 
   it("logs production error when Redis env is missing (still fail-open)", async () => {
-    const prevNodeEnv = process.env.NODE_ENV;
+    vi.stubEnv("NODE_ENV", "production");
     try {
-      process.env.NODE_ENV = "production";
       vi.resetModules();
       delete process.env.UPSTASH_REDIS_REST_URL;
       delete process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -88,7 +87,7 @@ describe("rate-limit", () => {
       logErrorSpy.mockRestore();
       logWarnSpy.mockRestore();
     } finally {
-      process.env.NODE_ENV = prevNodeEnv;
+      vi.unstubAllEnvs();
     }
   });
 

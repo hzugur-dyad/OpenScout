@@ -21,7 +21,7 @@ const authPaths = ["/login", "/register"];
 const employerAuthPaths = ["/employer/login", "/employer/register"];
 
 export async function updateSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const response = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";

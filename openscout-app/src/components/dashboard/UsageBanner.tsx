@@ -72,7 +72,7 @@ export function UsageBanner({ feature }: UsageBannerProps) {
     return (
       <div className="mb-6 rounded-[10px] border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/40">
         <p className="font-medium text-red-800 dark:text-red-300">
-          You've used all {limit} {label} {limit === 1 ? "attempt" : "attempts"} this week.
+          You&apos;ve used all {limit} {label} {limit === 1 ? "attempt" : "attempts"} this week.
         </p>
         <p className="mt-1 text-sm text-red-600 dark:text-red-400">
           Upgrade your plan to get more.{" "}

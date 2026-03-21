@@ -61,12 +61,37 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 | Step        | Command              |
 |------------|----------------------|
 | Install    | `npm ci` (in `openscout-app/`) |
-| Lint       | `npm run lint`       |
+| Env check  | `npm run validate-env` (`OPENSCOUT_ENV_PROFILE=ci`) — fails if required CI env keys are empty |
+| Lint       | `npm run lint` (0 ESLint **errors** required; some React Compiler rules are warnings — see `openscout-app/eslint.config.mjs`) |
+| Clean      | `rm -rf .next` — avoids stale generated types breaking `tsc` |
 | Typecheck  | `npx tsc --noEmit`   |
 | Tests      | `npx vitest run`     |
-| Build      | `npm run build`      |
+| Build      | `npm run build` (production Next.js build) |
 
 Triggers: **push** to `main`, **pull_request** targeting `main`.
+
+Any step failure fails the workflow job; nothing downstream runs in the same job.
+
+### Branch protection (recommended; configured in GitHub, not in this repo)
+
+To keep broken code off `main`:
+
+1. **Settings → Branches → Branch protection rules** for `main`.
+2. Enable **Require a pull request before merging** (optional but recommended).
+3. Enable **Require status checks to pass before merging** and require the check named **Lint, typecheck, test, build** (or the workflow name as GitHub displays it).
+4. Optionally **Require branches to be up to date before merging**.
+
+Fork PRs still get CI with placeholder env; the optional Vercel CLI deploy job skips forks.
+
+### Production env gate (Vercel build)
+
+Optional stricter check before build (rejects placeholder-style values — see [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)):
+
+```bash
+OPENSCOUT_ENV_PROFILE=production npm run validate-env && npm run build
+```
+
+Local dev: run `npm run validate-env` (default **local** profile) for a read-only summary; it always exits 0.
 
 ## GitHub Actions secrets (optional but recommended)
 
@@ -123,8 +148,15 @@ Use this only if you intentionally want Actions to run `vercel deploy` (e.g. cus
 
 Behavior in the workflow:
 
+- **`deploy-vercel` runs only after `ci` succeeds** (`needs: ci`). If lint, typecheck, tests, or build fail, deploy does not run.
 - **Push to `main`** → deploy with `--prod` (production).
 - **Pull request** (same-repo only; forks skipped) → preview deploy; the action can comment the preview URL on the PR when `GITHUB_TOKEN` has `pull-requests: write`.
+
+### Deploy path when using Vercel Git integration only
+
+If `ENABLE_VERCEL_CLI` is **not** `true`, GitHub Actions **does not deploy**. Vercel deploys from its own Git connection. In that setup, **merge discipline + required CI checks** are the quality gate; Vercel still builds the merged commit — keep Vercel build logs monitored.
+
+Release and smoke-test guidance: [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md), [SMOKE_TESTS.md](./SMOKE_TESTS.md).
 
 ## Vercel environment variables
 

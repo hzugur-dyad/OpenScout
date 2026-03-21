@@ -23,13 +23,13 @@ export default function WhatEmployersSeePage() {
 
         <div className="mt-8 space-y-6 text-gray-700 dark:text-zinc-300">
           <p>
-            When you apply with your Scout Score, employers don't see a blank resume. They see a <strong>CV score</strong> (0–100) based on your profile and uploaded CV, an <strong>interview score</strong> (0–100) from your AI interview, and a short <strong>report</strong> with strengths and areas to improve.
+            When you apply with your Scout Score, employers don&apos;t see a blank resume. They see a <strong>CV score</strong> (0–100) based on your profile and uploaded CV, an <strong>interview score</strong> (0–100) from your AI interview, and a short <strong>report</strong> with strengths and areas to improve.
           </p>
           <p>
-            Everything is structured the same for every candidate. That means employers can compare apples to apples: who passed the bar, who had a strong interview, and what to ask in a follow-up. No more guessing from PDFs. No more "culture fit" screens before skills. Scout-vetted means: we already ran the first filter. You get candidates who showed up and passed.
+            Everything is structured the same for every candidate. That means employers can compare apples to apples: who passed the bar, who had a strong interview, and what to ask in a follow-up. No more guessing from PDFs. No more &quot;culture fit&quot; screens before skills. Scout-vetted means: we already ran the first filter. You get candidates who showed up and passed.
           </p>
           <p>
-            Your Scout report is yours to share — via your Scout Pass link — so even off the platform, you can show employers you're pre-vetted. One credential, many companies.
+            Your Scout report is yours to share — via your Scout Pass link — so even off the platform, you can show employers you&apos;re pre-vetted. One credential, many companies.
           </p>
         </div>
 

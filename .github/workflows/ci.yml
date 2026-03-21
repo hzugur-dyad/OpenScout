@@ -31,6 +31,8 @@ jobs:
       run:
         working-directory: openscout-app
     env:
+      OPENSCOUT_ENV_PROFILE: ci
+      NEXT_TELEMETRY_DISABLED: "1"
       # Secrets override placeholders when set (closer to production). Placeholders keep
       # `next build` working on forks / before secrets are configured. See docs/CI_CD.md.
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
@@ -64,8 +66,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate CI environment
+        run: npm run validate-env
+
       - name: Lint
         run: npm run lint
+
+      # Fresh checkout has no .next; this clears stale generated types on self-hosted/cache restores.
+      - name: Clear Next.js build cache
+        run: rm -rf .next
 
       - name: Typecheck
         run: npx tsc --noEmit
@@ -73,7 +82,7 @@ jobs:
       - name: Test
         run: npx vitest run
 
-      - name: Build
+      - name: Production build
         run: npm run build
 
   # Optional: Vercel via CLI. Enable with repo Variable ENABLE_VERCEL_CLI = true

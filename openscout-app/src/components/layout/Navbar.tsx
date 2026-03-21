@@ -146,7 +146,7 @@ export function Navbar({
                       userType === "employer" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
                     }`}
                   >
-                    I'm Hiring
+                    I&apos;m Hiring
                   </button>
                 </div>
                 {navLinks.map((link) => (
@@ -198,7 +198,7 @@ export function Navbar({
               className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
               style={{ color: userType === "employer" ? "white" : undefined }}
             >
-              I'm Hiring
+              I&apos;m Hiring
             </button>
           </div>
         </div>
