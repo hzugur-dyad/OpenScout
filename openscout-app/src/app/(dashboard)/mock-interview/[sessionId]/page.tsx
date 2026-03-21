@@ -19,51 +19,9 @@ import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 
 type InterviewControl = {
   questionId: string;
-  attemptCount: number;
-  evaluationResult: "n/a" | "correct" | "partial" | "incorrect";
-  nextAction: "next" | "retry";
-  concept?: string;
+  attempt: number;
+  isFollowup: boolean;
 };
-
-function parseInterviewControlLine(content: string): { visibleText: string; control: InterviewControl | null } {
-  const marker = "INTERVIEW_CONTROL";
-  const idx = content.lastIndexOf(marker);
-  if (idx < 0) return { visibleText: content.trim(), control: null };
-
-  const jsonRaw = content.slice(idx + marker.length).trim();
-  try {
-    const parsed = JSON.parse(jsonRaw) as {
-      question_id?: string;
-      attempt_count?: number;
-      evaluation_result?: "n/a" | "correct" | "partial" | "incorrect";
-      next_action?: "next" | "retry";
-      concept?: string;
-    };
-    if (
-      typeof parsed.question_id === "string" &&
-      typeof parsed.attempt_count === "number" &&
-      (parsed.evaluation_result === "n/a" ||
-        parsed.evaluation_result === "correct" ||
-        parsed.evaluation_result === "partial" ||
-        parsed.evaluation_result === "incorrect") &&
-      (parsed.next_action === "next" || parsed.next_action === "retry")
-    ) {
-      return {
-        visibleText: content.slice(0, idx).trim(),
-        control: {
-          questionId: parsed.question_id,
-          attemptCount: Math.max(1, Math.min(2, parsed.attempt_count)),
-          evaluationResult: parsed.evaluation_result,
-          nextAction: parsed.next_action,
-          concept: typeof parsed.concept === "string" ? parsed.concept : undefined,
-        },
-      };
-    }
-  } catch {
-    // If parsing fails, treat as normal content.
-  }
-  return { visibleText: content.trim(), control: null };
-}
 
 export default function MockInterviewSessionPage() {
   const params = useParams();
@@ -205,23 +163,32 @@ export default function MockInterviewSessionPage() {
           interviewControl: controlStateRef.current
             ? {
                 questionId: controlStateRef.current.questionId,
-                attemptCount: controlStateRef.current.attemptCount,
+                attemptCount: controlStateRef.current.attempt,
               }
             : undefined,
           ...(jobId && { jobId }),
         }),
       });
       const data = await res.json();
-      const rawContent = data.content || "";
-      const hasEndSignal = rawContent.includes("INTERVIEW_ENDED") && rawContent.includes('"score"');
-      const beforeEnd = hasEndSignal ? rawContent.split("INTERVIEW_ENDED")[0].trim() : rawContent;
-      const { visibleText, control } = parseInterviewControlLine(beforeEnd);
-      if (control) controlStateRef.current = control;
+      const visibleText = (data.content ?? "").trim();
+      const interviewEnded = Boolean(data.interviewEnded);
+
+      if (interviewEnded) {
+        controlStateRef.current = null;
+      } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
+        controlStateRef.current = {
+          questionId: data.questionControl.questionId,
+          attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
+          isFollowup: Boolean(data.questionControl.isFollowup),
+        };
+      } else {
+        controlStateRef.current = null;
+      }
 
       setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
       setAiMessage(visibleText);
 
-      if (hasEndSignal) {
+      if (interviewEnded) {
         setStep("processing");
         const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
         const minMs = 5 * 60 * 1000;
@@ -381,10 +348,19 @@ export default function MockInterviewSessionPage() {
       }),
     });
     const data = await res.json();
-    const rawContent = data.content || copy.fallbackOpening;
-    const { visibleText, control } = parseInterviewControlLine(rawContent);
-    controlStateRef.current = control;
-    const content = visibleText || copy.fallbackOpening;
+    const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
+    if (data.interviewEnded) {
+      controlStateRef.current = null;
+    } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
+      controlStateRef.current = {
+        questionId: data.questionControl.questionId,
+        attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
+        isFollowup: Boolean(data.questionControl.isFollowup),
+      };
+    } else {
+      controlStateRef.current = null;
+    }
+    const content = visibleText;
     setAiMessage(content);
     setTranscript([{ role: "assistant", content }]);
 

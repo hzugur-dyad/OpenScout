@@ -12,12 +12,89 @@ import {
 } from "@/lib/mock-interview-prompt";
 import { parseJsonBody } from "@/lib/api-validation";
 import { interviewResponseSchema } from "@/types/schemas";
+import {
+  defaultMockInterviewEndScores,
+  parseMockInterviewAssistantTurn,
+  type NormalizedMockQuestionControl,
+} from "@/lib/ai/structured-output";
+import { GROQ_MOCK_INTERVIEW_MODEL } from "@/lib/mock-interview/versioning";
+
+/** Max user-side messages (each POST adds one user line) before hard stop. */
+const MAX_INTERVIEW_USER_MESSAGES = 40;
+
+function buildControlContextHint(
+  locale: InterviewLocale,
+  interviewControl: { questionId: string; attemptCount: number } | undefined
+): string {
+  if (!interviewControl) return "";
+  const q = interviewControl.questionId;
+  const a = Math.max(1, Math.min(2, interviewControl.attemptCount));
+  return locale === "tr"
+    ? `\nKONTROL BAĞLAMI: Aktif question_id=${q}, bildirilen attempt=${a}. attempt zaten 2 ise aynı soruda kalma; yeni question_id ve attempt=1 kullan.`
+    : `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt is already 2, advance with a new question_id and attempt=1.`;
+}
+
+function buildInvalidJsonRetrySuffix(locale: InterviewLocale): string {
+  return locale === "tr"
+    ? `\n\nKRİTİK: Son yanıtın geçersizdi. Adaya yönelik metinden sonra mesajın EN SONUNDA yalnızca TEK bir JSON olmalı: devam için {"type":"question_control","question_id":"...","attempt":1 veya 2,"is_followup":true veya false}; bitiş için {"type":"interview_end","reason":"...","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}. Markdown veya düz metin işaret kullanma.`
+    : `\n\nCRITICAL: Your last reply was invalid. After your spoken text, end with exactly ONE JSON object: while continuing {"type":"question_control","question_id":"...","attempt":1 or 2,"is_followup":true or false}; when closing {"type":"interview_end","reason":"...","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}. No markdown or plain-text markers.`;
+}
+
+function failsafeClosingText(locale: InterviewLocale, reason: "empty_model" | "parse_failure"): string {
+  if (locale === "tr") {
+    return reason === "empty_model"
+      ? "Şu anda yanıt alınamadı; mülakatı güvenli biçimde sonlandırıyorum. Sonuçların hazırlanıyor."
+      : "Yanıt biçimi beklenenle eşleşmedi; mülakatı güvenli biçimde sonlandırıyorum. Sonuçların hazırlanıyor.";
+  }
+  return reason === "empty_model"
+    ? "I couldn't get a response right now — closing the interview safely. Preparing your results."
+    : "The response format didn't match what we need — closing the interview safely. Preparing your results.";
+}
+
+function maxTurnsClosingText(locale: InterviewLocale): string {
+  return locale === "tr"
+    ? "Konuşma üst sınırına ulaşıldı; mülakatı burada sonlandırıyorum. Sonuçların hazırlanıyor."
+    : "We've reached the conversation limit — wrapping the interview here. Preparing your results.";
+}
+
+function enforceServerQuestionControl(
+  qc: NormalizedMockQuestionControl | null,
+  clientPrev?: { questionId: string; attemptCount: number }
+): NormalizedMockQuestionControl {
+  const advance: NormalizedMockQuestionControl = {
+    questionId: clientPrev ? `${clientPrev.questionId}__next` : "q_start",
+    attempt: 1,
+    isFollowup: false,
+  };
+
+  if (!qc) return advance;
+
+  let questionId = qc.questionId.trim() || advance.questionId;
+  const attempt = Math.min(2, Math.max(1, Math.round(qc.attempt)));
+  let isFollowup = qc.isFollowup;
+
+  if (clientPrev && clientPrev.questionId === questionId && clientPrev.attemptCount >= 2) {
+    return {
+      questionId: `${clientPrev.questionId}__next`,
+      attempt: 1,
+      isFollowup: false,
+    };
+  }
+
+  if (attempt >= 2) {
+    isFollowup = false;
+  }
+
+  return { questionId, attempt, isFollowup };
+}
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview request received");
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -42,9 +119,23 @@ export async function POST(request: NextRequest) {
       logWarn("mock-interview validation failed", { reason: "body schema" });
       return parsed.response;
     }
-    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } =
-      parsed.data;
+    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } = parsed.data;
     const locale: InterviewLocale = parseInterviewLocale(interviewLanguage);
+
+    const userTurnCount = messages.filter((m) => m.role === "user").length;
+    if (userTurnCount > MAX_INTERVIEW_USER_MESSAGES) {
+      logWarn("mock-interview max user messages exceeded", { userTurnCount });
+      const scores = defaultMockInterviewEndScores();
+      return NextResponse.json({
+        content: maxTurnsClosingText(locale),
+        interviewEnded: true,
+        interviewEnd: {
+          reason: "max_turns",
+          scores,
+        },
+        terminatedBy: "max_turns",
+      });
+    }
 
     let customQuestionsBlock = "";
     if (jobId && typeof jobId === "string") {
@@ -57,22 +148,23 @@ export async function POST(request: NextRequest) {
       const questions = config.custom_questions?.filter((q) => typeof q === "string" && q.trim()) ?? [];
       if (questions.length > 0) {
         customQuestionsBlock =
-          locale === "tr"
-            ? buildEmployerQuestionsBlockTr(questions)
-            : buildEmployerQuestionsBlockEn(questions);
+          locale === "tr" ? buildEmployerQuestionsBlockTr(questions) : buildEmployerQuestionsBlockEn(questions);
       }
     }
 
     const displayName = userName && typeof userName === "string" ? userName.trim() || "there" : "there";
-    const controlHint =
+    const clientPrev =
       interviewControl &&
       typeof interviewControl === "object" &&
       typeof (interviewControl as { questionId?: unknown }).questionId === "string" &&
       typeof (interviewControl as { attemptCount?: unknown }).attemptCount === "number"
-        ? locale === "tr"
-          ? `\nKONTROL BAĞLAMI: Mevcut soru=${(interviewControl as { questionId: string }).questionId}, attempt=${Math.max(1, Math.min(2, (interviewControl as { attemptCount: number }).attemptCount))}. Eğer attempt=2 ve önceki yanıt hala partial/incorrect ise next_action=\"next\" seç ve yeni question_id üret.`
-          : `\nCONTROL CONTEXT: Current question=${(interviewControl as { questionId: string }).questionId}, attempt=${Math.max(1, Math.min(2, (interviewControl as { attemptCount: number }).attemptCount))}. If attempt=2 and previous answer is still partial/incorrect, set next_action=\"next\" and move to a new question_id.`
-        : "";
+        ? {
+            questionId: (interviewControl as { questionId: string }).questionId.trim(),
+            attemptCount: Math.max(1, Math.min(2, Math.round((interviewControl as { attemptCount: number }).attemptCount))),
+          }
+        : undefined;
+
+    const controlHint = buildControlContextHint(locale, clientPrev);
     const systemPrompt = buildInterviewerSystemPrompt(locale, {
       jobCategory,
       displayName,
@@ -82,23 +174,82 @@ export async function POST(request: NextRequest) {
     });
 
     const groq = getGroq();
-    let completion;
-    try {
-      completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.5,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-      });
-    } catch (groqError) {
-      logError("mock-interview Groq request failed", groqError);
-      return NextResponse.json(
-        { error: groqError instanceof Error ? groqError.message : "Interview error" },
-        { status: 500 }
-      );
+
+    let rawContent = "";
+    let parseResult = null as ReturnType<typeof parseMockInterviewAssistantTurn> | null;
+
+    for (let groqAttempt = 0; groqAttempt < 2; groqAttempt++) {
+      const systemContent =
+        groqAttempt === 0 ? systemPrompt : systemPrompt + buildInvalidJsonRetrySuffix(locale);
+      const chatMessages = [{ role: "system" as const, content: systemContent }, ...messages];
+
+      let completion;
+      try {
+        completion = await groq.chat.completions.create({
+          model: GROQ_MOCK_INTERVIEW_MODEL,
+          temperature: 0.5,
+          messages: chatMessages,
+        });
+      } catch (groqError) {
+        logError("mock-interview Groq request failed", groqError);
+        return NextResponse.json(
+          { error: groqError instanceof Error ? groqError.message : "Interview error" },
+          { status: 500 }
+        );
+      }
+
+      rawContent = (completion.choices[0]?.message?.content ?? "").trim();
+      if (!rawContent) {
+        logWarn("mock-interview empty model content", { groqAttempt });
+        break;
+      }
+
+      parseResult = parseMockInterviewAssistantTurn(rawContent);
+      if (parseResult.interviewEnd || parseResult.questionControl) {
+        break;
+      }
+      logWarn("mock-interview missing valid trailing JSON", { groqAttempt });
     }
 
-    const content = completion.choices[0]?.message?.content || "";
-    return NextResponse.json({ content });
+    if (parseResult?.interviewEnd) {
+      const visible =
+        parseResult.visibleText.trim() ||
+        (locale === "tr" ? "Mülakatı tamamlıyoruz; sonuçların hazırlanıyor." : "Wrapping up — preparing your results.");
+      return NextResponse.json({
+        content: visible,
+        interviewEnded: true,
+        interviewEnd: parseResult.interviewEnd,
+        terminatedBy: null,
+      });
+    }
+
+    if (parseResult?.questionControl) {
+      const qc = enforceServerQuestionControl(parseResult.questionControl, clientPrev);
+      const visible = parseResult.visibleText.trim() || rawContent;
+      return NextResponse.json({
+        content: visible,
+        interviewEnded: false,
+        questionControl: {
+          questionId: qc.questionId,
+          attempt: qc.attempt,
+          isFollowup: qc.isFollowup,
+        },
+        terminatedBy: null,
+      });
+    }
+
+    const terminatedBy = !rawContent ? "empty_model" : "parse_failure";
+    logWarn("mock-interview failsafe terminate", { terminatedBy });
+    const scores = defaultMockInterviewEndScores();
+    return NextResponse.json({
+      content: failsafeClosingText(locale, terminatedBy === "empty_model" ? "empty_model" : "parse_failure"),
+      interviewEnded: true,
+      interviewEnd: {
+        reason: terminatedBy === "empty_model" ? "empty_model_response" : "invalid_structured_output",
+        scores,
+      },
+      terminatedBy,
+    });
   } catch (e) {
     logError("mock-interview unexpected error", e);
     return NextResponse.json(

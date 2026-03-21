@@ -1,18 +1,34 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
 import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { EmployerApplicationsControls } from "@/components/employer/EmployerApplicationsControls";
+import { EmployerApplicationsInteractiveTable } from "@/components/employer/EmployerApplicationsInteractiveTable";
+import {
+  filterEmployerApplications,
+  sortEmployerApplications,
+  parseApplicationsListQuery,
+  type EmployerApplicationListItem,
+} from "@/lib/employer-applications-list";
 
 export default async function EmployerApplicationsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ jobId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { jobId } = await params;
+  const sp = await searchParams;
+  const { sort, status: statusFilter, minScore } = parseApplicationsListQuery(sp);
+
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/employer/login");
 
   const { data: job } = await supabase
@@ -34,38 +50,37 @@ export default async function EmployerApplicationsPage({
 
   const isSubscribed = (company as { stripe_subscription_status?: string }).stripe_subscription_status === "active";
 
-  type ApplicationRow = {
-    id: string;
-    user_id: string;
-    status: string;
-    cv_score: number | null;
-    interview_score: number | null;
-    created_at: string;
-    profiles: { first_name?: string; last_name?: string; email?: string } | null;
-  };
-  let applications: ApplicationRow[] | null = null;
+  let applications: EmployerApplicationListItem[] | null = null;
   if (isSubscribed) {
     const { data } = await supabase
       .from("job_applications")
-      .select(`
+      .select(
+        `
         id,
         user_id,
-        status,
+        application_status,
         cv_score,
         interview_score,
+        interview_report,
         created_at,
         profiles(first_name, last_name, email)
-      `)
-      .eq("job_id", jobId)
-      .order("created_at", { ascending: false });
-    applications = data as ApplicationRow[] | null;
+      `
+      )
+      .eq("job_id", jobId);
+
+    const raw = (data ?? []) as EmployerApplicationListItem[];
+    const filtered = filterEmployerApplications(raw, statusFilter, minScore);
+    applications = sortEmployerApplications(filtered, sort);
   }
 
   return (
     <div className="mx-auto max-w-4xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <Link href="/employer" className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300">
+          <Link
+            href="/employer"
+            className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
+          >
             ← Back to employer
           </Link>
           <h1 className="mt-3 text-2xl font-bold text-gray-900 dark:text-zinc-100">Applications</h1>
@@ -95,8 +110,8 @@ export default async function EmployerApplicationsPage({
         <EmptyState
           className="mt-10"
           icon={Inbox}
-          title="No applications yet"
-          description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
+          title="No applications match"
+          description="Try adjusting filters, or when candidates meet your CV score requirement and complete the AI interview, they will show up here."
         >
           <Link href="/employer">
             <Button variant="primary">Back to dashboard</Button>
@@ -106,48 +121,13 @@ export default async function EmployerApplicationsPage({
           </Link>
         </EmptyState>
       ) : (
-        <div className="mt-8 overflow-hidden rounded-[10px] border border-[var(--border)] bg-white shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-[var(--border)] bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800">
-              <tr>
-                <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Candidate</th>
-                <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Status</th>
-                <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">CV</th>
-                <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Interview</th>
-                <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {applications.map((a) => {
-                const profile = (a as { profiles?: { first_name?: string; last_name?: string; email?: string } | null }).profiles;
-                const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || profile?.email || null;
-                const candidateLabel = name || (
-                  <span className="font-mono text-xs text-gray-500 dark:text-zinc-500">{a.user_id}</span>
-                );
-                return (
-                  <tr key={a.id} className="border-b border-[var(--border)] last:border-b-0 dark:border-zinc-700">
-                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">
-                      <Link href={`/employer/${jobId}/applications/${a.id}`} className="block hover:underline">
-                        <div className="font-medium">{candidateLabel}</div>
-                        {name && profile?.email && (
-                          <div className="text-xs text-gray-500 dark:text-zinc-500">{profile.email}</div>
-                        )}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">{a.status}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">{a.cv_score ?? "-"}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-zinc-200">{a.interview_score ?? "-"}</td>
-                    <td className="px-4 py-3 text-gray-500 dark:text-zinc-500">
-                      {a.created_at ? new Date(a.created_at).toLocaleString() : "-"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <Suspense fallback={<div className="mb-4 h-10" aria-hidden />}>
+            <EmployerApplicationsControls />
+          </Suspense>
+          <EmployerApplicationsInteractiveTable jobId={jobId} applications={applications} />
+        </>
       )}
     </div>
   );
 }
-

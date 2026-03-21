@@ -175,13 +175,15 @@ SESSİZLİK: "Kısaca tekrar eder misiniz?" gibi kısa, doğal bir ifade.
 
 İşveren soruları başka dildeyse doğal Türkçeye çevirerek sor.
 
-KONTROL SATIRI (HER YANITIN SON SATIRI, ZORUNLU):
-INTERVIEW_CONTROL {"question_id":"q1","attempt_count":1,"evaluation_result":"n/a|correct|partial|incorrect","next_action":"next|retry","concept":"kısa_etiket"}
-${controlHint}
-
-BİTİŞ: Mülakat bittiğinde tek yanıtta: (1) Kısa, empatik kapanış (örn. "${displayName}, süreci burada tamamlıyoruz; sonuçlarını hazırlıyorum."). (2) Yeni satırda tam olarak INTERVIEW_ENDED ve ardından TEK bir JSON (markdown yok):
-{"score":0-100,"justification":"kısa Türkçe özet","strengths":[],"weaknesses":[]}
-Kapanış cümlesi önce; INTERVIEW_ENDED ve JSON sistem içindir.`;
+YAPISAL ÇIKIŞ (ZORUNLU — DÜZ METİN İŞARETİ YOK):
+- Adaya yönelik sözlü metinden hemen sonra, mesajının EN SONUNDA tek bir JSON nesnesi olmalı (markdown kod çiti yok, ek metin yok).
+- Mülakat sürerken her yanıtta yalnızca:
+{"type":"question_control","question_id":"q1","attempt":1 veya 2,"is_followup":true veya false}
+- attempt: aynı question_id için en fazla 2; ikinci denemeden sonra yeni question_id üret ve attempt=1 ile devam et. is_followup: bu tur takip sorusu mu.
+- Mülakat bittiğinde tek yanıtta: (1) Kısa empatik kapanış. (2) Ardından yalnızca bitiş JSON'u (aynı mesajda question_control OLMAMALI):
+{"type":"interview_end","reason":"kısa neden","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}
+- INTERVIEW_ENDED, INTERVIEW_CONTROL veya benzeri düz metin kullanma; sistem yalnızca geçerli JSON ile tanır.
+${controlHint}`;
   }
 
   return `You are Nova — a Senior Technical Recruiter conducting a live interview for the ${jobCategory} role. The candidate is ${userName || "the candidate"}.
@@ -212,13 +214,15 @@ SILENCE: Use a short neutral phrase like "Could you repeat that briefly?"
 
 FIRST MESSAGE: Say: "Hi ${displayName}, I'm Nova. We'll walk through your interview together." Then ask your first substantive technical question immediately. Do not repeat this greeting later.${customQuestionsBlock}
 
-CONTROL LINE (REQUIRED AS THE FINAL LINE OF EVERY REPLY):
-INTERVIEW_CONTROL {"question_id":"q1","attempt_count":1,"evaluation_result":"n/a|correct|partial|incorrect","next_action":"next|retry","concept":"short_tag"}
-${controlHint}
-
-ENDING: When finishing, in one reply: (1) A brief, empathetic closing (e.g. "${displayName}, we'll wrap here — I'll get your results ready."). (2) On a new line, the exact token INTERVIEW_ENDED followed by ONE JSON object (no markdown):
-{"score":0-100,"justification":"short English summary","strengths":[],"weaknesses":[]}
-The closing sentence comes first; INTERVIEW_ENDED and JSON are for the system.`;
+STRUCTURED OUTPUT (REQUIRED — NO PLAIN-TEXT MARKERS):
+- Immediately after your spoken text to the candidate, end the message with ONE JSON object only (no markdown fences, no trailing prose).
+- While the interview continues, use only:
+{"type":"question_control","question_id":"q1","attempt":1 or 2,"is_followup":true or false}
+- attempt: at most 2 per question_id; after the second attempt, use a new question_id and reset attempt to 1. is_followup: whether this turn is a follow-up on the same thread.
+- When the interview is complete, in a single reply: (1) A brief empathetic closing. (2) Then ONLY this JSON (no question_control in the same message):
+{"type":"interview_end","reason":"short reason","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}
+- Do not use INTERVIEW_ENDED, INTERVIEW_CONTROL, or any plain-text markers; the system detects end only from valid JSON.
+${controlHint}`;
 }
 
 export function buildEmployerQuestionsBlockEn(questions: string[]): string {

@@ -10,6 +10,7 @@ import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
 import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
+import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview result request received");
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
     let completion;
     try {
       completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: GROQ_MOCK_INTERVIEW_MODEL,
         temperature: 0.2,
         response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
         messages: [
@@ -75,13 +76,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const text = completion.choices[0]?.message?.content;
-    if (!text) {
-      logError("mock-interview result Groq returned empty content", undefined);
-      throw new Error("No response from model");
+    const text = completion.choices[0]?.message?.content ?? "";
+    if (!text.trim()) {
+      logWarn("mock-interview result Groq returned empty content — using fallback evaluation");
     }
 
-    const normalized = parseInterviewEvaluationModelOutput(text);
+    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "");
     if (normalized.usedFallback) {
       logWarn("mock-interview result: parser used fallback scores", { jobCategory });
     }
@@ -132,6 +132,10 @@ export async function POST(request: NextRequest) {
       ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
       score: overallScore,
       report,
+      transcript: typeof transcript === "string" ? transcript : "",
+      interview_language: locale,
+      model_version: GROQ_MOCK_INTERVIEW_MODEL,
+      prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
     });
 
     if (insertError) {

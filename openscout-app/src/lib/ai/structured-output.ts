@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { extractJsonObjectFromModelText } from "@/lib/ai/extract-json";
+import { extractJsonObjectFromModelText, extractTrailingJsonObject, stripTrailingJsonSlice } from "@/lib/ai/extract-json";
 import { logWarn } from "@/lib/logger";
 
 const CATEGORY_KEYS = [
@@ -352,5 +352,131 @@ function interviewEvalFallback(fromError: boolean): NormalizedInterviewEvaluatio
     communicationScore: null,
     problemSolvingScore: null,
     usedFallback: fromError,
+  };
+}
+
+// --- Live mock interview assistant turn (trailing JSON only; ignore plain-text markers) ---
+
+const mockInterviewEndSchema = z.object({
+  type: z.literal("interview_end"),
+  reason: z.string(),
+  scores: z.object({
+    technical: z.union([z.number(), z.string()]),
+    communication: z.union([z.number(), z.string()]),
+    problem_solving: z.union([z.number(), z.string()]),
+    confidence: z.union([z.number(), z.string()]),
+    consistency: z.union([z.number(), z.string()]),
+  }),
+});
+
+const mockQuestionControlSchema = z.object({
+  type: z.literal("question_control"),
+  question_id: z.string().min(1),
+  attempt: z.number(),
+  is_followup: z.boolean(),
+});
+
+export type NormalizedMockInterviewEnd = {
+  reason: string;
+  scores: {
+    technical: number;
+    communication: number;
+    problem_solving: number;
+    confidence: number;
+    consistency: number;
+  };
+};
+
+export type NormalizedMockQuestionControl = {
+  questionId: string;
+  attempt: number;
+  isFollowup: boolean;
+};
+
+export type ParsedMockInterviewAssistantTurn = {
+  visibleText: string;
+  interviewEnd: NormalizedMockInterviewEnd | null;
+  questionControl: NormalizedMockQuestionControl | null;
+};
+
+function normalizeInterviewEndScores(
+  scores: z.infer<typeof mockInterviewEndSchema>["scores"]
+): NormalizedMockInterviewEnd["scores"] {
+  return {
+    technical: coerceScore(scores.technical) ?? 50,
+    communication: coerceScore(scores.communication) ?? 50,
+    problem_solving: coerceScore(scores.problem_solving) ?? 50,
+    confidence: coerceScore(scores.confidence) ?? 50,
+    consistency: coerceScore(scores.consistency) ?? 50,
+  };
+}
+
+/**
+ * Parses Nova's reply: spoken text first, then a single trailing JSON object.
+ * End-of-interview is recognized only when that JSON has type "interview_end".
+ */
+export function parseMockInterviewAssistantTurn(raw: string): ParsedMockInterviewAssistantTurn {
+  const trailing = extractTrailingJsonObject(raw);
+  if (!trailing) {
+    return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trailing);
+  } catch {
+    return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+  }
+
+  const t = (parsed as { type?: unknown }).type;
+  if (t === "interview_end") {
+    const end = mockInterviewEndSchema.safeParse(parsed);
+    if (!end.success) {
+      return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+    }
+    const visibleText = stripTrailingJsonSlice(raw, trailing);
+    return {
+      visibleText,
+      interviewEnd: {
+        reason: end.data.reason.trim(),
+        scores: normalizeInterviewEndScores(end.data.scores),
+      },
+      questionControl: null,
+    };
+  }
+
+  if (t === "question_control") {
+    const qc = mockQuestionControlSchema.safeParse(parsed);
+    if (!qc.success) {
+      return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+    }
+    const visibleText = stripTrailingJsonSlice(raw, trailing);
+    const attempt = Number.isFinite(qc.data.attempt) ? Math.round(qc.data.attempt) : 1;
+    return {
+      visibleText,
+      interviewEnd: null,
+      questionControl: {
+        questionId: qc.data.question_id.trim(),
+        attempt: Math.min(2, Math.max(1, attempt)),
+        isFollowup: qc.data.is_followup,
+      },
+    };
+  }
+
+  return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+}
+
+/** Neutral scores when the interview is terminated by failsafe rules. */
+export function defaultMockInterviewEndScores(): NormalizedMockInterviewEnd["scores"] {
+  return {
+    technical: 50,
+    communication: 50,
+    problem_solving: 50,
+    confidence: 50,
+    consistency: 50,
   };
 }

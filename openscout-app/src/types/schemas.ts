@@ -81,6 +81,18 @@ export const jobApplicationSchema = z.object({
 
 export type JobApplicationBody = z.infer<typeof jobApplicationSchema>;
 
+/** PATCH /api/employer/applications/[applicationId] */
+export const employerApplicationPatchSchema = z
+  .object({
+    status: z.enum(["applied", "shortlisted", "rejected"]).optional(),
+    notes: z.string().max(20_000).optional(),
+  })
+  .refine((d) => d.status !== undefined || d.notes !== undefined, {
+    message: "At least one of status or notes is required",
+  });
+
+export type EmployerApplicationPatchBody = z.infer<typeof employerApplicationPatchSchema>;
+
 // --- Mock interview chat request ---
 
 export const interviewMessageSchema = z.object({
