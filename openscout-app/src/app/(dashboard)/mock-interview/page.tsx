@@ -10,7 +10,8 @@ import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
 import { CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
-import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+import { INTERVIEW_LOCALE_LABEL, interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { getJobTitleBySlug } from "@/lib/seo/job-titles";
 
 const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
@@ -40,7 +41,11 @@ function MockInterviewContent() {
   const searchParams = useSearchParams();
   const [jobCategory, setJobCategory] = useState<string>(() => jobTitleFromJobQuery(searchParams) ?? JOB_TITLES[0]);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
-  const ui = interviewUi.en;
+  const ui = interviewUi[interviewLang];
+
+  useEffect(() => {
+    setInterviewLang(getDefaultInterviewLocale());
+  }, []);
   const [guard, setGuard] = useState<{
     profileComplete: boolean;
     hasCv: boolean;
@@ -119,7 +124,7 @@ function MockInterviewContent() {
                 <p className="mt-2 text-sm">
                   {ui.missingPrefix}:{" "}
                   {guard.missingProfileFieldKeys
-                    .map((k) => PROFILE_FIELD_LABEL.en[k] ?? k)
+                    .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
                     .join(", ")}
                   .
                 </p>
@@ -141,8 +146,8 @@ function MockInterviewContent() {
             <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.interviewLanguage}</label>
             <CustomSelect
               options={[
-                { value: "en", label: "English" },
-                { value: "tr", label: "Türkçe" },
+                { value: "en", label: INTERVIEW_LOCALE_LABEL.en },
+                { value: "tr", label: INTERVIEW_LOCALE_LABEL.tr },
               ]}
               value={interviewLang}
               onChange={(v) => setInterviewLang(v === "tr" ? "tr" : "en")}

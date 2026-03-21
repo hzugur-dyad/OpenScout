@@ -121,7 +121,12 @@ export default async function EmployerApplicationDetailPage({
           <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Candidate</h2>
           <p className="mt-1 font-medium text-gray-900 dark:text-zinc-200">{name}</p>
           {profile?.email && <p className="text-sm text-gray-500 dark:text-zinc-400">{profile.email}</p>}
-          <p className="mt-2 font-mono text-xs text-gray-400 dark:text-zinc-500">{application.user_id}</p>
+          <details className="mt-3 text-left">
+            <summary className="cursor-pointer text-xs text-gray-400 underline decoration-gray-400/70 underline-offset-2 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-400">
+              Technical details
+            </summary>
+            <p className="mt-2 break-all font-mono text-xs text-gray-400 dark:text-zinc-500">{application.user_id}</p>
+          </details>
         </div>
 
         <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">

@@ -12,12 +12,16 @@ export function InviteFriendCard() {
   const [successfulReferralsCount, setSuccessfulReferralsCount] = useState<number>(0);
   const [bonusBalance, setBonusBalance] = useState<number>(0);
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [phase, setPhase] = useState<"loading" | "ok" | "unavailable">("loading");
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    setPhase("loading");
     fetch("/api/referral/my-code")
       .then((res) => (res.ok ? res.json() : null))
       .then((data: ReferralMyCodeResponse | null) => {
+        if (cancelled) return;
         if (data?.code) {
           setCode(data.code);
           if (typeof data.referredCount === "number") setReferredCount(data.referredCount);
@@ -27,13 +31,24 @@ export function InviteFriendCard() {
           if (typeof data.bonusInterviewCreditsBalance === "number") {
             setBonusBalance(data.bonusInterviewCreditsBalance);
           }
+          setPhase("ok");
+        } else {
+          setCode(null);
+          setPhase("unavailable");
         }
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      .catch(() => {
+        if (!cancelled) {
+          setCode(null);
+          setPhase("unavailable");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [retryKey]);
 
-  if (loading) {
+  if (phase === "loading") {
     return (
       <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
         <div className="h-24 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
@@ -41,7 +56,29 @@ export function InviteFriendCard() {
     );
   }
 
-  if (!code) return null;
+  if (phase === "unavailable" || !code) {
+    return (
+      <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+        <div className="flex items-start gap-3">
+          <div
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full"
+            style={{ backgroundColor: "var(--primary-muted)" }}
+          >
+            <UserPlus className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
+          </div>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Invite a friend</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+              We couldn&apos;t load your referral link right now. Your account is fine — this is usually temporary.
+            </p>
+            <Button variant="outline" size="sm" className="mt-4" type="button" onClick={() => setRetryKey((k) => k + 1)}>
+              Try again
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
   const inviteUrl = `${baseUrl}/register?ref=${code}`;

@@ -369,6 +369,15 @@ export default function RegisterPage() {
           <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 
+        {searchParams.get("ref")?.trim() ? (
+          <p
+            className="mb-4 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary-muted)]/40 px-4 py-2.5 text-center text-sm text-gray-800 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-200"
+            role="status"
+          >
+            You&apos;re signing up with an invite link.
+          </p>
+        ) : null}
+
         <div className="mb-6">
           <StepIndicator current={step} />
         </div>

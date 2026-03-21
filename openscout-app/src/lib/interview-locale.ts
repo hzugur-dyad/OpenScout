@@ -110,6 +110,10 @@ export const interviewUi = {
     scoreProblemSolving: "Problem solving",
     loadingResults: "Loading your results…",
     processingSubtitle: "Scoring your answers and drafting feedback",
+    resultUnauthenticatedBody: "Sign in to view your result.",
+    signInCta: "Sign in",
+    resultNotFoundBody:
+      "Interview results not found. Please complete the interview again.",
   },
   tr: {
     mockInterviewTitle: "Yapay Zeka Deneme Mülakatı",
@@ -172,5 +176,9 @@ export const interviewUi = {
     scoreProblemSolving: "Problem çözme",
     loadingResults: "Sonuçlarınız yükleniyor…",
     processingSubtitle: "Yanıtlarınız puanlanıyor ve geri bildirim hazırlanıyor",
+    resultUnauthenticatedBody: "Sonucunuzu görmek için giriş yapın.",
+    signInCta: "Giriş yap",
+    resultNotFoundBody:
+      "Mülakat sonucu bulunamadı. Lütfen mülakatı yeniden tamamlayın.",
   },
 } as const;

@@ -8,6 +8,7 @@ import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { INTERVIEW_LOCALE_LABEL, type InterviewLocale } from "@/lib/interview-locale";
+import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { CVAnalysisLoadingSkeleton, JobApplyPageSkeleton } from "@/components/ui/Skeleton";
 
@@ -30,8 +31,12 @@ export default function JobApplyPage() {
   const [guard, setGuard] = useState<{ profileComplete: boolean; hasCv: boolean; canApply: boolean; missingProfileFields: string[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [interviewLang, setInterviewLang] = useState<InterviewLocale>("tr");
+  const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
   const applicationStartedTracked = useRef(false);
+
+  useEffect(() => {
+    setInterviewLang(getDefaultInterviewLocale());
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -131,11 +136,7 @@ export default function JobApplyPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <JobApplyPageSkeleton />;
   }
 
   if (notFound || !job) {

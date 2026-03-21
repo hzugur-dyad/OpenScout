@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/Button";
 import { MockInterviewResultView } from "@/components/mock-interview/MockInterviewResultView";
+import { MockInterviewResultFallback } from "@/components/mock-interview/MockInterviewResultFallback";
 import { parseInterviewLocale } from "@/lib/interview-locale";
 
 type PageProps = {
@@ -36,39 +35,11 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-bold">Interview Result</h1>
-        <p className="mt-2 text-gray-600">Sign in to view your result.</p>
-        <div className="mt-6 flex gap-4">
-          <Link href="/login">
-            <Button variant="primary">Sign in</Button>
-          </Link>
-          <Link href="/mock-interview">
-            <Button variant="outline">New Interview</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <MockInterviewResultFallback locale={resultLocale} variant="unauthenticated" />;
   }
 
   if (!sessionId) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-bold">Interview Result</h1>
-        <p className="mt-2 text-gray-600">
-          Interview results not found. Please complete the interview again.
-        </p>
-        <div className="mt-6 flex gap-4">
-          <Link href="/mock-interview">
-            <Button variant="primary">New Interview</Button>
-          </Link>
-          <Link href="/dashboard">
-            <Button variant="outline">Dashboard</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <MockInterviewResultFallback locale={resultLocale} variant="not_found" />;
   }
 
   const { data: interview } = await supabase
@@ -79,22 +50,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
     .maybeSingle();
 
   if (!interview) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-bold">Interview Result</h1>
-        <p className="mt-2 text-gray-600">
-          Interview results not found. Please complete the interview again.
-        </p>
-        <div className="mt-6 flex gap-4">
-          <Link href="/mock-interview">
-            <Button variant="primary">New Interview</Button>
-          </Link>
-          <Link href="/dashboard">
-            <Button variant="outline">Dashboard</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    return <MockInterviewResultFallback locale={resultLocale} variant="not_found" />;
   }
 
   const report = (interview.report as {
