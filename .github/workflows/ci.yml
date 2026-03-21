@@ -33,6 +33,8 @@ jobs:
     env:
       OPENSCOUT_ENV_PROFILE: ci
       NEXT_TELEMETRY_DISABLED: "1"
+      # Avoid intermittent OOM / slow GC on ubuntu-latest during `next build` + Vitest.
+      NODE_OPTIONS: --max-old-space-size=6144
       # Secrets override placeholders when set (closer to production). Placeholders keep
       # `next build` working on forks / before secrets are configured. See docs/CI_CD.md.
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://ci-placeholder.supabase.co' }}
