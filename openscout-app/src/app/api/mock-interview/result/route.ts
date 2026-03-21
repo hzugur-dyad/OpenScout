@@ -38,7 +38,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { transcript, jobCategory, jobId, interviewLanguage } = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Invalid JSON body",
+          message: "Request body must be valid JSON",
+        },
+        { status: 400 }
+      );
+    }
+
+    const { transcript, jobCategory, jobId, interviewLanguage } = (body ?? {}) as {
+      transcript?: unknown;
+      jobCategory?: unknown;
+      jobId?: unknown;
+      interviewLanguage?: unknown;
+    };
     const locale: InterviewLocale = parseInterviewLocale(
       typeof interviewLanguage === "string" ? interviewLanguage : undefined
     );

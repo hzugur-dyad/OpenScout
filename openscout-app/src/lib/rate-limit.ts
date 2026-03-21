@@ -121,23 +121,31 @@ export async function rateLimit(identifier: string, config: RateLimitConfig): Pr
     return { success: true, redisConfigured: false };
   }
   const { limiterKey, limit, window } = resolveLimiterSpec(config);
-  const limiter = getLimiter(limiterKey, limit, window);
-  const out = await limiter.limit(identifier);
-  if (!out.success) {
+  try {
+    const limiter = getLimiter(limiterKey, limit, window);
+    const out = await limiter.limit(identifier);
+    if (!out.success) {
+      return {
+        success: false,
+        limit: out.limit,
+        remaining: out.remaining,
+        reset: out.reset,
+      };
+    }
     return {
-      success: false,
+      success: true,
+      redisConfigured: true,
       limit: out.limit,
       remaining: out.remaining,
       reset: out.reset,
     };
+  } catch (e) {
+    logWarn("rateLimit: Upstash limit() failed; allowing request (fail-open)", {
+      limiterKey,
+      err: e instanceof Error ? e.message : String(e),
+    });
+    return { success: true, redisConfigured: false };
   }
-  return {
-    success: true,
-    redisConfigured: true,
-    limit: out.limit,
-    remaining: out.remaining,
-    reset: out.reset,
-  };
 }
 
 /** Named limits for specific product flows (each has its own Redis key prefix). */
