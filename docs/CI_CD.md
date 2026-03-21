@@ -85,7 +85,9 @@ Fork PRs still get CI with placeholder env; the optional Vercel CLI deploy job s
 
 ### Production env gate (Vercel build)
 
-Optional stricter check before build (rejects placeholder-style values — see [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)):
+[`openscout-app/vercel.json`](../openscout-app/vercel.json) sets **Build Command** to `npm run build:vercel`, which validates **production** env on **Vercel Production** only (Preview skips validation). Details: [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md).
+
+Manual equivalent if you override the command in the Vercel UI:
 
 ```bash
 OPENSCOUT_ENV_PROFILE=production npm run validate-env && npm run build
