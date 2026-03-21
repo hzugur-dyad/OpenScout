@@ -23,6 +23,16 @@ export const ANALYTICS_EVENTS = {
   result_shared: "result_shared",
   /** SEO job page CTA → mock interview (job = URL slug, page_type = route segment) */
   seo_cta_clicked: "seo_cta_clicked",
+  /** Candidate shared public profile link (role = target/open category, best_score = top Scout score) */
+  public_profile_shared: "public_profile_shared",
+  /** Candidate copied invite link from dashboard */
+  referral_link_copied: "referral_link_copied",
+  /** Referred user attributed to a referrer (no PII in properties) */
+  referral_attributed: "referral_attributed",
+  /** Referred user met onboarding + qualifying interview; about to grant rewards */
+  referral_qualified: "referral_qualified",
+  /** Bonus credits granted to referrer and/or referred (see properties.role) */
+  referral_rewarded: "referral_rewarded",
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

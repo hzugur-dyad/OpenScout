@@ -8,7 +8,7 @@ import { HiringFitBadge } from "@/components/employer/HiringFitBadge";
 import { InterviewResultShareBlock } from "@/components/mock-interview/InterviewResultShareBlock";
 import {
   fetchPublicMockInterviewById,
-  fetchSharedByFirstName,
+  fetchSharedByFirstNameForResultId,
 } from "@/lib/public-mock-interview-result";
 import { interviewResultViralText } from "@/lib/share-interview-result";
 import { absoluteUrl } from "@/lib/seo/site";
@@ -87,7 +87,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
   const data = fetched.data;
   let sharedByFirst: string | null = null;
   if (!anon) {
-    sharedByFirst = await fetchSharedByFirstName(data.userId);
+    sharedByFirst = await fetchSharedByFirstNameForResultId(id.trim());
   }
 
   const circleColor =

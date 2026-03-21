@@ -30,7 +30,12 @@ export type ScoutCredentialResponse = {
 
 export type ReferralMyCodeResponse = {
   code: string;
+  /** Users who signed up with your link (attributed). */
   referredCount?: number;
+  /** Referred users who finished onboarding + a qualifying interview; rewards granted. */
+  successfulReferralsCount?: number;
+  /** Spendable bonus mock interviews (referrals and other sources). */
+  bonusInterviewCreditsBalance?: number;
 };
 
 export type ReferralAttributeBody = {

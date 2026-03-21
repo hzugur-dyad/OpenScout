@@ -7,6 +7,7 @@ import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { buildCvAnalysisAutoSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
 import { parseAutoCvAnalysisModelOutput } from "@/lib/ai/structured-output";
+import { captureException, captureMessage } from "@/lib/monitoring";
 
 const WEIGHTS: Record<string, number> = {
   professional_summary: 0.15,
@@ -152,6 +153,12 @@ export async function POST(request: NextRequest) {
       });
     } catch (groqError) {
       logError("cv-analysis/auto Groq failed", groqError);
+      captureException(groqError, {
+        route: "/api/cv-analysis/auto",
+        user_id: user.id,
+        job_id: jobId,
+        tags: { feature: "cv_analysis", source: "auto" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "groq_error",
         source: "auto",
@@ -162,6 +169,12 @@ export async function POST(request: NextRequest) {
 
     const text = completion.choices[0]?.message?.content;
     if (!text) {
+      captureMessage("CV analysis auto: empty model response", {
+        route: "/api/cv-analysis/auto",
+        user_id: user.id,
+        job_id: jobId,
+        tags: { feature: "cv_analysis", source: "auto", reason: "empty_model" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "empty_model_response",
         source: "auto",
@@ -173,6 +186,12 @@ export async function POST(request: NextRequest) {
     const normalized = parseAutoCvAnalysisModelOutput(text, WEIGHTS);
     if (normalized.usedFallback) {
       logError("cv-analysis/auto model parse fallback", { job_id: jobId, preview: text.slice(0, 200) });
+      captureMessage("CV analysis auto: parser fallback used", {
+        route: "/api/cv-analysis/auto",
+        user_id: user.id,
+        job_id: jobId,
+        tags: { feature: "cv_analysis", source: "auto", reason: "parse_fallback" },
+      });
     }
 
     const categoryScores = normalized.category_scores;
@@ -191,6 +210,12 @@ export async function POST(request: NextRequest) {
     });
     if (insertErr) {
       logError("cv-analysis/auto insert failed", insertErr);
+      captureException(insertErr, {
+        route: "/api/cv-analysis/auto",
+        user_id: user.id,
+        job_id: jobId,
+        tags: { feature: "cv_analysis", source: "auto" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "db_insert",
         source: "auto",
@@ -217,6 +242,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ overall_score, cached: false });
   } catch (e) {
     logError("cv-analysis/auto unexpected error", e);
+    captureException(e, { route: "/api/cv-analysis/auto" });
     try {
       const supabase = await createClient();
       const { data: { user: u } } = await supabase.auth.getUser();

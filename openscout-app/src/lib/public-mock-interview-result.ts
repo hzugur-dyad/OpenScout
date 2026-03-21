@@ -17,7 +17,6 @@ export type PublicMockInterviewData = {
   strengths: string[];
   improvements: string[];
   job_category: string;
-  userId: string;
 };
 
 export type FetchPublicMockInterviewResult =
@@ -84,9 +83,24 @@ export async function fetchPublicMockInterviewById(
       strengths,
       improvements,
       job_category: typeof row.job_category === "string" ? row.job_category : "",
-      userId: row.user_id as string,
     },
   };
+}
+
+/** Server-only: resolves first name for “Shared by …” without putting auth user id in the public result payload. */
+export async function fetchSharedByFirstNameForResultId(rawId: string): Promise<string | null> {
+  const id = rawId?.trim();
+  if (!id || !isPublicMockInterviewId(id)) return null;
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return null;
+  const supabase = createAdminClient();
+  const { data: row } = await supabase
+    .from("mock_interviews")
+    .select("user_id")
+    .eq("id", id)
+    .maybeSingle();
+  const uid = row?.user_id;
+  if (typeof uid !== "string" || !uid.trim()) return null;
+  return fetchSharedByFirstName(uid);
 }
 
 export async function fetchSharedByFirstName(userId: string): Promise<string | null> {

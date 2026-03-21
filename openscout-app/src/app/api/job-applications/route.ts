@@ -7,6 +7,7 @@ import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { parseJsonBody } from "@/lib/api-validation";
 import { jobApplicationSchema } from "@/types/schemas";
+import { captureException } from "@/lib/monitoring";
 
 export async function POST(request: NextRequest) {
   logInfo("job-applications request received");
@@ -195,6 +196,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       logError("job-applications upsert failed", error);
+      captureException(error, {
+        route: "/api/job-applications",
+        user_id: user.id,
+        job_id: jobId,
+      });
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
@@ -222,6 +228,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (e) {
     logError("job-applications unexpected error", e);
+    captureException(e, { route: "/api/job-applications" });
     return NextResponse.json({ error: "Failed to save application" }, { status: 500 });
   }
 }

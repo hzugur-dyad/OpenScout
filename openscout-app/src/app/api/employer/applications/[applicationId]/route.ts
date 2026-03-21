@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { parseJsonBody } from "@/lib/api-validation";
 import { employerApplicationPatchSchema } from "@/types/schemas";
 import { logError, logInfo, logWarn } from "@/lib/logger";
+import { captureException } from "@/lib/monitoring";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function PATCH(
   request: NextRequest,
@@ -25,6 +27,12 @@ export async function PATCH(
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const rateLimited = await enforceRateLimit(request, user.id, {
+      namespace: "employer-application-patch",
+      preset: "moderate",
+    });
+    if (rateLimited) return rateLimited;
 
     const { data: application } = await supabase
       .from("job_applications")
@@ -82,6 +90,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   } catch (e) {
     logError("employer application PATCH unexpected error", e);
+    captureException(e, { route: "/api/employer/applications/[applicationId]" });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

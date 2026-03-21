@@ -33,12 +33,17 @@ export async function canUseFeature(
   supabase: SupabaseClient,
   userId: string,
   feature: UsageFeature,
-  plan: CandidatePlan
-): Promise<{ allowed: boolean; used: number; limit: number }> {
+  plan: CandidatePlan,
+  bonusMockInterviewCredits = 0
+): Promise<{ allowed: boolean; used: number; limit: number; viaBonus?: boolean }> {
   const limit = PLAN_LIMITS[plan][feature];
   if (limit === Infinity) return { allowed: true, used: 0, limit };
   const used = await getWeeklyUsage(supabase, userId, feature);
-  return { allowed: used < limit, used, limit };
+  if (used < limit) return { allowed: true, used, limit };
+  if (feature === "mock_interview" && bonusMockInterviewCredits > 0) {
+    return { allowed: true, used, limit, viaBonus: true };
+  }
+  return { allowed: false, used, limit };
 }
 
 export async function logUsage(

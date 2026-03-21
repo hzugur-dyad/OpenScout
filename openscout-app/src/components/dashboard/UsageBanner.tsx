@@ -17,6 +17,7 @@ const featureLabel: Record<UsageFeature, string> = {
 export function UsageBanner({ feature }: UsageBannerProps) {
   const [plan, setPlan] = useState<CandidatePlan>("free");
   const [used, setUsed] = useState(0);
+  const [bonusMockCredits, setBonusMockCredits] = useState(0);
   const [loaded, setLoaded] = useState(false);
   const supabase = createClient();
 
@@ -26,11 +27,14 @@ export function UsageBanner({ feature }: UsageBannerProps) {
       if (!user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("plan")
+        .select("plan, bonus_mock_interview_credits")
         .eq("user_id", user.id)
         .maybeSingle();
       const p = getUserPlan(profile?.plan);
       setPlan(p);
+      setBonusMockCredits(
+        Math.max(0, Number((profile as { bonus_mock_interview_credits?: number } | null)?.bonus_mock_interview_credits) || 0)
+      );
 
       if (PLAN_LIMITS[p][feature] === Infinity) {
         setLoaded(true);
@@ -56,8 +60,12 @@ export function UsageBanner({ feature }: UsageBannerProps) {
   const limit = PLAN_LIMITS[plan][feature];
   if (limit === Infinity) return null;
 
-  const remaining = Math.max(0, limit - used);
-  const isExhausted = remaining === 0;
+  const planRemaining = Math.max(0, limit - used);
+  const bonusLine =
+    feature === "mock_interview" && bonusMockCredits > 0
+      ? ` · ${bonusMockCredits} bonus credit${bonusMockCredits !== 1 ? "s" : ""}`
+      : "";
+  const isExhausted = planRemaining === 0 && (feature !== "mock_interview" || bonusMockCredits === 0);
   const label = featureLabel[feature];
 
   if (isExhausted) {
@@ -79,7 +87,9 @@ export function UsageBanner({ feature }: UsageBannerProps) {
   return (
     <div className="mb-6 rounded-[10px] border border-[var(--border)] bg-white p-3 dark:border-white/[0.06] dark:bg-zinc-900">
       <p className="text-sm text-gray-600 dark:text-zinc-300">
-        <span className="font-medium capitalize">{plan}</span> plan — {remaining} of {limit} {label} {limit === 1 ? "use" : "uses"} remaining this week.
+        <span className="font-medium capitalize">{plan}</span> plan — {planRemaining} of {limit} {label}{" "}
+        {limit === 1 ? "use" : "uses"} remaining this week
+        {bonusLine}.
         {plan === "free" && (
           <>
             {" "}

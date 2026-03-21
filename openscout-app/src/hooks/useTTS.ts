@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { InterviewLocale } from "@/lib/interview-locale";
+import { captureException } from "@/lib/monitoring";
 
 function formatTtsError(raw: string): string {
   try {
@@ -72,6 +73,10 @@ export function useTTS() {
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "TTS failed");
+      captureException(e, {
+        route: "client/useTTS",
+        aiInterview: { stage: "generation", reason: "tts_error" },
+      });
     } finally {
       stop();
     }

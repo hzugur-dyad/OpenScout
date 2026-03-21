@@ -12,6 +12,7 @@ import { buildCvAnalysisSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@
 import { parseCvAnalysisModelOutput } from "@/lib/ai/structured-output";
 // @ts-expect-error - pdf-parse has no types
 import pdfParse from "pdf-parse";
+import { captureException, captureMessage } from "@/lib/monitoring";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
@@ -172,6 +173,12 @@ export async function POST(request: NextRequest) {
       });
     } catch (groqError) {
       logError("cv-analysis Groq request failed", groqError);
+      captureException(groqError, {
+        route: "/api/cv-analysis",
+        user_id: user.id,
+        ...(jobId && String(jobId).trim() ? { job_id: String(jobId).trim() } : {}),
+        tags: { feature: "cv_analysis" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "groq_error",
         job_category: jobCategory,
@@ -186,6 +193,12 @@ export async function POST(request: NextRequest) {
     const text = completion.choices[0]?.message?.content;
     if (!text) {
       logError("cv-analysis Groq returned empty content", undefined);
+      captureMessage("CV analysis: empty model response", {
+        route: "/api/cv-analysis",
+        user_id: user.id,
+        ...(jobId && String(jobId).trim() ? { job_id: String(jobId).trim() } : {}),
+        tags: { feature: "cv_analysis", reason: "empty_model" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "empty_model_response",
         job_category: jobCategory,
@@ -213,6 +226,12 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       logError("cv-analysis insert failed", insertError);
+      captureException(insertError, {
+        route: "/api/cv-analysis",
+        user_id: user.id,
+        ...(jobId && String(jobId).trim() ? { job_id: String(jobId).trim() } : {}),
+        tags: { feature: "cv_analysis" },
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.cv_analysis_failed, {
         reason: "db_insert",
         job_category: jobCategory,
@@ -233,6 +252,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (e) {
     logError("cv-analysis unexpected error", e);
+    captureException(e, { route: "/api/cv-analysis" });
     try {
       const supabase = await createClient();
       const { data: { user: u } } = await supabase.auth.getUser();

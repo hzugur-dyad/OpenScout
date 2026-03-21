@@ -4,53 +4,66 @@ import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } fro
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { parseInterviewLocale } from "@/lib/interview-locale";
 import { synthesizeInterviewSpeech } from "@/lib/tts";
+import { captureException } from "@/lib/monitoring";
 
 export async function POST(request: NextRequest) {
   logInfo("tts request received");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const rlId = getRateLimitIdentifier(request, user?.id);
-  const limited = await rateLimitForKind("tts", rlId);
-  if (!limited.success) return tooManyRequestsResponse(limited);
-
-  const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "GOOGLE_CLOUD_TTS_API_KEY is not configured. Add it to .env.local." },
-      { status: 500 }
-    );
-  }
-
-  let body: { text?: string; locale?: string };
   try {
-    body = await request.json();
-  } catch {
-    logWarn("tts validation failed", { reason: "invalid JSON body" });
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
-  }
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const rlId = getRateLimitIdentifier(request, user?.id);
+    const limited = await rateLimitForKind("tts", rlId);
+    if (!limited.success) return tooManyRequestsResponse(limited);
 
-  const text = typeof body.text === "string" ? body.text.trim() : "";
-  if (!text) {
-    logWarn("tts validation failed", { reason: "text required" });
-    return NextResponse.json({ error: "text is required" }, { status: 400 });
-  }
+    const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "GOOGLE_CLOUD_TTS_API_KEY is not configured. Add it to .env.local." },
+        { status: 500 }
+      );
+    }
 
-  const locale = parseInterviewLocale(typeof body.locale === "string" ? body.locale : undefined);
+    let body: { text?: string; locale?: string };
+    try {
+      body = await request.json();
+    } catch {
+      logWarn("tts validation failed", { reason: "invalid JSON body" });
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
 
-  let buffer: Buffer;
-  try {
-    const result = await synthesizeInterviewSpeech({ text, locale, apiKey });
-    buffer = result.buffer;
-  } catch (fetchError) {
-    logError("tts Google TTS request failed", fetchError);
-    return NextResponse.json(
-      { error: fetchError instanceof Error ? fetchError.message : "TTS request failed" },
-      { status: 502 }
-    );
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text) {
+      logWarn("tts validation failed", { reason: "text required" });
+      return NextResponse.json({ error: "text is required" }, { status: 400 });
+    }
+
+    const locale = parseInterviewLocale(typeof body.locale === "string" ? body.locale : undefined);
+
+    let buffer: Buffer;
+    try {
+      const result = await synthesizeInterviewSpeech({ text, locale, apiKey });
+      buffer = result.buffer;
+    } catch (fetchError) {
+      logError("tts Google TTS request failed", fetchError);
+      captureException(fetchError, {
+        route: "/api/tts",
+        ...(user?.id ? { user_id: user.id } : {}),
+        aiInterview: { stage: "generation", reason: "tts_error" },
+      });
+      return NextResponse.json(
+        { error: fetchError instanceof Error ? fetchError.message : "TTS request failed" },
+        { status: 502 }
+      );
+    }
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": "audio/mpeg",
+      },
+    });
+  } catch (e) {
+    captureException(e, { route: "/api/tts" });
+    return NextResponse.json({ error: "TTS error" }, { status: 500 });
   }
-  return new NextResponse(new Uint8Array(buffer), {
-    headers: {
-      "Content-Type": "audio/mpeg",
-    },
-  });
 }

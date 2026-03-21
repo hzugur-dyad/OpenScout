@@ -58,7 +58,7 @@
 - **Login redirect:** `redirect` parametresi `startsWith("/")` ile kontrol ediliyor; `//evil.com` gibi protocol-relative URL’lere izin verilebilir (open redirect). **Öneri:** `//` ile başlayanları reddetmek veya sadece tek `/` ile başlayan path’lere izin vermek.
 
 ### 3.2 Eksik / Opsiyonel
-- **Rate limit:** Referral attribute ve job-applications için yok; istenirse eklenebilir.
+- **Rate limit:** Upstash tabanlı limitler birçok API’de aktif (başvuru, CV analizi, mülakat, TTS, checkout, webhook, işveren başvuru güncelleme, public profil linki vb.); üretimde `UPSTASH_REDIS_*` tanımlı olmalı.
 - **Scout Pass:** İptal / süre sonu yok; link ömür boyu geçerli.
 - **Abonelik sonrası ilan sayısı:** Abonelik iptal edilince mevcut ilanlar silinmiyor; sadece yeni ilan ekleme 1 ile sınırlı (bilinçli tasarım, dokümante edilmeli).
 
@@ -107,7 +107,7 @@
    - Lint/type-check’i CI’da çalıştır (varsa).
 
 4. **Ürün:**  
-   - Rate limit (referral, apply) ve Scout Pass için opsiyonel süre sonu/revoke değerlendirmesi.  
+   - Scout Pass için opsiyonel süre sonu/revoke değerlendirmesi.  
    - Global error boundary ve tutarlı hata/loading UX.
 
 ---

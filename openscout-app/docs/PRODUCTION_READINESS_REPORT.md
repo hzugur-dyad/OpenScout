@@ -47,6 +47,9 @@
 | `GOOGLE_CLOUD_TTS_API_KEY` | api/tts/route.ts | **Optional** (interview voice; 500 if missing) |
 | **App URL** | | |
 | `NEXT_PUBLIC_APP_URL` | scout-credential (pass URL base) | **Optional** (falls back to `request.nextUrl.origin`) |
+| **Upstash (rate limits)** | | |
+| `UPSTASH_REDIS_REST_URL` | `src/lib/rate-limit.ts` | **Recommended in production** (limits disabled if missing) |
+| `UPSTASH_REDIS_REST_TOKEN` | `src/lib/rate-limit.ts` | **Recommended in production** (both required for Redis) |
 
 ---
 
@@ -65,13 +68,23 @@
 - **job_applications:** Employers can view only for their listings; migration 010 restricts to companies with `stripe_subscription_status = 'active'`.
 - **referral_codes, referrals, scout_credentials:** Own-row or appropriate role checks.
 
-### Rate limits
-- **Applied:**  
-  - `/api/referral/attribute` — 10/hour per IP  
-  - `/api/job-applications` — 5/hour per user  
-  - `/api/mock-interview` — 60/hour per user  
-  - `/api/tts` — 30/hour per user or per IP (if unauthenticated)  
-- **Not rate-limited:** cv-analysis, mock-interview/result, scout-credential, employer/create-checkout-session, verify-session, referral/my-code, stripe-webhook, scout-pass. Consider adding limits for cv-analysis and mock-interview/result if abuse is a concern.
+### Rate limits (Upstash Redis)
+All limits use sliding windows via `@upstash/ratelimit`. If `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are unset, limits are **disabled** (requests still succeed); production logs a **warn** plus an **error** with `rate_limits_disabled: true` on first detection.
+
+- **Per kind / preset (see `src/lib/rate-limit.ts`):**  
+  - `/api/referral/attribute` — 10/hour; key: user id if logged in, else IP (runs before 401).  
+  - `/api/job-applications` — 5/hour per user.  
+  - `/api/cv-analysis`, `/api/cv-analysis/auto` — 5/minute per user.  
+  - `/api/mock-interview` — 60/hour per user.  
+  - `/api/mock-interview/result` — 5/minute per user.  
+  - `/api/tts` — 30/hour; user id or IP if unauthenticated.  
+  - `/api/stripe-webhook` — lenient preset (200/minute) per IP (before body/signature work).  
+  - `/api/employer/applications/[applicationId]` (PATCH) — moderate preset (60/minute) per user.  
+  - `/api/candidate/public-profile-link` (GET) — lenient preset (200/minute) per user.  
+  - `/api/employer/create-checkout-session`, `/api/candidate/create-checkout-session`, `/api/employer/verify-session` — **strict** (20/minute) per user.  
+  - `/api/scout-credential` — **moderate** (60/minute) per user.  
+  - `/api/referral/my-code` — **lenient** per user or IP before 401.  
+  - `/api/scout-pass/[slug]`, `/api/og/result/[id]`, `/api/og/profile/[slug]` — **lenient** per IP.
 
 ### Sensitive data in logs
 - **Logger** (`src/lib/logger.ts`): Only logs `message` and optional `data`; for errors, logs `error.name` and `error.message` (no stack or body). Comment instructs not to log passwords, tokens, or full request bodies.
@@ -116,7 +129,7 @@
 | Unused files | OK | None |
 | Env vars | OK | Document `GOOGLE_CLOUD_TTS_API_KEY` and `NEXT_PUBLIC_APP_URL` in `.env.local.example` |
 | Duplicate code | Minor | Extract `getClientIp` to shared util |
-| Auth / RLS / rate limits | OK | Consider rate limits for cv-analysis and mock-interview/result |
+| Auth / RLS / rate limits | OK | Set Upstash env vars in production; monitor `rate_limits_disabled` logs if missing |
 | Logging | OK | No sensitive data logged |
 | Build | OK | Passes after type and Suspense fixes |
 | Performance | OK | No critical issues; indexes in place for job_id lookups |

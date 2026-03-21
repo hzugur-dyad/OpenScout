@@ -8,3 +8,7 @@ vi.mock("@/lib/logger", () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
 }));
+
+vi.mock("@/lib/analytics-server", () => ({
+  captureServer: vi.fn().mockResolvedValue(undefined),
+}));

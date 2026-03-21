@@ -3,6 +3,8 @@ import Stripe from "stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { captureException } from "@/lib/monitoring";
 
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -15,6 +17,12 @@ function getStatusFromStripe(status: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  const limited = await enforceRateLimit(request, null, {
+    namespace: "stripe-webhook",
+    preset: "lenient",
+  });
+  if (limited) return limited;
+
   if (!stripeSecretKey || !webhookSecret) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
@@ -28,7 +36,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.text();
   } catch (e) {
-    console.error("stripe-webhook: failed to read body", e);
+    captureException(e, { route: "/api/stripe-webhook", tags: { stripe_phase: "read_body" } });
     return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   }
 
@@ -44,6 +52,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
+  try {
   async function resolveCompanyId(
     fromMetadata: string | undefined,
     subscriptionId: string | null
@@ -219,4 +228,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+  } catch (e) {
+    captureException(e, {
+      route: "/api/stripe-webhook",
+      tags: { stripe_event_type: event.type },
+      extra: { stripe_event_id: event.id },
+    });
+    throw e;
+  }
 }

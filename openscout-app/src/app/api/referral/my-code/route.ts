@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import type { ReferralMyCodeResponse } from "@/lib/types";
+import { captureException } from "@/lib/monitoring";
 
 function generateCode(): string {
   const chars = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -25,22 +26,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: existing } = await supabase
-      .from("referral_codes")
-      .select("code")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const [{ data: existing }, { data: profile }, referredRes, rewardedRes] = await Promise.all([
+      supabase.from("referral_codes").select("code").eq("user_id", user.id).maybeSingle(),
+      supabase.from("profiles").select("bonus_mock_interview_credits").eq("user_id", user.id).maybeSingle(),
+      supabase
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_user_id", user.id),
+      supabase
+        .from("referrals")
+        .select("id", { count: "exact", head: true })
+        .eq("referrer_user_id", user.id)
+        .eq("reward_status", "rewarded"),
+    ]);
 
-    const { count: referredCount } = await supabase
-      .from("referrals")
-      .select("id", { count: "exact", head: true })
-      .eq("referrer_user_id", user.id);
+    const referredCount = referredRes.count ?? 0;
+    const successfulReferralsCount = rewardedRes.count ?? 0;
+    const bonusInterviewCreditsBalance = Math.max(
+      0,
+      Number((profile as { bonus_mock_interview_credits?: number } | null)?.bonus_mock_interview_credits) || 0
+    );
 
-    const withCount = (code: string): ReferralMyCodeResponse =>
-      ({ code, referredCount: referredCount ?? 0 });
+    const withMeta = (code: string): ReferralMyCodeResponse => ({
+      code,
+      referredCount,
+      successfulReferralsCount,
+      bonusInterviewCreditsBalance,
+    });
 
     if (existing) {
-      return NextResponse.json(withCount(existing.code));
+      return NextResponse.json(withMeta(existing.code));
     }
 
     let code = generateCode();
@@ -51,7 +66,7 @@ export async function GET(request: NextRequest) {
         code,
       });
       if (!error) {
-        return NextResponse.json(withCount(code));
+        return NextResponse.json(withMeta(code));
       }
       if (error.code === "23505") {
         code = generateCode();
@@ -63,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ error: "Could not create code" }, { status: 500 });
   } catch (e) {
-    console.error("referral my-code error:", e);
+    captureException(e, { route: "/api/referral/my-code" });
     return NextResponse.json({ error: "Failed to get referral code" }, { status: 500 });
   }
 }

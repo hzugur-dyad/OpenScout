@@ -6,6 +6,7 @@ import { FileText, MessageCircle, Briefcase, ArrowRight, CreditCard } from "luci
 import { Button } from "@/components/ui/Button";
 import { Card, CardInteractive } from "@/components/ui/Card";
 import { InviteFriendCard } from "@/components/dashboard/InviteFriendCard";
+import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserPlan, PLAN_LIMITS, type CandidatePlan } from "@/lib/usage";
@@ -18,6 +19,7 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState<CandidatePlan>("free");
   const [cvUsed, setCvUsed] = useState(0);
   const [mockUsed, setMockUsed] = useState(0);
+  const [mockBonusCredits, setMockBonusCredits] = useState(0);
   const [checkedEmployer, setCheckedEmployer] = useState(false);
   const supabase = createClient();
 
@@ -125,11 +127,14 @@ export default function DashboardPage() {
       if (!user) return;
       const { data: profile } = await supabase
         .from("profiles")
-        .select("plan")
+        .select("plan, bonus_mock_interview_credits")
         .eq("user_id", user.id)
         .maybeSingle();
       const p = getUserPlan(profile?.plan);
       setPlan(p);
+      setMockBonusCredits(
+        Math.max(0, Number((profile as { bonus_mock_interview_credits?: number } | null)?.bonus_mock_interview_credits) || 0)
+      );
 
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
@@ -169,6 +174,20 @@ export default function DashboardPage() {
         Complete your profile and take an AI interview.
       </p>
 
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <SharePublicProfileButton />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            throw new Error("sentry client test");
+          }}
+        >
+          Test Sentry Client
+        </Button>
+      </div>
+
       <Card className="mt-4 p-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600 dark:text-zinc-300">
@@ -178,6 +197,12 @@ export default function DashboardPage() {
             {" · "}
             Interview: {mockUsed}/{mockLimit === Infinity ? "∞" : mockLimit}
             {" this week"}
+            {mockBonusCredits > 0 && (
+              <span className="text-gray-500 dark:text-zinc-500">
+                {" "}
+                · {mockBonusCredits} bonus credit{mockBonusCredits !== 1 ? "s" : ""}
+              </span>
+            )}
           </div>
           {plan === "free" && (
             <Link href="/pricing">

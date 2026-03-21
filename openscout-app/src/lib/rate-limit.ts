@@ -3,7 +3,7 @@ import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
-import { logWarn } from "@/lib/logger";
+import { logError, logWarn } from "@/lib/logger";
 
 /**
  * Upstash-backed sliding windows (REST / fetch — no Node-only APIs here).
@@ -31,6 +31,12 @@ function getRedis(): Redis | null {
       logWarn(
         "Upstash Redis not configured (UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN); rate limits are disabled"
       );
+      if (process.env.NODE_ENV === "production") {
+        logError(
+          "[PRODUCTION] Distributed rate limiting is DISABLED: Upstash Redis env vars are missing. All API traffic is uncapped until UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are set.",
+          { rate_limits_disabled: true, monitoring: "rate_limit_config" }
+        );
+      }
     }
     return null;
   }

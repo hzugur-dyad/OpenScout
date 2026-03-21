@@ -10,6 +10,7 @@ import {
 } from "@/lib/hiring-score";
 import { interviewScoreTrendFromChronological } from "@/lib/interview-history-trend";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
+import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
 
 type InterviewRow = {
   id: string;
@@ -62,8 +63,13 @@ export default async function InterviewHistoryPage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Interview history</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">Past mock interviews and how you&apos;re trending.</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Interview history</h1>
+          <p className="mt-1 text-gray-500 dark:text-zinc-400">Past mock interviews and how you&apos;re trending.</p>
+        </div>
+        <SharePublicProfileButton />
+      </div>
 
       {interviews.length === 0 ? (
         <EmptyState

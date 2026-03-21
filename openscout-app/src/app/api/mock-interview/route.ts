@@ -18,6 +18,7 @@ import {
   type NormalizedMockQuestionControl,
 } from "@/lib/ai/structured-output";
 import { GROQ_MOCK_INTERVIEW_MODEL } from "@/lib/mock-interview/versioning";
+import { captureException, captureMessage } from "@/lib/monitoring";
 
 /** Max user-side messages (each POST adds one user line) before hard stop. */
 const MAX_INTERVIEW_USER_MESSAGES = 40;
@@ -125,6 +126,12 @@ export async function POST(request: NextRequest) {
     const userTurnCount = messages.filter((m) => m.role === "user").length;
     if (userTurnCount > MAX_INTERVIEW_USER_MESSAGES) {
       logWarn("mock-interview max user messages exceeded", { userTurnCount });
+      captureMessage("Mock interview: max user turns reached", {
+        route: "/api/mock-interview",
+        user_id: user.id,
+        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+        aiInterview: { stage: "generation", reason: "max_turns" },
+      });
       const scores = defaultMockInterviewEndScores();
       return NextResponse.json({
         content: maxTurnsClosingText(locale),
@@ -192,6 +199,12 @@ export async function POST(request: NextRequest) {
         });
       } catch (groqError) {
         logError("mock-interview Groq request failed", groqError);
+        captureException(groqError, {
+          route: "/api/mock-interview",
+          user_id: user.id,
+          ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+          aiInterview: { stage: "generation", reason: "groq_error" },
+        });
         return NextResponse.json(
           { error: groqError instanceof Error ? groqError.message : "Interview error" },
           { status: 500 }
@@ -240,6 +253,20 @@ export async function POST(request: NextRequest) {
 
     const terminatedBy = !rawContent ? "empty_model" : "parse_failure";
     logWarn("mock-interview failsafe terminate", { terminatedBy });
+    captureMessage(
+      terminatedBy === "empty_model"
+        ? "Mock interview: empty model output before failsafe"
+        : "Mock interview: structured output parse failsafe",
+      {
+        route: "/api/mock-interview",
+        user_id: user.id,
+        ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
+        aiInterview: {
+          stage: "generation",
+          reason: terminatedBy === "empty_model" ? "empty_model" : "parse_failure",
+        },
+      }
+    );
     const scores = defaultMockInterviewEndScores();
     return NextResponse.json({
       content: failsafeClosingText(locale, terminatedBy === "empty_model" ? "empty_model" : "parse_failure"),
@@ -252,6 +279,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (e) {
     logError("mock-interview unexpected error", e);
+    captureException(e, { route: "/api/mock-interview" });
     return NextResponse.json(
       { error: e instanceof Error ? e.message : "Interview error" },
       { status: 500 }

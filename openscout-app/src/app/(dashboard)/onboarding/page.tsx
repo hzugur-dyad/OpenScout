@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { OnboardingStepper } from "@/components/onboarding/OnboardingStepper";
+import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion, AnimatePresence } from "framer-motion";
@@ -215,6 +216,12 @@ export default function OnboardingPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Session not found");
 
+      const { data: onboardingRow } = await supabase
+        .from("profiles")
+        .select("onboarding_completed_at")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
       await supabase.from("profiles").upsert({
         user_id: user.id,
         first_name: form.first_name,
@@ -285,7 +292,17 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       });
 
+      if (!(onboardingRow as { onboarding_completed_at?: string } | null)?.onboarding_completed_at) {
+        await supabase
+          .from("profiles")
+          .update({ onboarding_completed_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .is("onboarding_completed_at", null);
+      }
+
       trackClient(ANALYTICS_EVENTS.onboarding_completed, {});
+
+      fetch("/api/referral/evaluate", { method: "POST" }).catch(() => {});
 
       setEditing(false);
       setStep(1);
@@ -518,6 +535,10 @@ export default function OnboardingPage() {
       <Link href="/cv-analysis" className="mt-2 inline-block text-sm text-primary hover:underline">
         Upload new CV
       </Link>
+
+      <div className="mt-4">
+        <SharePublicProfileButton />
+      </div>
 
       <div className="mt-8">
         <OnboardingStepper currentStep={step} />

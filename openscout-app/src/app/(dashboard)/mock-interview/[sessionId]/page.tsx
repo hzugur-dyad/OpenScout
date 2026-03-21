@@ -16,6 +16,7 @@ import {
 } from "@/lib/interview-locale";
 import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+import { captureException, captureMessage } from "@/lib/monitoring";
 
 type InterviewControl = {
   questionId: string;
@@ -121,9 +122,25 @@ export default function MockInterviewSessionPage() {
         };
         micAnimationRef.current = requestAnimationFrame(updateLevel);
       })
-      .catch((err) => {
+      .catch((err: DOMException | Error) => {
         setMicError(err.message || copy.micDenied);
         setMicStream(null);
+        if (err instanceof DOMException && err.name === "NotAllowedError") {
+          captureMessage("Microphone permission denied (mock interview)", {
+            route: "/mock-interview/[sessionId]",
+            session_id: sessionId,
+            ...(jobId ? { job_id: jobId } : {}),
+            tags: { feature: "ai_interview", mic: "permission_denied" },
+            level: "warning",
+          });
+        } else if (!(err instanceof DOMException && err.name === "AbortError")) {
+          captureException(err, {
+            route: "/mock-interview/[sessionId]",
+            session_id: sessionId,
+            ...(jobId ? { job_id: jobId } : {}),
+            tags: { feature: "ai_interview", mic: "getUserMedia" },
+          });
+        }
       });
 
     return () => {
@@ -137,7 +154,7 @@ export default function MockInterviewSessionPage() {
       setMicStream(null);
       setMicLevel(0);
     };
-  }, [step]);
+  }, [step, sessionId, jobId, copy.micDenied]);
 
   const sendToAI = useCallback(
     async (userMessage: string) => {
@@ -169,6 +186,15 @@ export default function MockInterviewSessionPage() {
           ...(jobId && { jobId }),
         }),
       });
+      if (!res.ok) {
+        captureMessage(`Mock interview turn: HTTP ${res.status}`, {
+          route: "/api/mock-interview",
+          session_id: sessionId,
+          ...(jobId ? { job_id: jobId } : {}),
+          tags: { feature: "ai_interview" },
+          level: "warning",
+        });
+      }
       const data = await res.json();
       const visibleText = (data.content ?? "").trim();
       const interviewEnded = Boolean(data.interviewEnded);
@@ -347,6 +373,15 @@ export default function MockInterviewSessionPage() {
         ...(jobId && { jobId }),
       }),
     });
+    if (!res.ok) {
+      captureMessage(`Mock interview start: HTTP ${res.status}`, {
+        route: "/api/mock-interview",
+        session_id: sessionId,
+        ...(jobId ? { job_id: jobId } : {}),
+        tags: { feature: "ai_interview" },
+        level: "warning",
+      });
+    }
     const data = await res.json();
     const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
     if (data.interviewEnded) {
@@ -474,7 +509,11 @@ export default function MockInterviewSessionPage() {
       if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
       router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
     } catch (e) {
-      console.error("Failed to evaluate interview:", e);
+      captureException(e, {
+        route: "/api/mock-interview/result",
+        session_id: sessionId,
+        ...(jobId ? { job_id: jobId } : {}),
+      });
       router.push(
         `/mock-interview/${sessionId}/result?score=0&strengths=${encodeURIComponent(JSON.stringify([]))}&improvements=${encodeURIComponent(JSON.stringify([copy.resultErrorImprovement]))}&lang=${locale}`
       );

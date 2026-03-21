@@ -9,6 +9,7 @@ import {
   CreditCard,
   User,
   History,
+  ClipboardList,
 } from "lucide-react";
 import { ReferralAttribute } from "./ReferralAttribute";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
@@ -24,6 +25,7 @@ const candidateNavItems: NavItem[] = [
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
   { href: "/mock-interview", label: "Mock Interview", icon: MessageCircle },
   { href: "/dashboard/interviews", label: "Interview History", icon: History },
+  { href: "/dashboard/applications", label: "Applications", icon: ClipboardList },
   { href: "/dashboard/jobs", label: "Job Listings", icon: Briefcase },
   { href: "/pricing", label: "Upgrade Plan", icon: CreditCard },
 ];

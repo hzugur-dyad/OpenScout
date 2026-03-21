@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import type { ReferralAttributeBody } from "@/lib/types";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
+import { captureException } from "@/lib/monitoring";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,9 +56,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    await captureServer(user.id, ANALYTICS_EVENTS.referral_attributed, {});
+
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error("referral attribute error:", e);
+    captureException(e, { route: "/api/referral/attribute" });
     return NextResponse.json({ error: "Failed to attribute referral" }, { status: 500 });
   }
 }
