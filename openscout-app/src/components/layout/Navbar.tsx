@@ -42,16 +42,16 @@ export function Navbar({
           isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between overflow-visible px-4 sm:px-6 lg:px-8">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2 overflow-visible">
               <motion.div
                 layoutId="hero-logo"
-                className="flex items-center gap-2"
+                className="flex items-center gap-4 overflow-visible"
                 transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
               >
-                <OpenScoutLogoMark className="h-14 w-14" />
+                <OpenScoutLogoMark className="h-16 w-16 origin-left" />
                 <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
                   OpenScout
                 </span>
