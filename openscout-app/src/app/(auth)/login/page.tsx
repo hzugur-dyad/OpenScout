@@ -48,7 +48,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-zinc-950">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <OpenScoutLogoMark className="h-16 w-16" />
+          <OpenScoutLogoMark className="h-20 w-20" />
           <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 

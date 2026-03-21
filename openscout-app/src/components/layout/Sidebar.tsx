@@ -96,7 +96,7 @@ export function Sidebar({
           className={`flex min-w-0 items-center gap-3 ${collapsed ? "lg:justify-center lg:gap-0" : ""}`}
           onClick={onMobileClose}
         >
-          <OpenScoutLogoMark className="h-14 w-14 shrink-0" />
+          <OpenScoutLogoMark className="h-16 w-16 shrink-0" />
           <span
             className={`font-semibold text-gray-900 dark:text-zinc-100 truncate transition-opacity duration-200 ${
               collapsed ? "lg:opacity-0 lg:pointer-events-none lg:absolute lg:w-0" : labelsVisible ? "opacity-100" : "opacity-0"

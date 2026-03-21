@@ -88,7 +88,7 @@ export function AnimatedHero() {
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              <OpenScoutLogoMark className="h-36 w-36 sm:h-44 sm:w-44 md:h-52 md:w-52" />
+              <OpenScoutLogoMark className="h-44 w-44 sm:h-52 sm:w-52 md:h-60 md:w-60" />
               <span className="text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
                 OpenScout
               </span>

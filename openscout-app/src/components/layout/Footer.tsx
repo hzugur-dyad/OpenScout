@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="flex items-center gap-2">
-            <OpenScoutLogoMark className="h-14 w-14" />
+            <OpenScoutLogoMark className="h-16 w-16" />
             <span className="font-semibold text-gray-900 dark:text-zinc-100">OpenScout</span>
           </div>
           <div className="flex gap-8 text-sm text-gray-500 dark:text-zinc-400">

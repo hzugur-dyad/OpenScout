@@ -5,7 +5,7 @@ type OpenScoutLogoMarkProps = {
 };
 
 export function OpenScoutLogoMark({
-  className = "h-12 w-12",
+  className = "h-14 w-14",
   alt = "",
 }: OpenScoutLogoMarkProps) {
   return (
