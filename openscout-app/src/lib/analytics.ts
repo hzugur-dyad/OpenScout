@@ -21,6 +21,8 @@ export const ANALYTICS_EVENTS = {
   subscription_failed: "subscription_failed",
   /** User copied or used native share for a public interview result link */
   result_shared: "result_shared",
+  /** SEO job page CTA → mock interview (job = URL slug, page_type = route segment) */
+  seo_cta_clicked: "seo_cta_clicked",
 } as const;
 
 export type AnalyticsEventName = (typeof ANALYTICS_EVENTS)[keyof typeof ANALYTICS_EVENTS];

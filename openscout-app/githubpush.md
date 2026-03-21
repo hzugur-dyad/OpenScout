@@ -1,4 +1,4 @@
-git checkout istediğin-branch
+git checkout newversion
 git add .
-git commit -m "mesaj"
-git push -u origin istediğin-branch
+git commit -m "güncellemeeee"
+git push -u origin newversion

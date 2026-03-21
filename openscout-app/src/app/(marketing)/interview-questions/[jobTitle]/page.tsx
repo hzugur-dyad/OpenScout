@@ -4,6 +4,8 @@ import { getJobTitleBySlug, getAllJobSlugs } from "@/lib/seo/job-titles";
 import { buildSEOMetadata } from "@/lib/seo/metadata";
 import { getInterviewQuestionsContent } from "@/lib/seo/content";
 import { SEOPageLayout } from "@/components/seo/SEOPageLayout";
+import { SeoCtaBlock, SeoStickyInterviewCta } from "@/components/seo/SeoJobConversion";
+import { SeoPreparationLinks } from "@/components/seo/SeoPreparationLinks";
 
 type Props = { params: Promise<{ jobTitle: string }> };
 
@@ -31,8 +33,17 @@ export default async function InterviewQuestionsPage({ params }: Props) {
 
   return (
     <SEOPageLayout title={`${jobTitle} Interview Questions`} faqItems={content.faqItems}>
+      <SeoCtaBlock
+        jobSlug={slug}
+        pageType="interview-questions"
+        position="top"
+        headline={`Test yourself with a real AI interview for the ${jobTitle} role`}
+        buttonLabel="Start AI Interview"
+      />
+
       <section>
         <p className="text-lg text-gray-600">{content.intro}</p>
+        <SeoPreparationLinks jobSlug={slug} jobTitle={jobTitle} />
       </section>
 
       <section>
@@ -65,6 +76,14 @@ export default async function InterviewQuestionsPage({ params }: Props) {
         </ul>
       </section>
 
+      <SeoCtaBlock
+        jobSlug={slug}
+        pageType="interview-questions"
+        position="mid"
+        headline="See how you would perform in a real interview"
+        buttonLabel="Try AI Interview"
+      />
+
       <section>
         <h2 className="text-2xl font-semibold text-gray-900">Interview Preparation Tips</h2>
         <ul className="mt-4 list-inside list-disc space-y-2 text-gray-700">
@@ -73,6 +92,14 @@ export default async function InterviewQuestionsPage({ params }: Props) {
           ))}
         </ul>
       </section>
+
+      <SeoCtaBlock
+        jobSlug={slug}
+        pageType="interview-questions"
+        position="bottom"
+        headline="Get your AI-powered interview score"
+        buttonLabel="Start now"
+      />
 
       <section>
         <h2 className="text-2xl font-semibold text-gray-900">Related Career Resources</h2>
@@ -109,6 +136,8 @@ export default async function InterviewQuestionsPage({ params }: Props) {
           </li>
         </ul>
       </section>
+
+      <SeoStickyInterviewCta jobSlug={slug} pageType="interview-questions" />
     </SEOPageLayout>
   );
 }

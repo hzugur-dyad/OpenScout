@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { MessageCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { UsageBanner } from "@/components/dashboard/UsageBanner";
 import { CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+import { getJobTitleBySlug } from "@/lib/seo/job-titles";
 
 const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
   en: {
@@ -27,11 +28,19 @@ const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
   },
 };
 
-export default function MockInterviewPage() {
-  const [jobCategory, setJobCategory] = useState<string>(JOB_TITLES[0]);
+function jobTitleFromJobQuery(searchParams: ReturnType<typeof useSearchParams>): string | null {
+  const slug = searchParams.get("job");
+  if (!slug) return null;
+  const title = getJobTitleBySlug(slug);
+  if (!title || !(JOB_TITLES as readonly string[]).includes(title)) return null;
+  return title;
+}
+
+function MockInterviewContent() {
+  const searchParams = useSearchParams();
+  const [jobCategory, setJobCategory] = useState<string>(() => jobTitleFromJobQuery(searchParams) ?? JOB_TITLES[0]);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
   const ui = interviewUi.en;
-  const [showMicTest, setShowMicTest] = useState(false);
   const [guard, setGuard] = useState<{
     profileComplete: boolean;
     hasCv: boolean;
@@ -69,6 +78,11 @@ export default function MockInterviewPage() {
     }
     loadGuard();
   }, [supabase]);
+
+  useEffect(() => {
+    const fromUrl = jobTitleFromJobQuery(searchParams);
+    if (fromUrl) setJobCategory(fromUrl);
+  }, [searchParams]);
 
   function handleStart() {
     const id = crypto.randomUUID();
@@ -167,5 +181,13 @@ export default function MockInterviewPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MockInterviewPage() {
+  return (
+    <Suspense fallback={<CVAnalysisPageSkeleton />}>
+      <MockInterviewContent />
+    </Suspense>
   );
 }
