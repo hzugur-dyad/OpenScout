@@ -48,10 +48,10 @@ export function Navbar({
             <Link href="/" className="flex items-center gap-2 overflow-visible">
               <motion.div
                 layoutId="hero-logo"
-                className="flex items-center gap-4 overflow-visible"
+                className="flex items-center gap-2 overflow-visible"
                 transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
               >
-                <OpenScoutLogoMark className="h-16 w-16 origin-left" />
+                <OpenScoutLogoMark className="h-16 w-16 origin-left scale-[1.22]" />
                 <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
                   OpenScout
                 </span>
