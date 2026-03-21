@@ -29,7 +29,16 @@ export async function GET(request: Request) {
           .maybeSingle();
         const isEmployer = profile?.role === "employer" || company != null;
         if (isEmployer) redirectPath = "/employer";
-        else if (!nextParam) redirectPath = "/dashboard";
+        else if (!nextParam) {
+          const { data: ob } = await supabase
+            .from("profiles")
+            .select("onboarding_completed_at")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          redirectPath = (ob as { onboarding_completed_at?: string | null } | null)?.onboarding_completed_at
+            ? "/dashboard"
+            : "/onboarding";
+        }
       }
       return NextResponse.redirect(new URL(redirectPath, requestUrl.origin));
     }

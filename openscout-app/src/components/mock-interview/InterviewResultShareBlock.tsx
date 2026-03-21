@@ -34,8 +34,14 @@ export function InterviewResultShareBlock({
     [resultId, hideName]
   );
 
-  const fullUrl =
-    typeof window !== "undefined" ? `${window.location.origin}${publicPath}` : publicPath;
+  const fullUrl = useMemo(() => {
+    if (typeof window === "undefined") return publicPath;
+    const u = new URL(publicPath, window.location.origin);
+    u.searchParams.set("utm_source", "openscout");
+    u.searchParams.set("utm_medium", "share");
+    u.searchParams.set("utm_campaign", "interview_result");
+    return u.href;
+  }, [publicPath]);
 
   const viralText = interviewResultViralText(score, jobCategory);
 

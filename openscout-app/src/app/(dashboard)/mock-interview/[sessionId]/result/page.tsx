@@ -14,6 +14,16 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   const tooShort = params.tooShort === "1";
   const langRaw = typeof params.lang === "string" ? params.lang : Array.isArray(params.lang) ? params.lang[0] : undefined;
   const resultLocale = parseInterviewLocale(langRaw);
+  const applicationSavedRaw = params.applicationSaved;
+  const applicationSubmitted =
+    (typeof applicationSavedRaw === "string" ? applicationSavedRaw : Array.isArray(applicationSavedRaw) ? applicationSavedRaw[0] : undefined) === "1";
+
+  const errorParam = typeof params.error === "string" ? params.error : Array.isArray(params.error) ? params.error[0] : undefined;
+  const evalError = errorParam === "1";
+
+  if (evalError) {
+    return <MockInterviewResultFallback locale={resultLocale} variant="eval_error" />;
+  }
 
   if (tooShort) {
     return (
@@ -25,6 +35,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
         category=""
         cvScore={null}
         locale={resultLocale}
+        applicationSubmitted={applicationSubmitted}
       />
     );
   }
@@ -115,6 +126,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       communicationScore={communicationScore}
       problemSolvingScore={problemSolvingScore}
       shareResultId={sessionId}
+      applicationSubmitted={applicationSubmitted}
     />
   );
 }

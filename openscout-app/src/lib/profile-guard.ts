@@ -1,10 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { computeCvReadiness } from "@/lib/cv-readiness";
 
-/** Required profile fields for job application and mock interview */
-const REQUIRED_PROFILE_FIELDS = ["first_name", "last_name", "email", "location"] as const;
+const PROFILE_FIELD_LABEL: Record<string, string> = {
+  first_name: "First name",
+  last_name: "Last name",
+  email: "Email",
+  location: "Location",
+};
 
 export type ProfileGuardResult = {
   profileComplete: boolean;
+  /** CV file or raw text stored in profile_private. */
+  hasUploadedCv: boolean;
+  /** At least one cv_analyses row for this user. */
+  hasCvAnalysis: boolean;
+  /** True if uploaded CV on file or any CV analysis exists. */
   hasCv: boolean;
   canApplyOrInterview: boolean;
   missingProfileFields: string[];
@@ -45,30 +55,21 @@ export async function checkProfileAndCv(
     cv_raw_text?: string | null;
   } | null;
 
-  const missingProfileFields: string[] = [];
-  for (const field of REQUIRED_PROFILE_FIELDS) {
-    const value = profile?.[field];
-    if (value === undefined || value === null || String(value).trim() === "") {
-      const label =
-        field === "first_name"
-          ? "First name"
-          : field === "last_name"
-            ? "Last name"
-            : field === "email"
-              ? "Email"
-              : "Location";
-      missingProfileFields.push(label);
-    }
-  }
-  const profileComplete = missingProfileFields.length === 0;
-  const hasCv =
-    cvRes.data != null || !!(privateRow?.cv_file_url) || !!(privateRow?.cv_raw_text);
-  const canApplyOrInterview = profileComplete && hasCv;
+  const c = computeCvReadiness({
+    profile,
+    cvFileUrl: privateRow?.cv_file_url,
+    cvRawText: privateRow?.cv_raw_text,
+    hasCvAnalysisRow: cvRes.data != null,
+  });
+
+  const missingProfileFields = c.missingProfileFieldKeys.map((k) => PROFILE_FIELD_LABEL[k] ?? k);
 
   return {
-    profileComplete,
-    hasCv,
-    canApplyOrInterview,
+    profileComplete: c.profileComplete,
+    hasUploadedCv: c.hasUploadedCv,
+    hasCvAnalysis: c.hasCvAnalysis,
+    hasCv: c.hasUploadedCv || c.hasCvAnalysis,
+    canApplyOrInterview: c.canAccessFlow,
     missingProfileFields,
   };
 }

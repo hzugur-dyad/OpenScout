@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
+import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
@@ -41,7 +42,7 @@ export function Navbar({
           isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        <nav className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
@@ -50,12 +51,7 @@ export function Navbar({
                 className="flex items-center gap-2"
                 transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
               >
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "var(--primary-lighter)" }}
-                >
-                  <Compass className="h-5 w-5" style={{ color: "var(--primary-dark)" }} />
-                </span>
+                <OpenScoutLogoMark className="h-14 w-14" />
                 <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
                   OpenScout
                 </span>

@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmployerApplicationNotesForm } from "@/components/employer/EmployerApplicationNotesForm";
 import { EmployerApplicationStatusActions } from "@/components/employer/EmployerApplicationStatusActions";
+import { userHasCompanyAccess } from "@/lib/employer-company";
+import {
+  computeHiringScore,
+  hiringScoreInputsFromInterviewRow,
+  HIRING_SCORE_WEIGHT_LABELS,
+} from "@/lib/hiring-score";
+import { computeCandidateRiskFlags, riskFlagLabel } from "@/lib/employer-candidate-signals";
 
 export default async function EmployerApplicationDetailPage({
   params,
@@ -19,20 +26,21 @@ export default async function EmployerApplicationDetailPage({
 
   const { data: job } = await supabase
     .from("job_listings")
-    .select("id, title, company_id")
+    .select("id, title, company_id, min_cv_score")
     .eq("id", jobId)
     .maybeSingle();
 
   if (!job) notFound();
 
+  const companyId = (job as { company_id: string }).company_id;
+  const hasAccess = await userHasCompanyAccess(supabase, user.id, companyId);
   const { data: company } = await supabase
     .from("companies")
     .select("id, stripe_subscription_status")
-    .eq("id", (job as { company_id: string }).company_id)
-    .eq("user_id", user.id)
+    .eq("id", companyId)
     .maybeSingle();
 
-  if (!company) notFound();
+  if (!company || !hasAccess) notFound();
 
   const isSubscribed = (company as { stripe_subscription_status?: string }).stripe_subscription_status === "active";
 
@@ -66,6 +74,7 @@ export default async function EmployerApplicationDetailPage({
       cv_score,
       interview_score,
       interview_report,
+      ai_recommendation_reason,
       created_at,
       profiles(first_name, last_name, email)
     `
@@ -75,6 +84,13 @@ export default async function EmployerApplicationDetailPage({
     .maybeSingle();
 
   if (!application) notFound();
+
+  const { data: events } = await supabase
+    .from("application_events")
+    .select("id, event_type, old_status, new_status, note_excerpt, created_at, actor_user_id")
+    .eq("job_application_id", applicationId)
+    .order("created_at", { ascending: false })
+    .limit(25);
 
   const profile = (application as { profiles?: { first_name?: string; last_name?: string; email?: string } | null })
     .profiles;
@@ -98,6 +114,22 @@ export default async function EmployerApplicationDetailPage({
 
   const pipelineStatus = (application as { application_status?: string }).application_status || "applied";
   const notes = (application as { notes?: string | null }).notes ?? null;
+  const aiReason = (application as { ai_recommendation_reason?: string | null }).ai_recommendation_reason ?? null;
+  const minCvJob = (job as { min_cv_score?: number | null }).min_cv_score ?? 0;
+  const hiringScore = computeHiringScore(
+    hiringScoreInputsFromInterviewRow({
+      interview_score: application.interview_score as number | null,
+      interview_report: application.interview_report,
+      cv_score: application.cv_score as number | null,
+    })
+  );
+  const riskFlags = computeCandidateRiskFlags({
+    interviewReport: application.interview_report,
+    interviewScore: application.interview_score as number | null,
+    cvScore: application.cv_score as number | null,
+    minCvScore: minCvJob,
+    durationMs: null,
+  });
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -136,6 +168,38 @@ export default async function EmployerApplicationDetailPage({
           </div>
         </div>
 
+        {(events?.length ?? 0) > 0 && (
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+            <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Activity</h2>
+            <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-zinc-300">
+              {(events ?? []).map((ev) => {
+                const e = ev as {
+                  id: string;
+                  event_type: string;
+                  old_status?: string | null;
+                  new_status?: string | null;
+                  note_excerpt?: string | null;
+                  created_at: string;
+                };
+                const when = e.created_at ? new Date(e.created_at).toLocaleString() : "";
+                let line = `${e.event_type.replace(/_/g, " ")}`;
+                if (e.event_type === "status_change" || e.event_type === "bulk_status_change") {
+                  line = `Status ${e.old_status ?? "—"} → ${e.new_status ?? "—"}`;
+                }
+                if (e.event_type === "note_update" && e.note_excerpt) {
+                  line = `Notes updated — ${e.note_excerpt}`;
+                }
+                return (
+                  <li key={e.id} className="border-b border-[var(--border)] pb-2 last:border-0 dark:border-zinc-700">
+                    <span className="text-xs text-gray-500 dark:text-zinc-500">{when}</span>
+                    <p className="mt-0.5">{line}</p>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
           <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Notes</h2>
           <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">Visible only to your team (stored on this application).</p>
@@ -148,6 +212,14 @@ export default async function EmployerApplicationDetailPage({
           <h2 className="font-semibold text-gray-800 dark:text-zinc-100">Scores</h2>
           <div className="mt-3 flex flex-wrap gap-6">
             <div>
+              <span className="text-sm text-gray-500 dark:text-zinc-500">Hiring score</span>
+              <p className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{hiringScore}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+                Weights:{" "}
+                {HIRING_SCORE_WEIGHT_LABELS.map((w) => `${w.label} ${Math.round(w.weight * 100)}%`).join(", ")}.
+              </p>
+            </div>
+            <div>
               <span className="text-sm text-gray-500 dark:text-zinc-500">CV score</span>
               <p className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{application.cv_score ?? "—"}</p>
             </div>
@@ -156,6 +228,24 @@ export default async function EmployerApplicationDetailPage({
               <p className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{application.interview_score ?? "—"}</p>
             </div>
           </div>
+          {aiReason?.trim() && (
+            <div className="mt-4 rounded-lg border border-[var(--border)] bg-gray-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
+                AI recommendation summary
+              </h3>
+              <p className="mt-1 text-sm text-gray-800 dark:text-zinc-200">{aiReason.trim()}</p>
+            </div>
+          )}
+          {riskFlags.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-xs font-medium text-amber-800 dark:text-amber-200">Signals to review</h3>
+              <ul className="mt-1 list-inside list-disc text-sm text-amber-900 dark:text-amber-100">
+                {riskFlags.map((f) => (
+                  <li key={f}>{riskFlagLabel(f)}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {application.created_at && (
             <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">
               Applied: {new Date(application.created_at).toLocaleString()}

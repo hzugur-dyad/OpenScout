@@ -11,6 +11,7 @@ import { INTERVIEW_LOCALE_LABEL, type InterviewLocale } from "@/lib/interview-lo
 import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { CVAnalysisLoadingSkeleton, JobApplyPageSkeleton } from "@/components/ui/Skeleton";
+import { computeCvReadiness, CV_READINESS_COPY_EN, type CvReadiness } from "@/lib/cv-readiness";
 
 export default function JobApplyPage() {
   const params = useParams();
@@ -28,7 +29,7 @@ export default function JobApplyPage() {
   const [cvScore, setCvScore] = useState<number | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
-  const [guard, setGuard] = useState<{ profileComplete: boolean; hasCv: boolean; canApply: boolean; missingProfileFields: string[] } | null>(null);
+  const [readiness, setReadiness] = useState<CvReadiness | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
@@ -58,7 +59,7 @@ export default function JobApplyPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
-      const [{ data: profile }, { data: privateRow }] = await Promise.all([
+      const [{ data: profile }, { data: privateRow }, { data: anyAnalysis }] = await Promise.all([
         supabase
           .from("profiles")
           .select("first_name, last_name, email, location")
@@ -69,24 +70,20 @@ export default function JobApplyPage() {
           .select("cv_file_url, cv_raw_text")
           .eq("user_id", user.id)
           .maybeSingle(),
+        supabase.from("cv_analyses").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
       ]);
 
       const p = profile as { first_name?: string; last_name?: string; email?: string; location?: string } | null;
       const pv = privateRow as { cv_file_url?: string; cv_raw_text?: string } | null;
-      const required = ["first_name", "last_name", "email", "location"] as const;
-      const missingProfileFields: string[] = [];
-      for (const field of required) {
-        const v = p?.[field];
-        if (!v || String(v).trim() === "") {
-          missingProfileFields.push(field === "first_name" ? "First name" : field === "last_name" ? "Last name" : field === "email" ? "Email" : "Location");
-        }
-      }
-      const profileComplete = missingProfileFields.length === 0;
-      const hasCv = !!(pv?.cv_file_url || pv?.cv_raw_text);
+      const r = computeCvReadiness({
+        profile: p,
+        cvFileUrl: pv?.cv_file_url,
+        cvRawText: pv?.cv_raw_text,
+        hasCvAnalysisRow: anyAnalysis != null,
+      });
+      setReadiness(r);
 
-      setGuard({ profileComplete, hasCv, canApply: profileComplete && hasCv, missingProfileFields });
-
-      if (profileComplete && hasCv) {
+      if (r.canAccessFlow) {
         // Check for existing analysis for this job
         const { data: existingAnalysis } = await supabase
           .from("cv_analyses")
@@ -155,8 +152,8 @@ export default function JobApplyPage() {
   const minScore = job.min_cv_score ?? 0;
   const canProceed = cvScore !== null && cvScore >= minScore;
 
-  // Guard: profile and CV required
-  if (guard && !guard.canApply) {
+  // Guard: same CV readiness rule as mock interview (profile + uploaded CV or any analysis)
+  if (readiness && !readiness.canAccessFlow) {
     return (
       <div className="mx-auto max-w-2xl">
         <Link href={`/dashboard/jobs/${jobId}`} className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-200">← Back to job</Link>
@@ -166,19 +163,42 @@ export default function JobApplyPage() {
           <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
             <AlertCircle className="h-6 w-6 shrink-0" />
             <div>
-              <h3 className="font-semibold">Profile and CV required</h3>
-              <p className="mt-1 text-sm dark:text-amber-300">
-                {!guard.profileComplete && "Complete your profile (name, email, location). "}
-                {!guard.hasCv && "Upload your CV in your profile before applying."}
-              </p>
-              {guard.missingProfileFields.length > 0 && (
-                <p className="mt-2 text-sm dark:text-amber-300">Missing: {guard.missingProfileFields.join(", ")}.</p>
+              <h3 className="font-semibold">{CV_READINESS_COPY_EN.applyGateTitle}</h3>
+              <div className="mt-1 space-y-2 text-sm dark:text-amber-300">
+                {!readiness.profileComplete && <p>{CV_READINESS_COPY_EN.applyGateProfileHint}</p>}
+                {readiness.profileComplete && !readiness.hasUploadedCv && !readiness.hasCvAnalysis && (
+                  <p>{CV_READINESS_COPY_EN.applyGateNoCvHint}</p>
+                )}
+              </div>
+              {readiness.missingProfileFieldKeys.length > 0 && (
+                <p className="mt-2 text-sm dark:text-amber-300">
+                  Missing:{" "}
+                  {readiness.missingProfileFieldKeys
+                    .map((k) =>
+                      k === "first_name"
+                        ? "First name"
+                        : k === "last_name"
+                          ? "Last name"
+                          : k === "email"
+                            ? "Email"
+                            : "Location"
+                    )
+                    .join(", ")}
+                  .
+                </p>
               )}
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-4">
-            <Link href="/onboarding"><Button variant="primary">Complete profile</Button></Link>
-            <Link href={`/dashboard/jobs/${jobId}`}><Button variant="outline">Go back</Button></Link>
+            <Link href="/onboarding">
+              <Button variant="primary">Complete profile / CV</Button>
+            </Link>
+            <Link href="/cv-analysis">
+              <Button variant="outline">Run CV analysis</Button>
+            </Link>
+            <Link href={`/dashboard/jobs/${jobId}`}>
+              <Button variant="outline">Go back</Button>
+            </Link>
           </div>
         </div>
       </div>
@@ -195,15 +215,13 @@ export default function JobApplyPage() {
         {/* Step 1: Analyze CV */}
         {cvScore === null && !analyzing && (
           <>
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Step 1: CV Analysis</h3>
-            <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
-              We will analyze your uploaded CV against this job position to check if you meet the minimum requirements.
-            </p>
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{CV_READINESS_COPY_EN.applyStep1Title}</h3>
+            <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{CV_READINESS_COPY_EN.applyStep1Body}</p>
             {analyzeError && (
               <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">{analyzeError}</div>
             )}
             <Button variant="primary" className="mt-4" onClick={runAutoAnalysis}>
-              Analyze my CV for this role
+              {CV_READINESS_COPY_EN.applyAnalyzeButton}
             </Button>
           </>
         )}
@@ -212,7 +230,7 @@ export default function JobApplyPage() {
         {analyzing && (
           <div className="py-4">
             <p className="mb-4 text-center text-sm font-medium text-gray-700 dark:text-zinc-300">
-              Analyzing your CV against this position…
+              {CV_READINESS_COPY_EN.applyAnalyzingLabel}
             </p>
             <CVAnalysisLoadingSkeleton />
           </div>

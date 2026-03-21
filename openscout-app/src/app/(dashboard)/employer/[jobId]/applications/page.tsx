@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound, redirect } from "next/navigation";
-import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,6 +12,7 @@ import {
   parseApplicationsListQuery,
   type EmployerApplicationListItem,
 } from "@/lib/employer-applications-list";
+import { userHasCompanyAccess } from "@/lib/employer-company";
 
 export default async function EmployerApplicationsPage({
   params,
@@ -39,11 +39,14 @@ export default async function EmployerApplicationsPage({
 
   if (!job) notFound();
 
+  const companyId = (job as { company_id: string }).company_id;
+  const hasAccess = await userHasCompanyAccess(supabase, user.id, companyId);
+  if (!hasAccess) notFound();
+
   const { data: company } = await supabase
     .from("companies")
     .select("id, stripe_subscription_status")
-    .eq("id", (job as { company_id: string }).company_id)
-    .eq("user_id", user.id)
+    .eq("id", companyId)
     .maybeSingle();
 
   if (!company) notFound();
@@ -63,6 +66,7 @@ export default async function EmployerApplicationsPage({
         cv_score,
         interview_score,
         interview_report,
+        ai_recommendation_reason,
         created_at,
         profiles(first_name, last_name, email)
       `
@@ -110,7 +114,7 @@ export default async function EmployerApplicationsPage({
       ) : rawApplications.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Inbox}
+          iconName="inbox"
           title="No applications yet"
           description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
         >
@@ -124,7 +128,7 @@ export default async function EmployerApplicationsPage({
       ) : applications.length === 0 ? (
         <EmptyState
           className="mt-10"
-          icon={Inbox}
+          iconName="inbox"
           title="No applications match"
           description="Try changing status or minimum interview score filters."
         >

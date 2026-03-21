@@ -1,18 +1,28 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import { Briefcase, Inbox, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/** Serializable icon key so Server Components can render EmptyState (no passing Lucide components across the RSC boundary). */
+const EMPTY_STATE_ICONS = {
+  briefcase: Briefcase,
+  inbox: Inbox,
+  messageCircle: MessageCircle,
+} as const;
+
+export type EmptyStateIconName = keyof typeof EMPTY_STATE_ICONS;
+
 type EmptyStateProps = {
-  icon: LucideIcon;
+  iconName: EmptyStateIconName;
   title: string;
   description?: string;
   className?: string;
   children?: ReactNode;
 };
 
-export function EmptyState({ icon: Icon, title, description, className, children }: EmptyStateProps) {
+export function EmptyState({ iconName, title, description, className, children }: EmptyStateProps) {
+  const Icon = EMPTY_STATE_ICONS[iconName];
   return (
     <div
       className={cn(

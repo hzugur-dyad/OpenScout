@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Upload, X } from "lucide-react";
+import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
 
 const STEPS = [
   {
@@ -48,6 +49,7 @@ export default function OnboardingPage() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [cvFileUrl, setCvFileUrl] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
+  const [onboardingCompletedAt, setOnboardingCompletedAt] = useState<string | null>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -99,24 +101,8 @@ export default function OnboardingPage() {
         setProfileLoading(false);
         return;
       }
-      // Apply profile data from registration if present (e.g. user landed here after email confirm)
-      try {
-        const raw = typeof window !== "undefined" ? sessionStorage.getItem("pending_candidate_profile") : null;
-        if (raw) {
-          const parsed = JSON.parse(raw) as { first_name?: string; last_name?: string; location?: string };
-          if (parsed.first_name != null || parsed.last_name != null || parsed.location != null) {
-            await supabase.from("profiles").upsert({
-              user_id: user.id,
-              first_name: parsed.first_name ?? "",
-              last_name: parsed.last_name ?? "",
-              email: user.email ?? "",
-              location: parsed.location ?? "",
-              updated_at: new Date().toISOString(),
-            });
-            sessionStorage.removeItem("pending_candidate_profile");
-          }
-        }
-      } catch (_) {}
+      await applyPendingCandidateProfileIfAny(supabase, user.id, user.email ?? undefined);
+
       const [
         { data: profile },
         { data: privateRow },
@@ -140,7 +126,8 @@ export default function OnboardingPage() {
         location: (profile as { location?: string } | null)?.location ?? "",
         professional_summary: (profile as { professional_summary?: string } | null)?.professional_summary ?? "",
       }));
-      setCvFileUrl((profile as { cv_file_url?: string } | null)?.cv_file_url ?? null);
+      const cvPath = (privateRow as { cv_file_url?: string | null } | null)?.cv_file_url ?? null;
+      setCvFileUrl(cvPath);
       setForm((f) => ({
         ...f,
         work_experiences: (workList ?? []).map((w: Record<string, unknown>) => ({
@@ -176,6 +163,9 @@ export default function OnboardingPage() {
         portfolio: (links as { portfolio?: string } | null)?.portfolio ?? "",
         other_highlights: (links as { other_highlights?: string[] } | null)?.other_highlights ?? [],
       }));
+      const completedAt = (profile as { onboarding_completed_at?: string | null } | null)?.onboarding_completed_at ?? null;
+      setOnboardingCompletedAt(completedAt);
+      setEditing(completedAt == null);
       setProfileLoading(false);
     }
     loadProfile();
@@ -293,11 +283,13 @@ export default function OnboardingPage() {
       });
 
       if (!(onboardingRow as { onboarding_completed_at?: string } | null)?.onboarding_completed_at) {
+        const completedIso = new Date().toISOString();
         await supabase
           .from("profiles")
-          .update({ onboarding_completed_at: new Date().toISOString() })
+          .update({ onboarding_completed_at: completedIso })
           .eq("user_id", user.id)
           .is("onboarding_completed_at", null);
+        setOnboardingCompletedAt(completedIso);
       }
 
       trackClient(ANALYTICS_EVENTS.onboarding_completed, {});
@@ -329,8 +321,10 @@ export default function OnboardingPage() {
       <div className="mx-auto max-w-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Profile</h1>
-            <p className="mt-1 text-gray-500">Your information is shown below. Edit when you need to.</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">My profile</h1>
+            <p className="mt-1 text-gray-500 dark:text-zinc-400">
+              Summary of your candidate profile. Edit anytime to keep it current.
+            </p>
           </div>
           <Button variant="primary" onClick={() => setEditing(true)}>
             Edit profile
@@ -528,10 +522,18 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Complete Your Profile</h1>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Complete your profile</h1>
       <p className="mt-1 text-gray-500 dark:text-zinc-400">
-        Review and complete your information.
+        One setup flow for your professional details—whether you just created your account or are updating later.
       </p>
+      {!onboardingCompletedAt && (
+        <p
+          className="mt-4 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary-muted)]/30 px-4 py-3 text-sm text-gray-800 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-200"
+          role="status"
+        >
+          Your account is ready. Continue the steps below to finish setup; you can change any field later.
+        </p>
+      )}
       <Link href="/cv-analysis" className="mt-2 inline-block text-sm text-primary hover:underline">
         Upload new CV
       </Link>
@@ -565,6 +567,9 @@ export default function OnboardingPage() {
               data-testid="onboarding-step-about"
             >
               <h2 className="text-lg font-semibold">About</h2>
+              <p className="text-sm text-gray-500 dark:text-zinc-400">
+                Pre-filled from your account when available. Edit anything that needs an update.
+              </p>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium">First Name <span className="text-red-500">*</span></label>

@@ -25,6 +25,8 @@ type Props = {
   problemSolvingScore?: number | null;
   /** When set, shows public `/result/[id]` share card (no transcript on shared link). */
   shareResultId?: string;
+  /** Set when redirect follows a successful job application submit from the interview flow. */
+  applicationSubmitted?: boolean;
 };
 
 function DimensionMeter({ label, value }: { label: string; value: number }) {
@@ -61,6 +63,7 @@ export function MockInterviewResultView({
   communicationScore,
   problemSolvingScore,
   shareResultId,
+  applicationSubmitted = false,
 }: Props) {
   const locale: InterviewLocale = localeProp ?? "en";
   const ui = interviewUi[locale];
@@ -260,12 +263,35 @@ export function MockInterviewResultView({
         </>
       )}
 
-      <div className="mt-8 flex gap-4">
-        <Link href="/mock-interview">
-          <Button variant="outline">{ui.newInterview}</Button>
+      {!tooShort && applicationSubmitted && (
+        <div className="mt-8 rounded-[10px] border border-green-200 bg-green-50/80 p-4 dark:border-green-900/50 dark:bg-green-950/30">
+          <p className="text-sm font-medium text-green-900 dark:text-green-100">{ui.applicationSubmittedLead}</p>
+          <p className="mt-1 text-sm text-green-800/90 dark:text-green-200/90">{ui.applicationSubmittedNext}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link href="/dashboard/applications">
+              <Button variant="primary" size="sm">
+                {ui.myApplicationsCta}
+              </Button>
+            </Link>
+            <Link href="/dashboard/jobs">
+              <Button variant="outline" size="sm">
+                {ui.browseMoreJobsCta}
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {!tooShort && !applicationSubmitted && (
+        <p className="mt-8 text-sm text-gray-600 dark:text-zinc-400">{ui.nextAfterInterviewLine}</p>
+      )}
+
+      <div className={`flex flex-wrap gap-4 ${!tooShort ? "mt-3" : "mt-8"}`}>
+        <Link href="/dashboard/jobs">
+          <Button variant="primary">{ui.applyToJobsCta}</Button>
         </Link>
-        <Link href="/dashboard">
-          <Button variant="primary">{ui.dashboard}</Button>
+        <Link href="/mock-interview">
+          <Button variant="outline">{ui.takeAnotherInterviewCta}</Button>
         </Link>
       </div>
     </div>

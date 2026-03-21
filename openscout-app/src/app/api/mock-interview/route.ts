@@ -35,6 +35,12 @@ function buildControlContextHint(
     : `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt is already 2, advance with a new question_id and attempt=1.`;
 }
 
+function buildJsonRepairAttemptSuffix(locale: InterviewLocale): string {
+  return locale === "tr"
+    ? `\n\nSON DENEME: Önceki iki yanıtta geçerli JSON yoktu. Adaya TEK cümle söyle; ardından mesajın EN SONUNDA yalnızca şu türden TEK JSON: devam {"type":"question_control","question_id":"...","attempt":1 veya 2,"is_followup":true veya false}; bitiş {"type":"interview_end","reason":"...","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}. Başka metin yok.`
+    : `\n\nFINAL ATTEMPT: The last two replies had no valid JSON. Say ONE short sentence to the candidate, then end with exactly ONE JSON object only: while continuing {"type":"question_control","question_id":"...","attempt":1 or 2,"is_followup":true or false}; when closing {"type":"interview_end","reason":"...","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}. No other text after the JSON.`;
+}
+
 function buildInvalidJsonRetrySuffix(locale: InterviewLocale): string {
   return locale === "tr"
     ? `\n\nKRİTİK: Son yanıtın geçersizdi. Adaya yönelik metinden sonra mesajın EN SONUNDA yalnızca TEK bir JSON olmalı: devam için {"type":"question_control","question_id":"...","attempt":1 veya 2,"is_followup":true veya false}; bitiş için {"type":"interview_end","reason":"...","scores":{"technical":0-100,"communication":0-100,"problem_solving":0-100,"confidence":0-100,"consistency":0-100}}. Markdown veya düz metin işaret kullanma.`
@@ -104,9 +110,14 @@ export async function POST(request: NextRequest) {
     if (!guard.canApplyOrInterview) {
       const reasons: string[] = [];
       if (!guard.profileComplete) reasons.push("Complete required profile fields (name, email, location)");
-      if (!guard.hasCv) reasons.push("Complete at least one CV analysis");
+      if (guard.profileComplete && !guard.hasCv) {
+        reasons.push("Upload a CV in your profile or complete a CV analysis so we have your résumé on file");
+      }
       return NextResponse.json(
-        { error: "Complete your profile and run a CV analysis before starting a mock interview.", details: reasons },
+        {
+          error: "Complete your profile and add a CV (upload or CV analysis) before starting a mock interview.",
+          details: reasons,
+        },
         { status: 403 }
       );
     }
@@ -185,9 +196,13 @@ export async function POST(request: NextRequest) {
     let rawContent = "";
     let parseResult = null as ReturnType<typeof parseMockInterviewAssistantTurn> | null;
 
-    for (let groqAttempt = 0; groqAttempt < 2; groqAttempt++) {
+    for (let groqAttempt = 0; groqAttempt < 3; groqAttempt++) {
       const systemContent =
-        groqAttempt === 0 ? systemPrompt : systemPrompt + buildInvalidJsonRetrySuffix(locale);
+        groqAttempt === 0
+          ? systemPrompt
+          : groqAttempt === 1
+            ? systemPrompt + buildInvalidJsonRetrySuffix(locale)
+            : systemPrompt + buildJsonRepairAttemptSuffix(locale);
       const chatMessages = [{ role: "system" as const, content: systemContent }, ...messages];
 
       let completion;
@@ -206,8 +221,12 @@ export async function POST(request: NextRequest) {
           aiInterview: { stage: "generation", reason: "groq_error" },
         });
         return NextResponse.json(
-          { error: groqError instanceof Error ? groqError.message : "Interview error" },
-          { status: 500 }
+          {
+            error: groqError instanceof Error ? groqError.message : "Interview error",
+            retryable: true,
+            code: "interview_provider_error",
+          },
+          { status: 503 }
         );
       }
 

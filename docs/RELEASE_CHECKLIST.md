@@ -38,13 +38,15 @@ Set these in **Vercel → Project → Settings → Environment Variables** for *
 
 ## 2. Automated production env gate (optional)
 
-Before `next build` on Vercel (e.g. **Build Command**):
+The app pins **Build Command** in [`openscout-app/vercel.json`](../openscout-app/vercel.json) to `npm run build:vercel`, which runs [`scripts/vercel-build.mjs`](../openscout-app/scripts/vercel-build.mjs): **production env validation runs for Vercel Production only** (Preview skips it so placeholder preview env does not fail the build). Locally, `npm run build:vercel` always runs the production gate first.
+
+Equivalent one-liner if you set the command only in the Vercel UI:
 
 ```bash
 OPENSCOUT_ENV_PROFILE=production npm run validate-env && npm run build
 ```
 
-This rejects obvious CI placeholders and localhost app URLs. **Do not** use this profile in local dev unless you intend to simulate production.
+This rejects obvious CI placeholders and localhost app URLs. **Do not** use this profile in local dev unless you intend to simulate production (or use `npm run build:vercel` for that).
 
 Local informational report (always succeeds):
 

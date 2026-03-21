@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Upload, CheckCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Upload, CheckCircle, AlertCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion } from "framer-motion";
@@ -320,6 +321,20 @@ function CVAnalysisContent() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="rounded-[10px] border border-[var(--border)] bg-[var(--primary-muted)]/25 p-4 dark:border-white/[0.06] dark:bg-zinc-900/60">
+            <p className="text-sm font-medium text-gray-900 dark:text-zinc-100">Next: Try an AI interview based on your CV</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">
+              Practice with Nova using the same profile and scores employers see.
+            </p>
+            <div className="mt-3">
+              <Link href="/mock-interview">
+                <Button variant="primary" icon={ArrowRight} iconPosition="right">
+                  Start mock interview
+                </Button>
+              </Link>
+            </div>
           </div>
 
           <Button variant="outline" onClick={() => setResult(null)}>

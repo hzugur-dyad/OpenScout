@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Compass,
   Play,
   Building2,
   Code2,
@@ -14,6 +13,7 @@ import {
   Layers,
   Globe,
 } from "lucide-react";
+import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { LandingLottie } from "@/components/landing/LandingLottie";
@@ -88,15 +88,7 @@ export function AnimatedHero() {
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              <span
-                className="flex h-12 w-12 items-center justify-center rounded-full"
-                style={{ backgroundColor: "var(--primary-lighter)" }}
-              >
-                <Compass
-                  className="h-7 w-7"
-                  style={{ color: "var(--primary-dark)" }}
-                />
-              </span>
+              <OpenScoutLogoMark className="h-44 w-44 sm:h-52 sm:w-52 md:h-60 md:w-60" />
               <span className="text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">
                 OpenScout
               </span>

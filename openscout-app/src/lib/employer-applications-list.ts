@@ -5,7 +5,15 @@ import {
 
 export type ApplicationSortKey = "recent" | "overall" | "technical" | "communication" | "best_fit";
 
-export type ApplicationStatusFilter = "all" | "applied" | "shortlisted" | "rejected";
+export type ApplicationStatusFilter =
+  | "all"
+  | "applied"
+  | "screening"
+  | "shortlisted"
+  | "interviewing"
+  | "offer"
+  | "hired"
+  | "rejected";
 
 export type EmployerApplicationListItem = {
   id: string;
@@ -14,6 +22,7 @@ export type EmployerApplicationListItem = {
   cv_score: number | null;
   interview_score: number | null;
   interview_report: unknown;
+  ai_recommendation_reason?: string | null;
   created_at: string;
   profiles: { first_name?: string; last_name?: string; email?: string } | null;
 };
@@ -101,7 +110,16 @@ export function parseApplicationsListQuery(searchParams: Record<string, string |
 
   const st = raw("status");
   const status: ApplicationStatusFilter =
-    st === "applied" || st === "shortlisted" || st === "rejected" || st === "all" ? st : "all";
+    st === "applied" ||
+    st === "screening" ||
+    st === "shortlisted" ||
+    st === "interviewing" ||
+    st === "offer" ||
+    st === "hired" ||
+    st === "rejected" ||
+    st === "all"
+      ? st
+      : "all";
 
   const minRaw = raw("minScore");
   let minScore: number | null = null;

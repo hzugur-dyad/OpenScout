@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Compass, X, LogOut, type LucideIcon } from "lucide-react";
+import { X, LogOut, type LucideIcon } from "lucide-react";
+import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
@@ -86,7 +87,7 @@ export function Sidebar({
       {/* Header: logo only (no toggle - hover expands) */}
       <div
         className={`
-          flex h-16 shrink-0 items-center border-b border-[var(--border)] dark:border-zinc-800
+          flex h-[4.5rem] shrink-0 items-center border-b border-[var(--border)] dark:border-zinc-800
           ${collapsed ? "lg:justify-center lg:px-0" : "px-4"}
         `}
       >
@@ -95,12 +96,7 @@ export function Sidebar({
           className={`flex min-w-0 items-center gap-3 ${collapsed ? "lg:justify-center lg:gap-0" : ""}`}
           onClick={onMobileClose}
         >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: "var(--primary)" }}
-          >
-            <Compass className="h-5 w-5 text-white" />
-          </span>
+          <OpenScoutLogoMark className="h-16 w-16 shrink-0" />
           <span
             className={`font-semibold text-gray-900 dark:text-zinc-100 truncate transition-opacity duration-200 ${
               collapsed ? "lg:opacity-0 lg:pointer-events-none lg:absolute lg:w-0" : labelsVisible ? "opacity-100" : "opacity-0"

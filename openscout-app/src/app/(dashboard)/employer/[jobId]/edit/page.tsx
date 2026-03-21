@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EmployerJobForm } from "@/components/employer/EmployerJobForm";
+import { userCanRecruitForCompany } from "@/lib/employer-company";
 
 export default async function EmployerEditListingPage({
   params,
@@ -20,14 +21,8 @@ export default async function EmployerEditListingPage({
 
   if (!job) notFound();
 
-  const { data: company } = await supabase
-    .from("companies")
-    .select("id")
-    .eq("id", job.company_id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!company) notFound();
+  const canEdit = await userCanRecruitForCompany(supabase, user.id, job.company_id);
+  if (!canEdit) notFound();
 
   return (
     <div className="mx-auto max-w-3xl">

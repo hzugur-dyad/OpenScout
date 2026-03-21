@@ -50,12 +50,27 @@ export function EmployerApplicationsControls() {
         <span className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-500">Status</span>
         <select
           className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-          value={status === "all" || status === "applied" || status === "shortlisted" || status === "rejected" ? status : "all"}
+          value={
+            status === "all" ||
+            status === "applied" ||
+            status === "screening" ||
+            status === "shortlisted" ||
+            status === "interviewing" ||
+            status === "offer" ||
+            status === "hired" ||
+            status === "rejected"
+              ? status
+              : "all"
+          }
           onChange={(e) => pushQuery({ status: e.target.value === "all" ? undefined : e.target.value })}
         >
           <option value="all">All</option>
           <option value="applied">Applied</option>
+          <option value="screening">Screening</option>
           <option value="shortlisted">Shortlisted</option>
+          <option value="interviewing">Interviewing</option>
+          <option value="offer">Offer</option>
+          <option value="hired">Hired</option>
           <option value="rejected">Rejected</option>
         </select>
       </label>

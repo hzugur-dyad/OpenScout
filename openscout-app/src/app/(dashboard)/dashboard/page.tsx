@@ -6,13 +6,15 @@ import { FileText, MessageCircle, Briefcase, ArrowRight, CreditCard } from "luci
 import { Button } from "@/components/ui/Button";
 import { Card, CardInteractive } from "@/components/ui/Card";
 import { InviteFriendCard } from "@/components/dashboard/InviteFriendCard";
+import { NextStepCard } from "@/components/dashboard/NextStepCard";
 import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserPlan, PLAN_LIMITS, type CandidatePlan } from "@/lib/usage";
+import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
+import { buildJourneySignals, deriveDashboardNextStep, type NextStepCardModel } from "@/lib/next-step-guidance";
 
 const PENDING_EMPLOYER_KEY = "pending_employer_company";
-const PENDING_PROFILE_KEY = "pending_candidate_profile";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const [mockUsed, setMockUsed] = useState(0);
   const [mockBonusCredits, setMockBonusCredits] = useState(0);
   const [checkedEmployer, setCheckedEmployer] = useState(false);
+  const [nextStep, setNextStep] = useState<NextStepCardModel | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -49,71 +52,7 @@ export default function DashboardPage() {
         return;
       }
       try {
-        const raw = sessionStorage.getItem(PENDING_PROFILE_KEY);
-        if (raw && user) {
-          const parsed = JSON.parse(raw) as Record<string, unknown>;
-          if (parsed.first_name || parsed.last_name || parsed.location) {
-            await supabase.from("profiles").upsert({
-              user_id: user.id,
-              first_name: (parsed.first_name as string) ?? "",
-              last_name: (parsed.last_name as string) ?? "",
-              email: user.email ?? "",
-              location: (parsed.location as string) ?? "",
-              professional_summary: (parsed.professional_summary as string) ?? "",
-              updated_at: new Date().toISOString(),
-            });
-
-            const we = parsed.work_experiences as Array<Record<string, unknown>> | undefined;
-            if (we && we.length > 0) {
-              await supabase.from("work_experiences").delete().eq("user_id", user.id);
-              for (let i = 0; i < we.length; i++) {
-                await supabase.from("work_experiences").insert({
-                  user_id: user.id, company_name: we[i].company_name, job_title: we[i].job_title,
-                  start_date: we[i].start_date || null, end_date: we[i].end_date || null,
-                  employment_type: we[i].employment_type || null, location: we[i].location || null,
-                  is_remote: we[i].is_remote ?? false, description: we[i].description || null,
-                  highlights: (we[i].highlights as string[]) || [], sort_order: i,
-                });
-              }
-            }
-
-            const eds = parsed.educations as Array<Record<string, unknown>> | undefined;
-            if (eds && eds.length > 0) {
-              await supabase.from("educations").delete().eq("user_id", user.id);
-              for (let i = 0; i < eds.length; i++) {
-                await supabase.from("educations").insert({
-                  user_id: user.id, institution: eds[i].institution, location: eds[i].location || null,
-                  degree_type: eds[i].degree_type || null, field_of_study: eds[i].field_of_study || null,
-                  start_year: eds[i].start_year ? parseInt(eds[i].start_year as string) : null,
-                  end_year: eds[i].end_year ? parseInt(eds[i].end_year as string) : null,
-                  completed: eds[i].completed ?? true, sort_order: i,
-                });
-              }
-            }
-
-            if (parsed.job_search_status || parsed.available_start || parsed.domain) {
-              await supabase.from("job_preferences").upsert({
-                user_id: user.id,
-                job_search_status: (parsed.job_search_status as string) || "actively_looking",
-                available_start: (parsed.available_start as string) || "within_1_month",
-                domain: (parsed.domain as string) || "engineering",
-                updated_at: new Date().toISOString(),
-              });
-            }
-
-            if (parsed.linkedin || parsed.github || parsed.portfolio) {
-              await supabase.from("professional_links").upsert({
-                user_id: user.id,
-                linkedin: (parsed.linkedin as string) || null,
-                github: (parsed.github as string) || null,
-                portfolio: (parsed.portfolio as string) || null,
-                updated_at: new Date().toISOString(),
-              });
-            }
-
-            sessionStorage.removeItem(PENDING_PROFILE_KEY);
-          }
-        }
+        await applyPendingCandidateProfileIfAny(supabase, user.id, user.email ?? undefined);
       } catch (_) {}
       setCheckedEmployer(true);
     }
@@ -156,6 +95,32 @@ export default function DashboardPage() {
     loadPlan();
   }, [supabase, checkedEmployer]);
 
+  useEffect(() => {
+    if (!checkedEmployer) return;
+    async function loadJourney() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const [profileRes, privRes, cvRes, miRes, jaRes] = await Promise.all([
+        supabase.from("profiles").select("onboarding_completed_at").eq("user_id", user.id).maybeSingle(),
+        supabase.from("profile_private").select("cv_file_url, cv_raw_text").eq("user_id", user.id).maybeSingle(),
+        supabase.from("cv_analyses").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
+        supabase.from("mock_interviews").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
+        supabase.from("job_applications").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
+      ]);
+      const priv = privRes.data as { cv_file_url?: string | null; cv_raw_text?: string | null } | null;
+      const signals = buildJourneySignals({
+        onboardingCompletedAt: (profileRes.data as { onboarding_completed_at?: string | null } | null)?.onboarding_completed_at,
+        cvFileUrl: priv?.cv_file_url,
+        cvRawText: priv?.cv_raw_text,
+        cvAnalysisRowExists: cvRes.data != null,
+        mockInterviewRowExists: miRes.data != null,
+        jobApplicationRowExists: jaRes.data != null,
+      });
+      setNextStep(deriveDashboardNextStep(signals));
+    }
+    loadJourney();
+  }, [supabase, checkedEmployer]);
+
   const cvLimit = PLAN_LIMITS[plan].cv_analysis;
   const mockLimit = PLAN_LIMITS[plan].mock_interview;
 
@@ -171,7 +136,7 @@ export default function DashboardPage() {
     <div className="mx-auto max-w-4xl">
       <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Welcome</h1>
       <p className="mt-1 text-gray-500 dark:text-zinc-400">
-        Complete your profile and take an AI interview.
+        Use <span className="font-medium text-gray-700 dark:text-zinc-300">My profile</span> to finish setup, then CV analysis and mock interviews.
       </p>
 
       <div className="mt-4">
@@ -204,6 +169,8 @@ export default function DashboardPage() {
         </div>
       </Card>
 
+      {nextStep && <NextStepCard step={nextStep} />}
+
       <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <Link href="/onboarding">
           <CardInteractive className="p-6">
@@ -213,9 +180,9 @@ export default function DashboardPage() {
             >
               <FileText className="h-6 w-6" style={{ color: "var(--primary-dark)" }} />
             </div>
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Complete Your Profile</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">My profile</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
-              Your profile in 5 steps
+              Finish or update your details in one place
             </p>
             <div className="mt-4 flex items-center text-sm font-medium" style={{ color: "var(--primary)" }}>
               Start <ArrowRight className="ml-1 h-4 w-4" />

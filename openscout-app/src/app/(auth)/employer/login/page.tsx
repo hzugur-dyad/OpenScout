@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { Compass } from "lucide-react";
+import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 
 export default function EmployerLoginPage() {
   const [email, setEmail] = useState("");
@@ -43,12 +43,7 @@ export default function EmployerLoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
-          <span
-            className="flex h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: "var(--primary)" }}
-          >
-            <Compass className="h-6 w-6 text-white" />
-          </span>
+          <OpenScoutLogoMark className="h-20 w-20" />
           <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
         </Link>
 

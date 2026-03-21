@@ -54,6 +54,7 @@ beforeEach(() => {
 });
 
 const longTranscript = "x".repeat(400);
+const testSessionId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
 describe("POST /api/mock-interview/result", () => {
   it("returns 401 when unauthenticated", async () => {
@@ -66,6 +67,7 @@ describe("POST /api/mock-interview/result", () => {
     const req = new NextRequest("http://localhost/api/mock-interview/result", {
       method: "POST",
       body: JSON.stringify({
+        sessionId: testSessionId,
         transcript: "Hello",
         jobCategory: "Engineering",
         interviewLanguage: "en",
@@ -85,6 +87,7 @@ describe("POST /api/mock-interview/result", () => {
     const req = new NextRequest("http://localhost/api/mock-interview/result", {
       method: "POST",
       body: JSON.stringify({
+        sessionId: testSessionId,
         transcript: "short",
         jobCategory: "Engineering",
         interviewLanguage: "en",
@@ -104,7 +107,8 @@ describe("POST /api/mock-interview/result", () => {
     const req = new NextRequest("http://localhost/api/mock-interview/result", {
       method: "POST",
       body: JSON.stringify({
-        transcript: "Hello",
+        sessionId: testSessionId,
+        transcript: longTranscript,
         jobCategory: "Engineering",
         interviewLanguage: "en",
       }),
@@ -124,6 +128,7 @@ describe("POST /api/mock-interview/result", () => {
     const req = new NextRequest("http://localhost/api/mock-interview/result", {
       method: "POST",
       body: JSON.stringify({
+        sessionId: testSessionId,
         transcript,
         jobCategory: "Engineering",
         jobId: "job-xyz",
@@ -149,10 +154,16 @@ describe("POST /api/mock-interview/result", () => {
       technical_score: 80,
       communication_score: 78,
       problem_solving_score: 76,
+      evaluation_meta: {
+        used_fallback: false,
+        source: "post_interview_evaluation",
+        pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
+      },
     });
     expect(row.user_id).toBe("user-1");
     expect(row.job_id).toBe("job-xyz");
     expect(row.job_category).toBe("Engineering");
+    expect(row.id).toBe(testSessionId);
   });
 
   it("accepts authenticated user with complete profile for happy-path authorization", async () => {
@@ -165,6 +176,7 @@ describe("POST /api/mock-interview/result", () => {
     const req = new NextRequest("http://localhost/api/mock-interview/result", {
       method: "POST",
       body: JSON.stringify({
+        sessionId: testSessionId,
         transcript: longTranscript,
         jobCategory: "Design",
         interviewLanguage: "en",
