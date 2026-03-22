@@ -1,4 +1,4 @@
-git checkout newversion
+git checkout main
 git add .
-git commit -m "pull rquest sorrunu"
-git push -u origin newversion
+git commit -m "iş sayısı arttı"
+git push -u origi main
