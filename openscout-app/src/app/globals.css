@@ -17,6 +17,10 @@
   --muted-foreground: #9ca3af;
 }
 
+html.dark {
+  background: transparent;
+}
+
 .dark {
   --background: #09090b;
   --foreground: #fafafa;
@@ -39,9 +43,22 @@
 }
 
 body {
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Marketing home: translucent bands so the fixed Framer iframe reads through the full scroll */
+.landing-framer-dim {
+  background-color: rgb(255 255 255 / 0.78);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+/* Dark: no tint — full-page Framer iframe shows through */
+html.dark .landing-framer-dim {
+  background-color: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Text selection: very light yellow */
@@ -83,9 +100,8 @@ body {
   mix-blend-mode: normal;
 }
 
-/* Dark mode: ensure body uses theme variables */
 .dark body {
-  background: var(--background);
+  background: transparent;
   color: var(--foreground);
 }
 

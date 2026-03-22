@@ -69,12 +69,12 @@ export function AnimatedHero() {
   }, [phase]);
 
   return (
-    <section className="relative overflow-hidden bg-white dark:bg-zinc-950">
+    <section className="landing-framer-dim relative overflow-hidden">
       {/* 1. Center reveal — logo + brand name fade in at center */}
       <AnimatePresence>
         {phase === "centered" && (
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-white dark:bg-zinc-950"
+            className="landing-framer-dim fixed inset-0 z-[60] flex items-center justify-center"
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >

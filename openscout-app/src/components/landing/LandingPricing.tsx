@@ -19,7 +19,7 @@ type Tier = {
 };
 
 const ctaBase =
-  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-zinc-950";
+  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-transparent";
 
 const ctaVariants: Record<Tier["cta"]["variant"], string> = {
   primary:
@@ -101,13 +101,13 @@ export function LandingPricing() {
     <section className="relative overflow-hidden py-24">
       {/* Soft field — not a flat gray slab */}
       <div
-        className="pointer-events-none absolute inset-0 -z-10 dark:opacity-40"
+        className="pointer-events-none absolute inset-0 -z-10"
         style={{
           background:
             "radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 100%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 50%)",
         }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-zinc-50/90 dark:bg-zinc-950/80" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-zinc-50/50 dark:bg-transparent" />
 
       <Container>
         <motion.div
@@ -137,7 +137,7 @@ export function LandingPricing() {
           transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto mt-14 max-w-5xl"
         >
-          <div className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-zinc-900/60">
+          <div className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-black/30 dark:backdrop-blur-xl">
             <div className="grid divide-y divide-[var(--border)] dark:divide-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
               {tiers.map((tier) => (
                 <div

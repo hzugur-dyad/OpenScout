@@ -14,7 +14,7 @@ const AccordionItem = forwardRef<
   <AccordionPrimitive.Item
     ref={ref}
     className={cn(
-      "rounded-xl border border-[var(--border)] bg-white dark:border-white/[0.06] dark:bg-zinc-900",
+      "rounded-xl border border-[var(--border)] bg-white/88 backdrop-blur-md dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl",
       className
     )}
     {...props}

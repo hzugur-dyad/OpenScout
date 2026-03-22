@@ -77,11 +77,20 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-[var(--foreground)] dark:bg-zinc-950 dark:text-zinc-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-transparent text-[var(--foreground)] dark:text-zinc-100`}
       >
-        <PostHogProvider>
-          <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
-        </PostHogProvider>
+        <iframe
+          src="https://courageous-customer-454833.framer.app/"
+          title=""
+          aria-hidden
+          className="pointer-events-none fixed inset-0 z-0 h-full w-full border-0"
+          loading="eager"
+        />
+        <div className="relative z-[1] min-h-dvh">
+          <PostHogProvider>
+            <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+          </PostHogProvider>
+        </div>
       </body>
     </html>
   );

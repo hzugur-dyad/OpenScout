@@ -42,7 +42,7 @@ export function Navbar({
     <>
       {/* ── Navbar ── */}
       <header
-        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur transition-opacity duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${
+        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/80 backdrop-blur-md transition-opacity duration-300 dark:border-white/[0.08] dark:bg-transparent dark:backdrop-blur-xl ${
           isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
@@ -132,7 +132,7 @@ export function Navbar({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="border-t border-[var(--border)] bg-white dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
+              className="border-t border-[var(--border)] bg-white backdrop-blur-md dark:border-white/[0.08] dark:bg-black/25 dark:backdrop-blur-xl md:hidden"
             >
               <div className="space-y-2 px-4 py-4">
                 {showUserTypeToggle && (
@@ -181,7 +181,7 @@ export function Navbar({
           transition={{ duration: 0.4, delay: 0.4 }}
         >
           <div className="absolute top-3">
-            <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/90 p-1 shadow-soft backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/90">
+            <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/75 p-1 shadow-soft backdrop-blur-md dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
               <motion.div
                 layout
                 className="absolute inset-y-1 z-0 rounded-full"

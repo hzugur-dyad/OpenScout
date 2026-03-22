@@ -19,6 +19,7 @@ import { AnimatedHero } from "@/components/landing/AnimatedHero";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { useTheme } from "next-themes";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
+import { cn } from "@/lib/utils";
 
 const faqs = [
   {
@@ -47,7 +48,6 @@ export default function LandingPage() {
   const { resolvedTheme } = useTheme();
   const { userType } = useLandingUserType();
   const isEmployer = userType === "employer";
-  const isDark = resolvedTheme === "dark";
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -57,7 +57,7 @@ export default function LandingPage() {
       <AnimatedHero />
 
       {/* Stats/Benefits */}
-      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="landing-framer-dim border-y border-[var(--border)] py-16 dark:border-zinc-800">
         <Container>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
@@ -151,7 +151,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why OpenScout - different heading and cards for employer */}
-      <section className="border-t border-[var(--border)] bg-zinc-50/50 py-20 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="border-t border-[var(--border)] bg-zinc-50/50 py-20 dark:border-zinc-800 dark:bg-transparent">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             {!isEmployer ? "Why Candidates Choose OpenScout" : "Why Employers Use OpenScout"}
@@ -176,7 +176,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
+                className="flex gap-4 rounded-[10px] border border-[var(--border)] bg-white/85 p-6 shadow-soft backdrop-blur-md dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl"
               >
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
@@ -212,7 +212,7 @@ export default function LandingPage() {
       </section>
 
       {/* For employers */}
-      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-zinc-950">
+      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-transparent">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">
@@ -230,12 +230,12 @@ export default function LandingPage() {
 
       {/* CTA — style only depends on theme after mount to avoid hydration mismatch */}
       <section
-        className="py-20"
-        style={{
-          background: mounted && resolvedTheme === "light"
-            ? "linear-gradient(180deg, var(--background) 0%, var(--primary-lighter) 100%)"
-            : "var(--background)",
-        }}
+        className={cn(
+          "py-20",
+          mounted && resolvedTheme === "light"
+            ? "bg-gradient-to-b from-white/80 via-white/55 to-[var(--primary-lighter)] backdrop-blur-md"
+            : "landing-framer-dim",
+        )}
       >
         <Container>
           <div className="mx-auto max-w-2xl text-center">
