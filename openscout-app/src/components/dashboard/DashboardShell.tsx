@@ -48,6 +48,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const effectiveRole = role ?? (isEmployerPath ? "employer" : "candidate");
   const navItems = effectiveRole === "employer" ? employerNavItems : candidateNavItems;
   const dashboardHref = effectiveRole === "employer" ? "/employer" : "/dashboard";
+  const isCandidateDashboardHome = pathname === "/dashboard";
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -136,7 +137,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div className="flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950">
+    <div
+      className={
+        isCandidateDashboardHome
+          ? "flex min-h-[100dvh] bg-[#F7F6F3] dark:bg-zinc-950"
+          : "flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950"
+      }
+    >
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (

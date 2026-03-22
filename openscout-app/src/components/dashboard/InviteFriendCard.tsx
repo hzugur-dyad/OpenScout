@@ -51,17 +51,17 @@ export function InviteFriendCard() {
 
   if (phase === "loading") {
     return (
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[0_20px_44px_-22px_rgba(15,23,42,0.06)] dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.42)]">
-        <div className="h-24 animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-800" />
+      <div className="rounded-xl border border-[#EAEAEA] bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="h-24 animate-pulse rounded-[10px] bg-[#F7F6F3] dark:bg-zinc-800" />
       </div>
     );
   }
 
   if (phase === "unavailable" || !code) {
     return (
-      <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[0_20px_44px_-22px_rgba(15,23,42,0.06)] dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.42)]">
+      <div className="rounded-xl border border-[#EAEAEA] bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/[0.11] text-emerald-900 dark:bg-emerald-400/[0.12] dark:text-emerald-300/95">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#3d2426] dark:text-[#e8a8a6]">
             <UserPlus className="h-6 w-6" weight="bold" aria-hidden />
           </div>
           <div className="min-w-0">
@@ -105,67 +105,67 @@ export function InviteFriendCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[0_20px_44px_-22px_rgba(15,23,42,0.06)] dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.42)]">
+    <div className="rounded-xl border border-[#EAEAEA] bg-white p-8 transition-[box-shadow] duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)]">
       <div className="flex items-start gap-4">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/[0.11] text-emerald-900 dark:bg-emerald-400/[0.12] dark:text-emerald-300/95">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#3d2426] dark:text-[#e8a8a6]">
           <UserPlus className="h-6 w-6" weight="bold" aria-hidden />
         </div>
         <div className="min-w-0">
-          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">Invite a friend</h3>
-          <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+          <h3 className="font-semibold text-[#111111] dark:text-zinc-100">Invite a friend</h3>
+          <p className="mt-2 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">
             When someone uses your link, signs up, finishes profile onboarding, and completes a full mock interview,
             you both get{" "}
-            <span className="font-medium text-zinc-900 dark:text-zinc-200">one bonus mock interview</span> credit
+            <span className="font-medium text-[#111111] dark:text-zinc-200">one bonus mock interview</span> credit
             (on top of your weekly plan limit). Short or abandoned interviews don&apos;t count.
           </p>
         </div>
       </div>
 
-      <dl className="mt-6 grid gap-4 rounded-xl border border-zinc-200/80 bg-zinc-50/80 p-5 text-sm dark:border-zinc-800 dark:bg-zinc-950/40 sm:grid-cols-2">
+      <dl className="mt-6 grid gap-4 rounded-xl border border-[#EAEAEA] bg-[#F7F6F3] p-5 text-sm dark:border-zinc-800 dark:bg-zinc-950/50 sm:grid-cols-2">
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-500">Your referral code</dt>
-          <dd className="mt-0.5 font-mono text-base font-semibold tracking-wide text-zinc-900 dark:text-zinc-100">
+          <dt className="text-[#787774] dark:text-zinc-500">Your referral code</dt>
+          <dd className="mt-0.5 font-mono text-base font-semibold tracking-wide text-[#111111] dark:text-zinc-100">
             {code}
           </dd>
         </div>
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-500">Bonus credits (balance)</dt>
-          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+          <dt className="text-[#787774] dark:text-zinc-500">Bonus credits (balance)</dt>
+          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-[#111111] dark:text-zinc-100">
             {bonusBalance}
           </dd>
         </div>
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-500">Friends attributed</dt>
-          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+          <dt className="text-[#787774] dark:text-zinc-500">Friends attributed</dt>
+          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-[#111111] dark:text-zinc-100">
             {referredCount}
           </dd>
         </div>
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-500">Successful referrals</dt>
-          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+          <dt className="text-[#787774] dark:text-zinc-500">Successful referrals</dt>
+          <dd className="mt-0.5 font-mono text-base font-semibold tabular-nums text-[#111111] dark:text-zinc-100">
             {successfulReferralsCount}
           </dd>
         </div>
       </dl>
 
       {inProgressInvites > 0 && (
-        <p className="mt-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
+        <p className="mt-4 text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
           {inProgressInvites} invite{inProgressInvites !== 1 ? "s" : ""} still in progress (onboarding or qualifying
           interview).
         </p>
       )}
 
-      <p className="mt-4 text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
-        Status: <span className="font-medium text-zinc-800 dark:text-zinc-300">Attributed</span> → signed up with your
-        link; <span className="font-medium text-zinc-800 dark:text-zinc-300">Qualified</span> → met requirements;
-        rewards show as <span className="font-medium text-zinc-800 dark:text-zinc-300">Successful</span> here once
+      <p className="mt-4 text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
+        Status: <span className="font-medium text-[#111111] dark:text-zinc-300">Attributed</span> → signed up with your
+        link; <span className="font-medium text-[#111111] dark:text-zinc-300">Qualified</span> → met requirements;
+        rewards show as <span className="font-medium text-[#111111] dark:text-zinc-300">Successful</span> here once
         credits are granted.
       </p>
 
       <div className="mt-6 space-y-2">
         <label
           htmlFor="referral-link-readonly"
-          className="text-xs font-medium uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-500"
+          className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500"
         >
           Referral link
         </label>
@@ -175,11 +175,11 @@ export function InviteFriendCard() {
             type="text"
             readOnly
             value={inviteUrl}
-            className="min-w-0 flex-1 rounded-lg border border-zinc-200/90 bg-white px-3 py-2 font-mono text-sm text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+            className="min-w-0 flex-1 rounded-md border border-[#EAEAEA] bg-white px-3 py-2 font-mono text-sm text-[#111111] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           />
           <button
             type="button"
-            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white"
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-md bg-[#111111] px-4 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:scale-[0.98] dark:bg-zinc-100 dark:text-[#111111] dark:hover:bg-white"
             onClick={copyLink}
           >
             <LinkSimple className="h-4 w-4" weight="bold" aria-hidden />
@@ -189,7 +189,7 @@ export function InviteFriendCard() {
         <Button
           variant="outline"
           size="sm"
-          className="rounded-lg border-zinc-200 dark:border-zinc-700"
+          className="rounded-md border-[#EAEAEA] dark:border-zinc-700"
           onClick={copyCode}
         >
           <span className="inline-flex items-center gap-2">

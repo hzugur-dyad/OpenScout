@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Newsreader } from "next/font/google";
 import {
   ArrowRight,
   Briefcase,
@@ -25,12 +26,16 @@ import {
 
 const PENDING_EMPLOYER_KEY = "pending_employer_company";
 
-/** design-taste-frontend: spring choreography for in-view reveals. */
+const dashboardSerif = Newsreader({
+  subsets: ["latin"],
+  display: "swap",
+});
+
+/** Minimalist UI: in-view reveal — transform + opacity, calm easing. */
 const revealTransition = (delay = 0) => ({
-  type: "spring" as const,
-  stiffness: 100,
-  damping: 24,
+  duration: 0.6,
   delay,
+  ease: [0.16, 1, 0.3, 1] as const,
 });
 
 function Reveal({
@@ -56,39 +61,45 @@ function Reveal({
 }
 
 const bentoCard =
-  "group flex h-full flex-col rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[0_20px_44px_-22px_rgba(15,23,42,0.07)] transition-[box-shadow,transform,border-color] duration-200 dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.42)] hover:border-zinc-300/90 hover:shadow-[0_24px_48px_-20px_rgba(15,23,42,0.09)] active:scale-[0.99] dark:hover:border-zinc-700 dark:hover:shadow-[0_28px_52px_-22px_rgba(0,0,0,0.5)]";
+  "group flex h-full flex-col rounded-xl border border-[#EAEAEA] bg-white p-8 transition-[box-shadow,transform,border-color] duration-200 dark:border-zinc-800 dark:bg-zinc-900 hover:border-[#dcdcdc] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-[0.98] dark:hover:border-zinc-700 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.18)]";
 
 const planPanel =
-  "rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-[0_20px_44px_-22px_rgba(15,23,42,0.06)] dark:border-zinc-800/90 dark:bg-zinc-900 dark:shadow-[0_24px_48px_-24px_rgba(0,0,0,0.42)]";
+  "rounded-xl border border-[#EAEAEA] bg-white p-8 dark:border-zinc-800 dark:bg-zinc-900";
 
-/** Single accent (emerald, desaturated) for icon wells — dashboard rule: sans UI, no rainbow tiles. */
-const iconWellBase =
-  "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/[0.11] text-emerald-900 dark:bg-emerald-400/[0.12] dark:text-emerald-300/95";
+/** Muted pastel icon wells (minimalist-ui palette). */
+const iconWellGreen =
+  "flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#EDF3EC] text-[#346538] dark:bg-[#243326] dark:text-[#9cb89e]";
 
-const iconWell = `${iconWellBase} mb-5`;
+const iconWellBlue =
+  "flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#E1F3FE] text-[#1F6C9F] dark:bg-[#1a2a35] dark:text-[#7eb8db]";
+
+const iconWellYellow =
+  "flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#FBF3DB] text-[#956400] dark:bg-[#2d2818] dark:text-[#c9a85c]";
+
+const iconWell = `${iconWellGreen} mb-5`;
 
 function DashboardLoadingSkeleton() {
   return (
-    <div className="-mx-4 min-h-full bg-zinc-50 px-4 py-12 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
-      <div className="mx-auto w-full max-w-6xl space-y-16 md:space-y-20">
+    <div className="-mx-4 min-h-full bg-[#F7F6F3] px-4 py-16 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+      <div className="mx-auto w-full max-w-5xl space-y-20 md:space-y-24">
         <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12">
           <div className="space-y-4 lg:col-span-7">
-            <div className="h-10 w-2/3 max-w-sm animate-pulse rounded-lg bg-zinc-200/90 dark:bg-zinc-800" />
-            <div className="h-4 w-full max-w-xl animate-pulse rounded bg-zinc-200/70 dark:bg-zinc-800/80" />
-            <div className="h-4 w-4/5 max-w-lg animate-pulse rounded bg-zinc-200/70 dark:bg-zinc-800/80" />
-            <div className="h-9 w-44 animate-pulse rounded-md bg-zinc-200/70 dark:bg-zinc-800/80" />
+            <div className="h-10 w-2/3 max-w-sm animate-pulse rounded-lg bg-black/[0.06] dark:bg-zinc-800" />
+            <div className="h-4 w-full max-w-xl animate-pulse rounded bg-black/[0.05] dark:bg-zinc-800/80" />
+            <div className="h-4 w-4/5 max-w-lg animate-pulse rounded bg-black/[0.05] dark:bg-zinc-800/80" />
+            <div className="h-9 w-44 animate-pulse rounded-md bg-black/[0.05] dark:bg-zinc-800/80" />
           </div>
-          <div className="h-48 animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-5" />
+          <div className="h-48 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-5" />
         </div>
-        <div className="h-32 animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+        <div className="h-32 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.06fr)] lg:items-stretch lg:gap-8">
           <div className="space-y-6">
-            <div className="h-44 animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
-            <div className="h-44 animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="h-44 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="h-44 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
           </div>
-          <div className="min-h-[220px] animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+          <div className="min-h-[220px] animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
         </div>
-        <div className="h-52 animate-pulse rounded-2xl border border-zinc-200/80 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+        <div className="h-52 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
       </div>
     </div>
   );
@@ -254,25 +265,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative -mx-4 min-h-full overflow-x-clip bg-zinc-50 px-4 pb-28 pt-12 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+    <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-32 pt-16 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-zinc-50 [background-image:radial-gradient(ellipse_85%_55%_at_18%_-8%,rgba(16,185,129,0.07),transparent_55%),radial-gradient(ellipse_70%_45%_at_100%_0%,rgba(24,24,27,0.03),transparent_50%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_80%_50%_at_50%_-25%,rgba(16,185,129,0.09),transparent_58%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_88%_58%_at_14%_-6%,rgba(120,100,90,0.035),transparent_56%),radial-gradient(ellipse_72%_48%_at_100%_0%,rgba(0,0,0,0.025),transparent_52%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_82%_52%_at_50%_-22%,rgba(255,255,255,0.04),transparent_58%)]"
       />
 
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-16 md:gap-20">
+      <div className="relative mx-auto flex w-full max-w-5xl flex-col gap-20 md:gap-24">
         <Reveal>
           <div className="grid gap-10 lg:grid-cols-12 lg:items-start lg:gap-12">
             <header className="lg:col-span-7">
-              <p className="text-xs font-medium uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-500">
+              <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
                 Candidate home
               </p>
-              <h1 className="mt-3 font-sans text-4xl font-semibold leading-[1.08] tracking-tighter text-zinc-900 md:text-5xl dark:text-zinc-100">
+              <h1
+                className={`${dashboardSerif.className} mt-3 text-4xl font-semibold leading-[1.1] tracking-[-0.03em] text-[#111111] md:text-[2.75rem] dark:text-zinc-100`}
+              >
                 Welcome back
               </h1>
-              <p className="mt-5 max-w-[65ch] text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <p className="mt-5 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
                 Open{" "}
-                <span className="font-medium text-zinc-900 dark:text-zinc-200">
+                <span className="font-medium text-[#111111] dark:text-zinc-200">
                   My profile
                 </span>{" "}
                 to finish setup, then run CV analysis and mock interviews when
@@ -285,37 +298,37 @@ export default function DashboardPage() {
 
             <aside className="lg:col-span-5">
               <div className={planPanel}>
-                <p className="text-xs font-medium uppercase tracking-[0.08em] text-zinc-500">
+                <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
                   Plan and weekly usage
                 </p>
                 <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                  <span className="text-lg font-semibold capitalize text-zinc-900 dark:text-zinc-100">
+                  <span className="text-lg font-semibold capitalize text-[#111111] dark:text-zinc-100">
                     {plan}
                   </span>
-                  <span className="text-sm text-zinc-500">plan</span>
+                  <span className="text-sm text-[#787774] dark:text-zinc-500">plan</span>
                 </div>
-                <dl className="mt-6 space-y-3 border-t border-zinc-200/80 pt-6 text-sm dark:border-zinc-800">
+                <dl className="mt-6 space-y-3 border-t border-[#EAEAEA] pt-6 text-sm dark:border-zinc-800">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-zinc-500 dark:text-zinc-500">
+                    <dt className="text-[#787774] dark:text-zinc-500">
                       CV analysis
                     </dt>
-                    <dd className="font-mono text-sm tabular-nums text-zinc-900 dark:text-zinc-100">
+                    <dd className="font-mono text-sm tabular-nums text-[#111111] dark:text-zinc-100">
                       {cvUsed}/{cvLimit === Infinity ? "∞" : cvLimit}
                     </dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-zinc-500 dark:text-zinc-500">
+                    <dt className="text-[#787774] dark:text-zinc-500">
                       Mock interview
                     </dt>
-                    <dd className="font-mono text-sm tabular-nums text-zinc-900 dark:text-zinc-100">
+                    <dd className="font-mono text-sm tabular-nums text-[#111111] dark:text-zinc-100">
                       {mockUsed}/{mockLimit === Infinity ? "∞" : mockLimit}
                     </dd>
                   </div>
-                  <div className="text-xs leading-relaxed text-zinc-500">
+                  <div className="text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
                     Counts use a rolling 7-day window.
                   </div>
                   {mockBonusCredits > 0 && (
-                    <div className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    <div className="text-xs leading-relaxed text-[#787774] dark:text-zinc-400">
                       {mockBonusCredits} bonus interview credit
                       {mockBonusCredits !== 1 ? "s" : ""} available.
                     </div>
@@ -325,7 +338,7 @@ export default function DashboardPage() {
                   <div className="mt-8">
                     <Link
                       href="/pricing"
-                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200/90 bg-white px-4 text-sm font-medium text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-colors hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] dark:hover:bg-zinc-800"
+                      className="inline-flex h-9 items-center gap-2 rounded-md border border-[#EAEAEA] bg-[#F7F6F3] px-4 text-sm font-medium text-[#111111] transition-colors hover:border-[#dcdcdc] hover:bg-[#EFEEE9] active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
                     >
                       <CreditCard className="h-4 w-4" weight="bold" aria-hidden />
                       Upgrade
@@ -351,13 +364,13 @@ export default function DashboardPage() {
                   <div className={iconWell}>
                     <FileText className="h-6 w-6" weight="bold" aria-hidden />
                   </div>
-                  <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
                     My profile
                   </h2>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  <p className="mt-2 flex-1 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">
                     Finish or update your details in one place.
                   </p>
-                  <div className="mt-6 flex items-center text-sm font-medium text-zinc-900 dark:text-zinc-200">
+                  <div className="mt-6 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200">
                     Continue
                     <ArrowRight
                       className="ml-1.5 h-4 w-4 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-0.5"
@@ -373,13 +386,13 @@ export default function DashboardPage() {
                   <div className={iconWell}>
                     <FileText className="h-6 w-6" weight="bold" aria-hidden />
                   </div>
-                  <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
                     CV analysis
                   </h2>
-                  <p className="mt-2 flex-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  <p className="mt-2 flex-1 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">
                     Upload a CV and get structured feedback against open roles.
                   </p>
-                  <div className="mt-6 flex items-center text-sm font-medium text-zinc-900 dark:text-zinc-200">
+                  <div className="mt-6 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200">
                     Open tool
                     <ArrowRight
                       className="ml-1.5 h-4 w-4 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-0.5"
@@ -394,18 +407,18 @@ export default function DashboardPage() {
             <Link href="/mock-interview" className="block min-h-0">
               <div className={`${bentoCard} min-h-[280px] justify-between lg:min-h-full lg:py-10`}>
                 <div>
-                  <div className={iconWell}>
+                  <div className={`${iconWellBlue} mb-5`}>
                     <ChatCircle className="h-6 w-6" weight="bold" aria-hidden />
                   </div>
-                  <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                  <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
                     Mock interview
                   </h2>
-                  <p className="mt-2 text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  <p className="mt-2 text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
                     Run a structured AI session and read a short scorecard when
                     you finish.
                   </p>
                 </div>
-                <div className="mt-8 flex items-center text-sm font-medium text-zinc-900 dark:text-zinc-200 lg:mt-10">
+                <div className="mt-8 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200 lg:mt-10">
                   Start session
                   <ArrowRight
                     className="ml-1.5 h-4 w-4 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-0.5"
@@ -423,19 +436,19 @@ export default function DashboardPage() {
             <div className={bentoCard}>
               <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
-                  <div className={iconWellBase}>
+                  <div className={iconWellYellow}>
                     <Briefcase className="h-6 w-6" weight="bold" aria-hidden />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                    <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
                       Job listings
                     </h2>
-                    <p className="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                    <p className="mt-1 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">
                       Browse open roles and track applications from here.
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-800 active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">
+                <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-[#111111] px-4 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:scale-[0.98] dark:bg-zinc-100 dark:text-[#111111] dark:hover:bg-white">
                   View listings
                 </span>
               </div>
