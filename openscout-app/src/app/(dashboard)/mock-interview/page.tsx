@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Newsreader } from "next/font/google";
 import { ChatCircle, CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
@@ -39,18 +39,21 @@ const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
   },
 };
 
-/** 1px #EAEAEA, 12px radius, flat surface (minimalist-ui) */
+/** Off-white surface, hairline stroke, no drop shadow (border defines edges on light UI). */
 const surfaceCard =
-  "rounded-xl border border-[#EAEAEA] bg-white transition-shadow duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]";
+  "rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] transition-colors duration-200 hover:border-[#D6D6D3] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700";
 
 const selectTriggerMinimal =
-  "rounded-md border-[#EAEAEA] bg-white py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+  "rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+
+const focusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBFBFA] dark:focus-visible:ring-zinc-100 dark:focus-visible:ring-offset-zinc-950";
 
 const btnPrimary =
-  "inline-flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-md bg-[#111111] px-5 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200";
+  `inline-flex min-h-11 min-w-[180px] touch-manipulation items-center justify-center gap-2 rounded-[10px] bg-[#111111] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#2a2a2a] active:bg-[#000000] active:scale-[0.98] motion-reduce:active:scale-100 dark:bg-zinc-100 dark:font-semibold dark:text-zinc-950 dark:hover:bg-zinc-200 dark:active:bg-zinc-300 ${focusRing}`;
 
 const btnOutline =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#EAEAEA] bg-white px-5 text-sm font-medium text-[#111111] transition-colors hover:bg-[#F7F6F3] active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
+  `inline-flex min-h-11 touch-manipulation items-center justify-center gap-2 rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] px-5 py-2.5 text-sm font-semibold text-[#111111] transition-colors hover:bg-[#F2F1EF] active:bg-[#EAE9E6] active:scale-[0.98] motion-reduce:active:scale-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/90 ${focusRing}`;
 
 function jobTitleFromJobQuery(searchParams: ReturnType<typeof useSearchParams>): string | null {
   const slug = searchParams.get("job");
@@ -61,6 +64,7 @@ function jobTitleFromJobQuery(searchParams: ReturnType<typeof useSearchParams>):
 }
 
 function MockInterviewContent() {
+  const reduceMotion = useReducedMotion();
   const searchParams = useSearchParams();
   const [jobCategory, setJobCategory] = useState<string>(() => jobTitleFromJobQuery(searchParams) ?? JOB_TITLES[0]);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
@@ -125,10 +129,10 @@ function MockInterviewContent() {
     !guardLoading && (!readiness || (readiness.canAccessFlow && !readiness.needsCvAnalysisBeforeInterview));
 
   const gateWarningSurface =
-    "rounded-xl border border-[#EAEAEA] bg-[#FBF3DB] dark:border-zinc-800 dark:bg-[#2d2608]/80";
+    "rounded-[10px] border border-[#E8E4DA] bg-[#F5F1EA] dark:border-zinc-800 dark:bg-[#1f1c14]/90";
 
   const nudgeSurface =
-    "rounded-xl border border-[#EAEAEA] bg-[#E1F3FE] dark:border-zinc-800 dark:bg-zinc-900";
+    "rounded-[10px] border border-[#DDE4EA] bg-[#EEF2F5] dark:border-zinc-800 dark:bg-zinc-900";
 
   return (
     <div className="relative min-h-[100dvh] bg-[#FBFBFA] dark:bg-zinc-950">
@@ -136,15 +140,16 @@ function MockInterviewContent() {
         className="pointer-events-none fixed inset-0 z-0"
         aria-hidden
         style={{
-          background:
-            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212,168,67,0.045), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0,0,0,0.02), transparent 50%)",
+          background: "radial-gradient(ellipse 90% 50% at 50% -15%, rgba(0,0,0,0.018), transparent 55%)",
         }}
       />
-      <div className="relative z-10 mx-auto max-w-4xl px-4 py-4 md:py-5">
+      <main id="mock-interview-main" className="relative z-10 mx-auto max-w-4xl px-4 py-4 md:py-5">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: EASE_MINIMAL }}
+          transition={
+            reduceMotion ? { duration: 0 } : { duration: 0.6, ease: EASE_MINIMAL }
+          }
           className="flex flex-col items-center"
         >
           <header className="w-full text-center">
@@ -173,9 +178,13 @@ function MockInterviewContent() {
             ) : showProfileGate && readiness ? (
               <motion.div
                 className={cn(gateWarningSurface, "p-4 md:p-5")}
-                initial={{ opacity: 0, y: 12 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
+                }
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -214,9 +223,13 @@ function MockInterviewContent() {
             ) : showNoCvGate && readiness ? (
               <motion.div
                 className={cn(gateWarningSurface, "p-4 md:p-5")}
-                initial={{ opacity: 0, y: 12 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
+                }
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -246,9 +259,13 @@ function MockInterviewContent() {
             ) : showAnalysisNudge && readiness ? (
               <motion.div
                 className={cn(nudgeSurface, "p-4 md:p-5")}
-                initial={{ opacity: 0, y: 12 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
+                }
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -280,7 +297,7 @@ function MockInterviewContent() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="flex flex-col gap-2">
                     <label
-                      className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-400"
+                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/55 dark:text-zinc-500"
                       htmlFor="mock-interview-lang"
                     >
                       {ui.interviewLanguage}
@@ -299,7 +316,7 @@ function MockInterviewContent() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label
-                      className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-400"
+                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/55 dark:text-zinc-500"
                       htmlFor="mock-interview-job"
                     >
                       {ui.jobCategory}
@@ -315,29 +332,32 @@ function MockInterviewContent() {
                   </div>
                 </div>
 
-                <div className="mt-4 border-t border-[#EAEAEA] pt-4 dark:border-zinc-800">
-                  <h3 className="text-center font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#787774] dark:text-zinc-500">
+                <div className="mt-8">
+                  <h3 className="text-center text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/55 dark:text-zinc-500">
                     {ui.whatToExpect}
                   </h3>
-                  <ul className="mx-auto mt-2 max-w-[48ch] border-t border-[#EAEAEA] dark:border-zinc-800" role="list">
+                  <ul className="mx-auto mt-4 max-w-[48ch] space-y-3" role="list">
                     {ui.expectBullets.map((line) => (
-                      <li
-                        key={line}
-                        className="flex gap-2 border-b border-[#EAEAEA] py-2 last:border-b-0 dark:border-zinc-800"
-                      >
+                      <li key={line} className="flex gap-3">
                         <CheckCircle
-                          className="mt-0.5 h-4 w-4 shrink-0 text-[#346538] dark:text-emerald-400"
-                          weight="bold"
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[#3d5c40] opacity-90 dark:text-emerald-500/90"
+                          weight="regular"
                           aria-hidden
                         />
-                        <span className="text-xs leading-snug text-[#111111]/85 dark:text-zinc-300">{line}</span>
+                        <span className="text-sm font-normal leading-[1.5] text-[#111111]/70 dark:text-zinc-400">
+                          {line}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="mt-4 flex justify-center">
-                  <button type="button" onClick={handleStart} className={btnPrimary}>
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleStart}
+                    className={btnPrimary}
+                  >
                     <ChatCircle className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
                     {ui.startInterview}
                   </button>
@@ -346,7 +366,7 @@ function MockInterviewContent() {
             ) : null}
           </div>
         </motion.div>
-      </div>
+      </main>
     </div>
   );
 }

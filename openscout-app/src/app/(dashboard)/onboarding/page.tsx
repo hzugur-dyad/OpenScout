@@ -9,7 +9,7 @@ import { OnboardingStepper } from "@/components/onboarding/OnboardingStepper";
 import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FileText, UploadSimple } from "@phosphor-icons/react";
 import { Newsreader } from "next/font/google";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
@@ -19,50 +19,51 @@ const newsreader = Newsreader({
   weight: ["400", "600"],
 });
 
-const stepEase = { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const };
+/** Step panel motion: ≤400ms, ease-out; disabled when user prefers reduced motion */
+const stepEase = { duration: 0.32, ease: [0.16, 1, 0.3, 1] as const };
 
-const inputClass =
-  "w-full rounded-md border border-[#EAEAEA] bg-white px-3.5 py-2.5 text-sm leading-[1.6] text-[#111111] transition-colors placeholder:text-[#787774] focus:border-[#111111] focus:outline-none focus:ring-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400";
+const easeOut = "ease-[cubic-bezier(0.16,1,0.3,1)]";
 
-const inputClassSm =
-  "w-full rounded-md border border-[#EAEAEA] bg-white px-3 py-2 text-sm leading-[1.6] text-[#111111] transition-colors placeholder:text-[#787774] focus:border-[#111111] focus:outline-none focus:ring-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400";
+const focusRing =
+  "focus-visible:border-[#111111] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 dark:focus-visible:border-zinc-400 dark:focus-visible:ring-zinc-400 dark:focus-visible:ring-offset-[#161616]";
 
-/** Minimalist primary CTA: off-black surface, crisp radius (overrides theme gold on this page). */
-const minimalPrimaryBtn =
-  "rounded-md !bg-[#111111] !text-white hover:!bg-[#333333] active:scale-[0.98] dark:!bg-zinc-100 dark:!text-[#111111] dark:hover:!bg-white";
+/** ~99% off-white fields; stroke defines edges (minimal shadow). */
+const inputClass = `min-h-11 w-full touch-manipulation rounded-lg border border-[#E5E5E3] bg-[#FDFDFC] px-3.5 py-2.5 text-base leading-[1.5] text-[#111111] transition-[border-color,background-color,color] duration-200 ${easeOut} placeholder:text-black/45 sm:text-sm ${focusRing} dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500`;
 
-const minimalOutlineBtn =
-  "rounded-md border-[#EAEAEA] bg-transparent hover:bg-[#F7F6F3] dark:border-zinc-700 dark:hover:bg-zinc-900";
+const inputClassSm = `min-h-11 w-full touch-manipulation rounded-lg border border-[#E5E5E3] bg-[#FDFDFC] px-3 py-2.5 text-base leading-[1.5] text-[#111111] transition-[border-color,background-color,color] duration-200 ${easeOut} placeholder:text-black/45 sm:py-2 sm:text-sm ${focusRing} dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500`;
+
+/** Primary CTA: darker base, hover lifts lightness, active presses darker (no layout shift). */
+const minimalPrimaryBtn = `rounded-lg !bg-[#141414] !text-[#FAFAFA] transition-colors duration-200 ${easeOut} hover:!bg-[#2c2c2c] active:!bg-[#0a0a0a] dark:!bg-zinc-100 dark:!text-[#141414] dark:hover:!bg-white dark:active:!bg-zinc-200`;
+
+const minimalOutlineBtn = `rounded-lg border-[#E5E5E3] bg-transparent transition-colors duration-200 ${easeOut} hover:border-[#C8C8C4] hover:bg-[#F2F1EE] dark:border-zinc-700 dark:hover:border-zinc-600 dark:hover:bg-zinc-900`;
 
 /** Match dashboard page: full-bleed bone canvas, same radial wash, max-w-5xl content */
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+    <div className="relative -mx-4 min-h-full min-h-dvh overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.38),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.06),transparent_55%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.22),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.07),transparent_55%)]"
       />
       <div className="relative mx-auto w-full max-w-5xl">{children}</div>
     </div>
   );
 }
 
-const pageTitleClass = `text-[2.25rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111111] md:text-5xl dark:text-zinc-100 ${newsreader.className}`;
+const pageTitleClass = `text-[2.25rem] font-semibold leading-[1.12] tracking-[-0.03em] text-[#111111] md:text-5xl dark:text-zinc-100 ${newsreader.className}`;
 
 const stepHeadingClass =
-  "text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100";
+  "text-lg font-semibold leading-snug tracking-tight text-[#111111] dark:text-zinc-100";
 
-const labelUI = "text-sm font-medium text-[#2F3437] dark:text-zinc-200";
+const labelUI = "text-sm font-medium text-black/75 dark:text-zinc-200";
 
-const labelCompact = "text-xs font-medium text-[#787774] dark:text-zinc-400";
+const labelCompact = "text-xs font-medium text-black/55 dark:text-zinc-400";
 
 const requiredMark = "text-[#9F2F2D] dark:text-red-300/90";
 
-const mainFormCard =
-  "mt-8 rounded-xl border border-[#EAEAEA] bg-white p-8 transition-[box-shadow] duration-200 md:mt-12 md:p-10 dark:border-zinc-800 dark:bg-[#141312] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]";
+const mainFormCard = `mt-8 rounded-xl border border-[#E5E5E3] bg-[#FAFAF9] p-8 transition-[border-color,background-color] duration-200 ${easeOut} md:mt-12 md:p-10 hover:border-[#C8C8C4] hover:bg-[#F9F9F7] dark:border-zinc-800 dark:bg-[#141414] dark:hover:border-zinc-700 dark:hover:bg-[#161616]`;
 
-const bentoInnerCard =
-  "space-y-3 rounded-lg border border-[#EAEAEA] bg-[#F9F9F8] p-5 transition-[box-shadow] duration-200 dark:border-zinc-800 dark:bg-[#141312] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]";
+const bentoInnerCard = `space-y-3 rounded-lg border border-[#E5E5E3] bg-[#F2F1EE] p-5 transition-[border-color,background-color] duration-200 ${easeOut} hover:border-[#C8C8C4] dark:border-zinc-800 dark:bg-[#1a1a18] dark:hover:border-zinc-700`;
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
@@ -75,8 +76,28 @@ export default function OnboardingPage() {
   const [cvUploading, setCvUploading] = useState(false);
   const [onboardingCompletedAt, setOnboardingCompletedAt] = useState<string | null>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const lastNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const locationRef = useRef<HTMLInputElement>(null);
+  const linkedinRef = useRef<HTMLInputElement>(null);
+  const prefersReducedMotion = useReducedMotion();
   const router = useRouter();
   const supabase = createClient();
+
+  const stepMotionProps = prefersReducedMotion
+    ? {
+        initial: false as const,
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
+        transition: { duration: 0.12, ease: "easeOut" as const },
+      }
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -8 },
+        transition: stepEase,
+      };
 
   const [form, setForm] = useState({
     first_name: "",
@@ -208,12 +229,26 @@ export default function OnboardingPage() {
     return null;
   }
 
+  function focusFirstInvalidField(stepNum: number) {
+    queueMicrotask(() => {
+      if (stepNum === 1) {
+        if (!form.first_name.trim()) firstNameRef.current?.focus();
+        else if (!form.last_name.trim()) lastNameRef.current?.focus();
+        else if (!form.email.trim()) emailRef.current?.focus();
+        else if (!form.location.trim()) locationRef.current?.focus();
+      } else if (stepNum === 5) {
+        linkedinRef.current?.focus();
+      }
+    });
+  }
+
   function handleNext() {
     setValidationError(null);
     setSaveError(null);
     const err = validateStep(step);
     if (err) {
       setValidationError(err);
+      focusFirstInvalidField(step);
       return;
     }
     setStep((s) => s + 1);
@@ -224,6 +259,7 @@ export default function OnboardingPage() {
     const err = validateStep(5);
     if (err) {
       setValidationError(err);
+      focusFirstInvalidField(5);
       return;
     }
     setIsLoading(true);
@@ -338,29 +374,29 @@ export default function OnboardingPage() {
       <OnboardingShell>
         <div className="grid gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-16">
           <div className="hidden space-y-5 md:block">
-            <div className="h-5 w-24 animate-pulse rounded bg-[#EAEAEA] dark:bg-zinc-800" />
+            <div className="h-5 w-24 animate-pulse rounded bg-[#E5E5E3] dark:bg-zinc-800" />
             <ul className="space-y-4">
               {[0, 1, 2, 3, 4].map((k) => (
                 <li key={k} className="flex gap-3">
-                  <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-[#EAEAEA] dark:bg-zinc-800" />
-                  <div className="h-3.5 flex-1 animate-pulse rounded-sm bg-[#EAEAEA]/80 dark:bg-zinc-800/90" />
+                  <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-[#E5E5E3] dark:bg-zinc-800" />
+                  <div className="h-3.5 flex-1 animate-pulse rounded-sm bg-[#E5E5E3]/80 dark:bg-zinc-800/90" />
                 </li>
               ))}
             </ul>
           </div>
           <div
-            className="rounded-xl border border-[#EAEAEA] bg-white p-8 md:p-10 dark:border-zinc-800 dark:bg-[#141312]"
+            className="rounded-xl border border-[#E5E5E3] bg-[#FAFAF9] p-8 md:p-10 dark:border-zinc-800 dark:bg-[#141414]"
             aria-busy
             aria-label="Loading profile form"
           >
-            <div className="h-8 w-2/3 max-w-xs animate-pulse rounded-md bg-[#EAEAEA] dark:bg-zinc-800" />
-            <div className="mt-4 h-3.5 w-full max-w-[38ch] animate-pulse rounded-sm bg-[#EAEAEA]/90 dark:bg-zinc-800/90" />
+            <div className="h-8 w-2/3 max-w-xs animate-pulse rounded-md bg-[#E5E5E3] dark:bg-zinc-800" />
+            <div className="mt-4 h-3.5 w-full max-w-[38ch] animate-pulse rounded-sm bg-[#E5E5E3]/90 dark:bg-zinc-800/90" />
             <div className="mt-12 grid gap-4 sm:grid-cols-2">
-              <div className="h-10 animate-pulse rounded-md border border-[#EAEAEA] bg-[#F9F9F8] dark:border-zinc-800 dark:bg-zinc-900" />
-              <div className="h-10 animate-pulse rounded-md border border-[#EAEAEA] bg-[#F9F9F8] dark:border-zinc-800 dark:bg-zinc-900" />
+              <div className="h-10 animate-pulse rounded-md border border-[#E5E5E3] bg-[#F2F1EE] dark:border-zinc-800 dark:bg-zinc-900" />
+              <div className="h-10 animate-pulse rounded-md border border-[#E5E5E3] bg-[#F2F1EE] dark:border-zinc-800 dark:bg-zinc-900" />
             </div>
-            <div className="mt-4 h-10 max-w-lg animate-pulse rounded-md border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
-            <div className="mt-10 h-24 animate-pulse rounded-md border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="mt-4 h-10 max-w-lg animate-pulse rounded-md border border-[#E5E5E3] bg-[#FDFDFC] dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="mt-10 h-24 animate-pulse rounded-md border border-[#E5E5E3] bg-[#FDFDFC] dark:border-zinc-800 dark:bg-zinc-900" />
           </div>
         </div>
       </OnboardingShell>
@@ -370,90 +406,78 @@ export default function OnboardingPage() {
   if (!editing) {
     return (
       <OnboardingShell>
-        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between md:gap-12">
-          <div className="max-w-2xl">
-            <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
-              Candidate profile
-            </p>
-            <h1 className={`mt-4 ${pageTitleClass}`}>My profile</h1>
-            <p className="mt-3 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
-              Read-only summary for employers. Edit when something changes.
-            </p>
-          </div>
-          <Button
-            variant="primary"
-            className={`shrink-0 ${minimalPrimaryBtn}`}
-            onClick={() => {
-              setSaveError(null);
-              setEditing(true);
-            }}
-          >
-            Edit profile
-          </Button>
+        <div className="max-w-2xl">
+          <p className="text-xs font-medium uppercase tracking-[0.05em] text-black/55 dark:text-zinc-500">
+            Candidate profile
+          </p>
+          <h1 className={`mt-4 ${pageTitleClass}`}>My Profile</h1>
+          <p className="mt-3 max-w-[65ch] text-base leading-[1.5] text-black/70 dark:text-zinc-400">
+            Read-only summary for employers. Edit when something changes.
+          </p>
         </div>
 
-        <div className="mt-14 max-w-3xl divide-y divide-[#EAEAEA] border-t border-[#EAEAEA] dark:divide-zinc-800 dark:border-zinc-800">
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">
+        <div className="mt-14 max-w-3xl space-y-12">
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
               About
             </h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">First name</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">First name</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.first_name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Last name</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Last name</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.last_name || "—"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Email</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Email</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.email || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Location</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Location</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.location || "—"}</dd>
               </div>
               {form.professional_summary && (
                 <div className="sm:col-span-2">
-                  <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Professional summary</dt>
+                  <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Professional summary</dt>
                   <dd className="mt-0.5 whitespace-pre-wrap text-[#111111] dark:text-zinc-100">{form.professional_summary}</dd>
                 </div>
               )}
             </dl>
           </section>
 
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Work experience</h2>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Work experience</h2>
             {form.work_experiences.length === 0 ? (
-              <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No roles listed yet.</p>
+              <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No roles listed yet.</p>
             ) : (
-              <ul className="mt-4 space-y-4">
+              <ul className="mt-4 space-y-6">
                 {form.work_experiences.map((we, i) => (
-                  <li key={i} className="border-b border-[#EAEAEA] pb-4 last:border-0 last:pb-0 dark:border-zinc-800">
+                  <li key={i}>
                     <p className="font-medium text-[#111111] dark:text-zinc-100">{we.job_title || "—"} at {we.company_name || "—"}</p>
                     {(we.start_date || we.end_date) && (
-                      <p className="text-sm text-[#787774] dark:text-zinc-400">{we.start_date} – {we.end_date || "Present"}</p>
+                      <p className="text-sm text-black/55 dark:text-zinc-400">{we.start_date} – {we.end_date || "Present"}</p>
                     )}
-                    {we.description && <p className="mt-1 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">{we.description}</p>}
+                    {we.description && <p className="mt-1 text-sm leading-[1.5] text-black/70 dark:text-zinc-400">{we.description}</p>}
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Education</h2>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Education</h2>
             {form.educations.length === 0 ? (
-              <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No education listed yet.</p>
+              <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No education listed yet.</p>
             ) : (
-              <ul className="mt-4 space-y-4">
+              <ul className="mt-4 space-y-6">
                 {form.educations.map((ed, i) => (
-                  <li key={i} className="border-b border-[#EAEAEA] pb-4 last:border-0 last:pb-0 dark:border-zinc-800">
+                  <li key={i}>
                     <p className="font-medium text-[#111111] dark:text-zinc-100">{ed.institution || "—"}</p>
-                    <p className="text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
+                    <p className="text-sm leading-[1.5] text-black/70 dark:text-zinc-400">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
                     {(ed.start_year || ed.end_year) && (
-                      <p className="text-sm text-[#787774] dark:text-zinc-400">{ed.start_year} – {ed.end_year || "Present"}</p>
+                      <p className="text-sm text-black/55 dark:text-zinc-400">{ed.start_year} – {ed.end_year || "Present"}</p>
                     )}
                   </li>
                 ))}
@@ -461,58 +485,57 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Job preferences</h2>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Job preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Job search status</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Job search status</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Available to start</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Available to start</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Domain</dt>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Domain</dt>
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.domain ?? "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Links</h2>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">LinkedIn</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.linkedin}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">LinkedIn</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.linkedin}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">GitHub</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.github}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">GitHub</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.github}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Portfolio</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Portfolio</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="py-10">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">CV</h2>
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">
                 <FileText className="h-5 w-5 text-[#111111] dark:text-zinc-200" weight="bold" aria-hidden />
-                <a
-                  href="#"
-                  onClick={async (e) => {
-                    e.preventDefault();
+                <button
+                  type="button"
+                  onClick={async () => {
                     const { data } = await supabase.storage.from("cvs").createSignedUrl(cvFileUrl!, 60);
                     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
                   }}
-                  className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300"
+                  className={`rounded-sm font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300 ${focusRing}`}
                 >
                   Download CV
-                </a>
+                </button>
                 <input ref={cvInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
@@ -570,9 +593,12 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => cvInputRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-[#EAEAEA] bg-[#F7F6F3] p-6 text-sm leading-[1.6] text-[#2F3437] transition-[border-color,background-color,box-shadow] duration-200 hover:border-[#111111]/20 hover:bg-[#FBFBFA] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200"
+                  disabled={cvUploading}
+                  aria-busy={cvUploading}
+                  aria-label={cvUploading ? "Uploading CV" : "Upload your CV, PDF or TXT up to 10 MB"}
+                  className={`flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border border-dashed border-[#E5E5E3] bg-[#F2F1EE] p-6 text-sm leading-[1.5] text-black/75 transition-[border-color,background-color] duration-200 ${easeOut} hover:border-[#B8B8B4] hover:bg-[#FAFAF9] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-200 dark:focus-visible:ring-zinc-400 dark:focus-visible:ring-offset-zinc-950`}
                 >
-                  <UploadSimple className="h-5 w-5" weight="bold" aria-hidden />
+                  <UploadSimple className="h-5 w-5 shrink-0" weight="bold" aria-hidden />
                   {cvUploading ? "Uploading..." : "Upload your CV (PDF or TXT, max 10MB)"}
                 </button>
               </div>
@@ -598,18 +624,24 @@ export default function OnboardingPage() {
 
   return (
     <OnboardingShell>
+      <a
+        href="#onboarding-main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-[#111111] focus:px-4 focus:py-2.5 focus:text-sm focus:text-white focus:outline-none focus:ring-2 focus:ring-[#111111] focus:ring-offset-2 dark:focus:bg-zinc-100 dark:focus:text-[#111111] dark:focus:ring-zinc-100"
+      >
+        Skip to profile form
+      </a>
       <div className="grid gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">
-        <aside className="md:pt-0.5">
-          <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+        <aside className="md:pt-0.5" aria-label="Onboarding introduction">
+          <p className="text-xs font-medium uppercase tracking-[0.05em] text-black/55 dark:text-zinc-500">
             Setup
           </p>
           <h1 className={`mt-4 ${pageTitleClass}`}>Complete your profile</h1>
-          <p className="mt-3 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
+          <p className="mt-3 max-w-[65ch] text-base leading-[1.5] text-black/70 dark:text-zinc-400">
             One pass for your details—whether you just signed up or are updating later.
           </p>
           {!onboardingCompletedAt && (
             <p
-              className="mt-6 rounded-md border border-[#EAEAEA] bg-[#FBF3DB] px-4 py-3 text-sm leading-[1.6] text-[#956400] dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-300"
+              className="mt-6 rounded-lg border border-[#E8DFC4] bg-[#FBF6E8] px-4 py-3 text-sm leading-[1.5] text-[#7A5E20] dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-300"
               role="status"
             >
               Account is ready. Move through the steps; you can edit fields anytime after saving.
@@ -617,7 +649,7 @@ export default function OnboardingPage() {
           )}
           <Link
             href="/cv-analysis"
-            className="mt-5 inline-flex text-sm font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300"
+            className={`mt-5 inline-flex min-h-11 items-center text-sm font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ${easeOut} hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300`}
           >
             Upload new CV
           </Link>
@@ -634,12 +666,12 @@ export default function OnboardingPage() {
             <OnboardingStepper currentStep={step} />
           </div>
 
-          <div className={mainFormCard}>
+          <main id="onboarding-main" className={mainFormCard} tabIndex={-1}>
             {validationError && (
               <div
                 role="alert"
                 data-testid="onboarding-validation-error"
-                className="mb-5 rounded-md border border-[#EAEAEA] bg-[#FDEBEC] px-4 py-3 text-sm leading-[1.6] text-[#9F2F2D] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
+                className="mb-5 rounded-lg border border-[#E8C9CD] bg-[#FDF2F3] px-4 py-3 text-sm leading-[1.5] text-[#8B2926] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
               >
                 {validationError}
               </div>
@@ -647,7 +679,7 @@ export default function OnboardingPage() {
             {saveError && (
               <div
                 role="alert"
-                className="mb-5 rounded-md border border-[#EAEAEA] bg-[#FDEBEC] px-4 py-3 text-sm leading-[1.6] text-[#9F2F2D] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
+                className="mb-5 rounded-lg border border-[#E8C9CD] bg-[#FDF2F3] px-4 py-3 text-sm leading-[1.5] text-[#8B2926] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
               >
                 {saveError}
               </div>
@@ -656,84 +688,107 @@ export default function OnboardingPage() {
           {step === 1 && (
             <motion.div
               key="1"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={stepEase}
+              {...stepMotionProps}
               className="space-y-4"
               data-testid="onboarding-step-about"
             >
               <h2 className={stepHeadingClass}>About</h2>
-              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+              <p className="max-w-[65ch] text-sm leading-[1.5] text-black/55 dark:text-zinc-400">
                 Pre-filled from your account when available. Adjust anything that is out of date.
               </p>
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <label className={labelUI}>
+                  <label htmlFor="onboarding-first-name" className={labelUI}>
                     First name <span className={requiredMark}>*</span>
                   </label>
                   <input
+                    id="onboarding-first-name"
+                    ref={firstNameRef}
+                    name="first_name"
+                    autoComplete="given-name"
                     value={form.first_name}
                     onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
                     className={inputClass}
                     required
                     aria-invalid={!!(validationError && !form.first_name.trim())}
+                    aria-required
+                    aria-describedby={validationError && !form.first_name.trim() ? "onboarding-first-name-error" : undefined}
                   />
                   {validationError && !form.first_name.trim() && (
-                    <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
+                    <p id="onboarding-first-name-error" className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className={labelUI}>
+                  <label htmlFor="onboarding-last-name" className={labelUI}>
                     Last name <span className={requiredMark}>*</span>
                   </label>
                   <input
+                    id="onboarding-last-name"
+                    ref={lastNameRef}
+                    name="last_name"
+                    autoComplete="family-name"
                     value={form.last_name}
                     onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
                     className={inputClass}
                     required
                     aria-invalid={!!(validationError && !form.last_name.trim())}
+                    aria-required
+                    aria-describedby={validationError && !form.last_name.trim() ? "onboarding-last-name-error" : undefined}
                   />
                   {validationError && !form.last_name.trim() && (
-                    <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
+                    <p id="onboarding-last-name-error" className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                   )}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>
+                <label htmlFor="onboarding-email" className={labelUI}>
                   Email <span className={requiredMark}>*</span>
                 </label>
                 <input
+                  id="onboarding-email"
+                  ref={emailRef}
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                   className={inputClass}
                   required
                   aria-invalid={!!(validationError && !form.email.trim())}
+                  aria-required
+                  aria-describedby={validationError && !form.email.trim() ? "onboarding-email-error" : undefined}
                 />
                 {validationError && !form.email.trim() && (
-                  <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
+                  <p id="onboarding-email-error" className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>
+                <label htmlFor="onboarding-location" className={labelUI}>
                   Location <span className={requiredMark}>*</span>
                 </label>
                 <input
+                  id="onboarding-location"
+                  ref={locationRef}
+                  name="location"
+                  autoComplete="address-level2"
                   value={form.location}
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   placeholder="Berlin, Germany"
                   className={inputClass}
                   required
                   aria-invalid={!!(validationError && !form.location.trim())}
+                  aria-required
+                  aria-describedby={validationError && !form.location.trim() ? "onboarding-location-error" : undefined}
                 />
                 {validationError && !form.location.trim() && (
-                  <p className="text-sm text-[#9F2F2D]" role="alert">Required</p>
+                  <p id="onboarding-location-error" className="text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                 )}
               </div>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>Professional summary</label>
+                <label htmlFor="onboarding-summary" className={labelUI}>Professional summary</label>
                 <textarea
+                  id="onboarding-summary"
+                  name="professional_summary"
                   value={form.professional_summary}
                   onChange={(e) => setForm((f) => ({ ...f, professional_summary: e.target.value }))}
                   rows={4}
@@ -747,33 +802,31 @@ export default function OnboardingPage() {
           {step === 2 && (
             <motion.div
               key="2"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={stepEase}
+              {...stepMotionProps}
               className="space-y-4"
               data-testid="onboarding-step-work-experience"
             >
               <h2 className={stepHeadingClass}>Work experience</h2>
-              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+              <p className="max-w-[65ch] text-sm leading-[1.5] text-black/55 dark:text-zinc-400">
                 Add roles in reverse chronological order when you can; you can skip this step and return later.
               </p>
               {form.work_experiences.length === 0 ? (
-                <p className="text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No roles yet. Use the button below to add one.</p>
+                <p className="text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No roles yet. Use the button below to add one.</p>
               ) : (
                 form.work_experiences.map((we, i) => (
                   <div key={i} className={bentoInnerCard}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">Role {i + 1}</span>
+                      <span className="text-sm font-medium text-black/75 dark:text-zinc-200">Role {i + 1}</span>
                       <button
                         type="button"
+                        aria-label={`Remove work experience ${i + 1}`}
                         onClick={() =>
                           setForm((f) => ({
                             ...f,
                             work_experiences: f.work_experiences.filter((_, idx) => idx !== i),
                           }))
                         }
-                        className="text-sm font-medium text-[#9F2F2D] transition-colors hover:text-[#7a2523] dark:text-red-300/90 dark:hover:text-red-200"
+                        className="min-h-11 min-w-11 touch-manipulation rounded-md px-2 text-sm font-medium text-[#9F2F2D] transition-colors hover:bg-[#FDEBEC]/60 hover:text-[#7a2523] dark:text-red-300/90 dark:hover:bg-red-950/20 dark:hover:text-red-200"
                       >
                         Remove
                       </button>
@@ -900,29 +953,27 @@ export default function OnboardingPage() {
           {step === 3 && (
             <motion.div
               key="3"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={stepEase}
+              {...stepMotionProps}
               className="space-y-4"
             >
               <h2 className={stepHeadingClass}>Education</h2>
               {form.educations.length === 0 ? (
-                <p className="text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No entries yet. Add a school or program below.</p>
+                <p className="text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No entries yet. Add a school or program below.</p>
               ) : (
                 form.educations.map((ed, i) => (
                   <div key={i} className={bentoInnerCard}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">Entry {i + 1}</span>
+                      <span className="text-sm font-medium text-black/75 dark:text-zinc-200">Entry {i + 1}</span>
                       <button
                         type="button"
+                        aria-label={`Remove education entry ${i + 1}`}
                         onClick={() =>
                           setForm((f) => ({
                             ...f,
                             educations: f.educations.filter((_, idx) => idx !== i),
                           }))
                         }
-                        className="text-sm font-medium text-[#9F2F2D] transition-colors hover:text-[#7a2523] dark:text-red-300/90 dark:hover:text-red-200"
+                        className="min-h-11 min-w-11 touch-manipulation rounded-md px-2 text-sm font-medium text-[#9F2F2D] transition-colors hover:bg-[#FDEBEC]/60 hover:text-[#7a2523] dark:text-red-300/90 dark:hover:bg-red-950/20 dark:hover:text-red-200"
                       >
                         Remove
                       </button>
@@ -966,9 +1017,12 @@ export default function OnboardingPage() {
                           aria-label="Degree"
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Field of Study</label>
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor={`onboarding-edu-${i}-field`} className={labelCompact}>
+                          Field of study
+                        </label>
                         <input
+                          id={`onboarding-edu-${i}-field`}
                           value={ed.field_of_study}
                           onChange={(e) =>
                             setForm((f) => ({
@@ -1072,10 +1126,7 @@ export default function OnboardingPage() {
           {step === 4 && (
             <motion.div
               key="4"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={stepEase}
+              {...stepMotionProps}
               className="space-y-4"
             >
               <h2 className={stepHeadingClass}>Job preferences</h2>
@@ -1124,30 +1175,46 @@ export default function OnboardingPage() {
           {step === 5 && (
             <motion.div
               key="5"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={stepEase}
+              {...stepMotionProps}
               className="space-y-4"
             >
               <h2 className={stepHeadingClass}>Links</h2>
-              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+              <p className="max-w-[65ch] text-sm leading-[1.5] text-black/55 dark:text-zinc-400">
                 LinkedIn is required so recruiters can verify your background. Other links are optional.
               </p>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>
+                <label htmlFor="onboarding-linkedin" className={labelUI}>
                   LinkedIn <span className={requiredMark}>*</span>
                 </label>
                 <input
+                  id="onboarding-linkedin"
+                  ref={linkedinRef}
+                  type="url"
+                  name="linkedin"
+                  autoComplete="url"
+                  inputMode="url"
                   value={form.linkedin}
                   onChange={(e) => setForm((f) => ({ ...f, linkedin: e.target.value }))}
                   placeholder="https://linkedin.com/in/..."
                   className={inputClass}
+                  aria-invalid={!!(validationError && !form.linkedin.trim())}
+                  aria-required
+                  aria-describedby={validationError && !form.linkedin.trim() ? "onboarding-linkedin-error" : undefined}
                 />
+                {validationError && !form.linkedin.trim() && (
+                  <p id="onboarding-linkedin-error" className="text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">
+                    LinkedIn URL is required
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>GitHub (optional)</label>
+                <label htmlFor="onboarding-github" className={labelUI}>GitHub (optional)</label>
                 <input
+                  id="onboarding-github"
+                  type="url"
+                  name="github"
+                  autoComplete="url"
+                  inputMode="url"
                   value={form.github}
                   onChange={(e) => setForm((f) => ({ ...f, github: e.target.value }))}
                   placeholder="https://github.com/..."
@@ -1155,8 +1222,13 @@ export default function OnboardingPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <label className={labelUI}>Portfolio (optional)</label>
+                <label htmlFor="onboarding-portfolio" className={labelUI}>Portfolio (optional)</label>
                 <input
+                  id="onboarding-portfolio"
+                  type="url"
+                  name="portfolio"
+                  autoComplete="url"
+                  inputMode="url"
                   value={form.portfolio}
                   onChange={(e) => setForm((f) => ({ ...f, portfolio: e.target.value }))}
                   placeholder="https://..."
@@ -1167,7 +1239,7 @@ export default function OnboardingPage() {
           )}
         </AnimatePresence>
 
-            <div className="mt-12 flex flex-col-reverse gap-3 border-t border-[#EAEAEA] pt-10 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+            <div className="mt-12 flex flex-col-reverse gap-3 border-t border-[#E5E5E3] pt-10 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
               {step === 1 ? (
                 <Button variant="ghost" onClick={() => setEditing(false)}>
                   Back to profile
@@ -1187,7 +1259,7 @@ export default function OnboardingPage() {
                 </Button>
               )}
             </div>
-          </div>
+          </main>
         </div>
       </div>
     </OnboardingShell>

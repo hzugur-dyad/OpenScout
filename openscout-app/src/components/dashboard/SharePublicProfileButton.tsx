@@ -76,7 +76,7 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
         size={size}
         onClick={handleClick}
         disabled={busy}
-        className="rounded-[6px] border-[#EAEAEA] dark:border-zinc-700"
+        className="rounded-[10px] border-zinc-200/90 transition-[border-color,background-color,transform] duration-200 ease-[cubic-bezier(0.33,1,0.68,1)] hover:border-zinc-300 dark:border-zinc-700 dark:hover:border-zinc-600"
       >
         <span className="inline-flex items-center gap-2">
           <ShareNetwork className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
@@ -84,7 +84,7 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
         </span>
       </Button>
       {msg && (
-        <span className="text-xs leading-relaxed text-[#787774] dark:text-zinc-500">{msg}</span>
+        <span className="text-xs font-normal leading-[1.5] text-zinc-900/50 dark:text-zinc-500">{msg}</span>
       )}
     </div>
   );

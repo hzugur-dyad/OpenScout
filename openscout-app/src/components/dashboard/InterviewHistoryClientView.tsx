@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Newsreader } from "next/font/google";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   CalendarBlank,
@@ -39,24 +39,29 @@ function Reveal({
   className?: string;
   delay?: number;
 }) {
+  const reduceMotion = useReducedMotion();
   return (
     <motion.div
       className={className}
-      initial={{ opacity: 0, y: 12 }}
+      initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-48px" }}
-      transition={revealTransition(delay)}
+      transition={reduceMotion ? { duration: 0 } : revealTransition(delay)}
     >
       {children}
     </motion.div>
   );
 }
 
-const primaryCtaClass =
-  "!rounded-md !bg-[#111111] !text-white hover:!bg-[#333333] dark:!bg-zinc-100 dark:!text-[#111111] dark:hover:!bg-white";
+const linkFocusRing =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F6F3] dark:focus-visible:ring-zinc-300 dark:focus-visible:ring-offset-zinc-950";
 
+const primaryCtaClass =
+  "!rounded-[10px] !bg-[#111111] !text-white hover:!bg-[#2a2a2a] active:!bg-[#0a0a0a] dark:!bg-zinc-100 dark:!text-[#111111]   dark:hover:!bg-white dark:active:!bg-zinc-200";
+
+/** Raised surfaces: off-white + hairline stroke; light hover = border/tint shift, not drop shadow. */
 const surfaceCard =
-  "rounded-xl border border-[#EAEAEA] bg-white transition-[box-shadow] duration-200 dark:border-zinc-800 dark:bg-[#141312] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]";
+  "rounded-[10px] border border-[#E6E5E2] bg-[#FAFAF9] transition-colors duration-200 ease-out hover:border-[#D9D8D4] hover:bg-[#F7F6F4] dark:border-zinc-800 dark:bg-[#161514] dark:hover:border-zinc-700 dark:hover:bg-[#1c1b1a] dark:hover:shadow-[0_1px_3px_rgba(0,0,0,0.18)]";
 
 export type InterviewHistoryRow = {
   id: string;
@@ -105,8 +110,8 @@ function trendPresentation(trend: InterviewScoreTrend): {
     };
   }
   return {
-    chipClass: "border-[#EAEAEA] bg-[#F7F6F3] dark:border-zinc-800 dark:bg-zinc-900/60",
-    iconClass: "text-[#787774] dark:text-zinc-400",
+    chipClass: "border-[#E6E5E2] bg-[#F3F2EF] dark:border-zinc-800 dark:bg-zinc-900/60",
+    iconClass: "text-[#111111]/55 dark:text-zinc-400",
   };
 }
 
@@ -125,16 +130,18 @@ export function InterviewHistoryClientView({
       ? "text-[#346538] dark:text-emerald-400"
       : trend === "Declining"
         ? "text-[#9F2F2D] dark:text-red-400"
-        : "text-[#2F3437] dark:text-zinc-200";
+        : "text-[#111111]/80 dark:text-zinc-200";
+
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.38),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.06),transparent_55%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.2),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.04),transparent_55%)]"
       />
 
-      <div className="relative mx-auto w-full max-w-5xl">
+      <main id="main-content" className="relative mx-auto w-full max-w-5xl">
         <Reveal>
           <header>
             <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
@@ -142,13 +149,14 @@ export function InterviewHistoryClientView({
             </p>
             <div className="mt-4 flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
               <h1
-                className={`min-w-0 flex-1 text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111111] md:text-[2.5rem] lg:pr-8 dark:text-zinc-100 ${newsreader.className}`}
+                id="interview-history-heading"
+                className={`min-w-0 flex-1 text-[2rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[#111111] md:text-[2.5rem] lg:pr-8 dark:text-zinc-100 ${newsreader.className}`}
               >
-                Interview history
+                Interview History
               </h1>
               <div className="flex w-full shrink-0 flex-col items-end gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:pt-1">
                 <SharePublicProfileButton variant="outline" size="sm" />
-                <Link href="/mock-interview" className="block w-auto sm:contents">
+                <Link href="/mock-interview" className="block w-auto touch-manipulation sm:contents">
                   <Button
                     variant="primary"
                     size="sm"
@@ -175,21 +183,21 @@ export function InterviewHistoryClientView({
         {rows.length === 0 ? (
             <Reveal delay={0.08}>
             <EmptyState
-              className="mt-20 border-solid border-[#EAEAEA] bg-white py-16 dark:border-zinc-800 dark:bg-[#141312]"
+              className="mt-20 rounded-[10px] border-solid border-[#E6E5E2] bg-[#FAFAF9] py-16 dark:border-zinc-800 dark:bg-[#161514]"
               iconName="messageCircle"
               title="No interviews yet"
               description="Run a mock interview once to unlock scores, a trend line, and this list."
             >
-              <Link href="/mock-interview">
+              <Link href="/mock-interview" className="touch-manipulation">
                 <Button variant="primary" size="sm" className={primaryCtaClass}>
                   Start your first interview
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/dashboard" className="touch-manipulation">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-md border-[#EAEAEA] dark:border-zinc-700"
+                  className="rounded-[10px] border-[#E6E5E2] dark:border-zinc-700"
                 >
                   Back to dashboard
                 </Button>
@@ -199,12 +207,18 @@ export function InterviewHistoryClientView({
         ) : (
           <div className="mt-14 space-y-12">
             <Reveal delay={0.06}>
-              <section className="overflow-hidden rounded-xl border border-[#EAEAEA] dark:border-zinc-800">
+              <section
+                className="overflow-hidden rounded-xl border border-[#EAEAEA] dark:border-zinc-800"
+                aria-labelledby="performance-snapshot-heading"
+              >
                 <div className="grid gap-px bg-[#EAEAEA] dark:bg-zinc-800 lg:grid-cols-5">
                   <div className="bg-white p-8 dark:bg-[#141312] lg:col-span-3 lg:p-10">
                     <div className="flex flex-wrap items-center gap-2">
                       <ChartLineUp className="h-5 w-5 text-[#787774] dark:text-zinc-500" weight="bold" aria-hidden />
-                      <h2 className="text-sm font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
+                      <h2
+                        id="performance-snapshot-heading"
+                        className="text-sm font-semibold tracking-tight text-[#111111] dark:text-zinc-100"
+                      >
                         Performance snapshot
                       </h2>
                     </div>
@@ -220,11 +234,15 @@ export function InterviewHistoryClientView({
                       {trendScores.map((s, i) => (
                         <motion.span
                           key={`${s}-${i}`}
-                          initial={{ opacity: 0, y: 8 }}
+                          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true }}
-                          transition={{ ...revealTransition(i * 0.08), duration: 0.45 }}
-                          className="inline-flex min-h-9 min-w-[2.75rem] items-center justify-center rounded border border-[#EAEAEA] bg-[#F7F6F3] px-3 font-mono text-sm tabular-nums text-[#111111] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : { ...revealTransition(i * 0.08), duration: 0.45 }
+                          }
+                          className="inline-flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-[10px] border border-[#E6E5E2] bg-[#F3F2EF] px-3 font-mono text-sm tabular-nums text-[#111111] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
                           {s}
                         </motion.span>
@@ -232,32 +250,35 @@ export function InterviewHistoryClientView({
                     </div>
 
                     <div
-                      className={`mt-8 inline-flex items-center gap-3 rounded-md border px-4 py-3 ${trendChipClass}`}
+                      className={`mt-8 inline-flex items-center gap-3 rounded-[10px] border px-4 py-3 ${trendChipClass}`}
                     >
                       <TrendIcon className={`h-5 w-5 shrink-0 ${trendIconClass}`} weight="bold" aria-hidden />
                       <div>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                        <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
                           Trend
                         </p>
-                        <p className={`text-sm font-semibold tabular-nums ${trendLabelClass}`}>{trend}</p>
+                        <p className={`text-sm font-semibold tabular-nums ${trendLabelClass}`}>
+                          <span className="sr-only">Score trend: </span>
+                          {trend}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col divide-y divide-[#EAEAEA] bg-white dark:divide-zinc-800 dark:bg-[#141312] lg:col-span-2">
+                  <div className="flex flex-col divide-y divide-[#E6E5E2] bg-[#FAFAF9] dark:divide-zinc-800 dark:bg-[#161514] lg:col-span-2">
                     <div className="flex flex-1 flex-col justify-center p-8 lg:p-10">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
                         Best interview score
                       </p>
                       <p className="mt-2 font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-100">
                         {bestInterviewScore}
                       </p>
-                      <p className="mt-2 text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
+                      <p className="mt-2 text-xs font-normal leading-relaxed text-[#111111]/50 dark:text-zinc-500">
                         Peak overall across all runs
                       </p>
                     </div>
                     <div className="flex flex-1 flex-col justify-center p-8 lg:p-10">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
                         Best hiring score
                       </p>
                       <p className="mt-2 font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-100">
@@ -273,44 +294,68 @@ export function InterviewHistoryClientView({
             </Reveal>
 
             <Reveal delay={0.1}>
-              <section>
+              <section aria-labelledby="all-sessions-heading">
                 <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                  <h2 className="text-sm font-semibold tracking-tight text-[#111111] dark:text-zinc-100">All sessions</h2>
-                  <p className="text-xs text-[#787774] dark:text-zinc-500">Sorted newest first</p>
+                  <h2
+                    id="all-sessions-heading"
+                    className="text-sm font-semibold tracking-tight text-[#111111] dark:text-zinc-100"
+                  >
+                    All sessions
+                  </h2>
+                  <p className="text-xs font-normal text-[#111111]/50 dark:text-zinc-500">Sorted newest first</p>
                 </div>
 
-                <div className={`overflow-hidden ${surfaceCard}`}>
+                <div className={`overflow-x-auto ${surfaceCard}`}>
                   <div className="hidden md:block">
-                    <table className="w-full text-left text-sm">
-                      <thead className="border-b border-[#EAEAEA] bg-[#FBFBFA] dark:border-zinc-800 dark:bg-zinc-900/80">
+                    <table className="w-full min-w-[640px] text-left text-sm">
+                      <caption className="sr-only">
+                        Mock interview sessions, newest first. Columns: role or category, date and time, overall score,
+                        hiring score, and link to full result.
+                      </caption>
+                      <thead className="border-b border-[#E6E5E2] bg-[#F3F2EF] dark:border-zinc-800 dark:bg-zinc-900/80">
                         <tr>
-                          <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                          >
                             Role / category
                           </th>
-                          <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                          >
                             Date
                           </th>
-                          <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                          >
                             Overall
                           </th>
-                          <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                          >
                             Hiring score
                           </th>
-                          <th className="px-6 py-4 text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                          <th
+                            scope="col"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                          >
                             Result
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#EAEAEA] dark:divide-zinc-800">
+                      <tbody className="divide-y divide-[#E6E5E2] dark:divide-zinc-800">
                         {rows.map((r) => {
                           const overall = typeof r.score === "number" ? r.score : "—";
                           return (
                             <tr
                               key={r.id}
-                              className="transition-[background-color,box-shadow] duration-200 hover:bg-[#FBFBFA] hover:shadow-[0_2px_8px_rgba(0,0,0,0.03)] dark:hover:bg-zinc-900/50 dark:hover:shadow-none"
+                              className="transition-colors duration-200 ease-out hover:bg-[#F3F2EF] dark:hover:bg-zinc-900/55"
                             >
                               <td className="px-6 py-4 font-medium text-[#111111] dark:text-zinc-100">{r.job_category}</td>
-                              <td className="px-6 py-4 tabular-nums text-[#787774] dark:text-zinc-400">
+                              <td className="px-6 py-4 tabular-nums text-[#111111]/55 dark:text-zinc-400">
                                 {formatInterviewDate(r.created_at)}
                               </td>
                               <td className="px-6 py-4 font-mono tabular-nums text-[#111111] dark:text-zinc-100">{overall}</td>
@@ -337,22 +382,22 @@ export function InterviewHistoryClientView({
                     </table>
                   </div>
 
-                  <ul className="divide-y divide-[#EAEAEA] md:hidden dark:divide-zinc-800">
+                  <ul className="divide-y divide-[#E6E5E2] md:hidden dark:divide-zinc-800">
                     {rows.map((r, idx) => {
                       const overall = typeof r.score === "number" ? r.score : "—";
                       return (
                         <motion.li
                           key={r.id}
-                          initial={{ opacity: 0, y: 10 }}
+                          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true, margin: "-24px" }}
-                          transition={revealTransition(idx * 0.05)}
+                          transition={reduceMotion ? { duration: 0 } : revealTransition(idx * 0.05)}
                           className="p-6 transition-colors active:bg-[#FBFBFA] dark:active:bg-zinc-900/40"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 text-[#111111] dark:text-zinc-100">
-                                <Tag className="h-4 w-4 shrink-0 text-[#787774] dark:text-zinc-500" weight="bold" aria-hidden />
+                                <Tag className="h-4 w-4 shrink-0 text-[#111111]/45 dark:text-zinc-500" weight="bold" aria-hidden />
                                 <span className="truncate font-medium">{r.job_category}</span>
                               </div>
                               <div className="mt-2 flex items-center gap-1.5 text-xs tabular-nums text-[#787774] dark:text-zinc-500">
@@ -361,13 +406,13 @@ export function InterviewHistoryClientView({
                               </div>
                               <div className="mt-4 flex gap-8 font-mono text-sm tabular-nums">
                                 <div>
-                                  <span className="block text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                                  <span className="block text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
                                     Overall
                                   </span>
                                   <span className="font-semibold text-[#111111] dark:text-zinc-100">{overall}</span>
                                 </div>
                                 <div>
-                                  <span className="block text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                                  <span className="block text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
                                     Hiring
                                   </span>
                                   <span className="font-semibold text-[#111111] dark:text-zinc-100">{r.hiringScore}</span>
@@ -376,7 +421,7 @@ export function InterviewHistoryClientView({
                             </div>
                             <Link
                               href={r.resultHref}
-                              className="inline-flex shrink-0 items-center justify-center rounded-md border border-[#EAEAEA] bg-white p-2.5 text-[#111111] transition-[transform,box-shadow] duration-200 active:scale-[0.98] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-[#141312] dark:text-zinc-100 dark:hover:shadow-none"
+                              className={`inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-[#E6E5E2] bg-[#FAFAF9] text-[#111111] transition-colors duration-200 ease-out hover:border-[#D9D8D4] hover:bg-[#F3F2EF] active:bg-[#EBEAE6] touch-manipulation dark:border-zinc-700 dark:bg-[#161514] dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-[#1c1b1a] dark:active:bg-zinc-900 ${linkFocusRing} ${reduceMotion ? "" : "active:scale-[0.98]"}`}
                               aria-label={`View result for ${r.job_category}`}
                             >
                               <ArrowRight className="h-5 w-5" weight="bold" aria-hidden />
@@ -391,7 +436,7 @@ export function InterviewHistoryClientView({
             </Reveal>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

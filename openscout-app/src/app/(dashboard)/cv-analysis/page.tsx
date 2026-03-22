@@ -28,11 +28,16 @@ const editorial = Newsreader({
 
 const quietEase = [0.16, 1, 0.3, 1] as const;
 
+/** Surfaces: off-white / zinc stack, edge defined by stroke (no card shadows). */
 const panel =
-  "rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-700/80 dark:bg-zinc-950";
+  "rounded-[10px] border border-zinc-200/90 bg-[#FAFAFA] dark:border-zinc-800 dark:bg-zinc-950";
 
 const ctaClass =
-  "rounded-md bg-zinc-900 text-white shadow-none hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white";
+  "rounded-[10px] bg-zinc-900 text-white shadow-none transition-colors duration-200 ease-out hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white";
+
+const labelMuted = "text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-500";
+
+const bodySecondary = "text-zinc-600 dark:text-zinc-400";
 
 function scoreAccent(score: number): {
   bar: string;
@@ -160,30 +165,30 @@ function CVAnalysisContent() {
 
   return (
     <div className="relative isolate mx-auto w-full max-w-4xl px-4 pb-20 pt-2">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[min(480px,55vh)] bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(251,243,219,0.07),transparent)] dark:bg-[radial-gradient(ellipse_75%_55%_at_50%_-5%,rgba(255,255,255,0.025),transparent)]"
-        aria-hidden
-      />
-
       {!result ? (
         isLoading ? (
           <CVAnalysisLoadingSkeleton />
         ) : (
-          <div className="space-y-16">
-            <header className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:gap-6 sm:text-left">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#EAEAEA] bg-[#F7F6F3] dark:border-zinc-700 dark:bg-zinc-900">
-                <FileText className="h-5 w-5 text-[#2F3437] dark:text-zinc-300" weight="bold" aria-hidden />
+          <div className="space-y-12 sm:space-y-16">
+            <header className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-start sm:gap-6 sm:text-left">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] border border-zinc-200/90 bg-[#F4F4F3] dark:border-zinc-800 dark:bg-zinc-900">
+                <FileText className="h-5 w-5 text-zinc-800 dark:text-zinc-300" weight="bold" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
                 <h1
                   className={cn(
                     editorial.className,
-                    "text-[2rem] font-semibold leading-[1.12] tracking-[-0.03em] text-[#111111] sm:text-[2.25rem] dark:text-zinc-50"
+                    "text-[2rem] font-semibold leading-[1.2] tracking-[-0.03em] text-zinc-900 sm:text-[2.25rem] dark:text-zinc-50"
                   )}
                 >
-                  CV analysis
+                  CV Analysis
                 </h1>
-                <p className="mx-auto mt-4 max-w-[65ch] text-base leading-[1.6] text-[#787774] sm:mx-0 dark:text-zinc-400">
+                <p
+                  className={cn(
+                    "mx-auto mt-4 max-w-[65ch] text-base leading-[1.5] sm:mx-0",
+                    bodySecondary
+                  )}
+                >
                   Upload a PDF or plain-text CV, pick a target role, and receive notes you can edit against.
                 </p>
               </div>
@@ -193,7 +198,7 @@ function CVAnalysisContent() {
 
             <div className="space-y-8">
               <div className="flex flex-col gap-2">
-                <label htmlFor="cv-job-category" className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">
+                <label htmlFor="cv-job-category" className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
                   Job category
                 </label>
                 <CustomSelect
@@ -203,7 +208,7 @@ function CVAnalysisContent() {
                   aria-label="Job category"
                   id="cv-job-category"
                 />
-                <p className="text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
+                <p className={cn("text-xs leading-[1.5]", bodySecondary)}>
                   Limits and scoring use this category for the current run.
                 </p>
               </div>
@@ -216,21 +221,21 @@ function CVAnalysisContent() {
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={handleDrop}
                 className={cn(
-                  "rounded-xl border border-dashed p-10 transition-colors duration-200 md:p-12",
-                  "bg-[#F9F9F8] dark:bg-zinc-950/50",
+                  "rounded-[10px] border border-dashed p-8 transition-colors duration-200 ease-out md:p-10",
+                  "bg-[#F6F6F5] dark:bg-zinc-950/60",
                   isDragging
-                    ? "border-[#956400]/50 bg-[#FBF3DB]/40 dark:border-amber-900/40 dark:bg-[#2d2610]/30"
-                    : "border-[#EAEAEA] dark:border-zinc-700"
+                    ? "border-amber-600/35 bg-amber-50/50 dark:border-amber-900/45 dark:bg-amber-950/25"
+                    : "border-zinc-200/90 dark:border-zinc-800"
                 )}
               >
                 <div className="flex flex-col items-center text-center">
-                  <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg border border-[#EAEAEA] bg-white dark:border-zinc-700 dark:bg-zinc-900">
-                    <UploadSimple className="h-6 w-6 text-[#787774] dark:text-zinc-400" weight="bold" aria-hidden />
+                  <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-zinc-200/90 bg-[#FAFAFA] dark:border-zinc-800 dark:bg-zinc-900">
+                    <UploadSimple className="h-6 w-6 text-zinc-500 dark:text-zinc-400" weight="bold" aria-hidden />
                   </span>
-                  <p className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">Drop a file or browse</p>
-                  <p className="mt-1 text-xs text-[#787774] dark:text-zinc-500">PDF or TXT, up to 10MB</p>
+                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Drop a file or browse</p>
+                  <p className={cn("mt-1 text-xs", bodySecondary)}>PDF or TXT, up to 10MB</p>
                   {!file ? (
-                    <p className="mt-4 max-w-sm text-xs leading-[1.6] text-[#787774]/90 dark:text-zinc-600">
+                    <p className={cn("mt-4 max-w-sm text-xs leading-[1.5]", bodySecondary)}>
                       One document per analysis keeps text extraction stable.
                     </p>
                   ) : null}
@@ -247,13 +252,13 @@ function CVAnalysisContent() {
                     variant="outline"
                     size="sm"
                     type="button"
-                    className="mt-6 rounded-md border-[#EAEAEA] shadow-none dark:border-zinc-600"
+                    className="mt-6 rounded-[10px] border-zinc-200/90 shadow-none transition-colors duration-200 ease-out hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     Browse files
                   </Button>
                   {file ? (
-                    <p className="mt-5 max-w-full truncate font-mono text-sm text-[#2F3437] dark:text-zinc-300" title={file.name}>
+                    <p className="mt-4 max-w-full truncate font-mono text-sm text-zinc-800 dark:text-zinc-300" title={file.name}>
                       <span className="font-sans font-medium">Selected:</span> {file.name}
                     </p>
                   ) : null}
@@ -263,7 +268,7 @@ function CVAnalysisContent() {
               {error ? (
                 <div
                   role="alert"
-                  className="flex items-start gap-3 rounded-xl border border-[#EAEAEA] bg-[#FDEBEC] p-4 text-sm text-[#9F2F2D] dark:border-zinc-700 dark:bg-[#2c1516] dark:text-[#e8a8a6]"
+                  className="flex items-start gap-3 rounded-[10px] border border-red-200/80 bg-red-50/90 p-4 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200/90"
                 >
                   <WarningCircle className="mt-0.5 h-5 w-5 shrink-0" weight="bold" aria-hidden />
                   <span>{error}</span>
@@ -287,27 +292,30 @@ function CVAnalysisContent() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: quietEase }}
-          className="space-y-16"
+          transition={{ duration: 0.55, ease: quietEase }}
+          className="space-y-12 sm:space-y-16"
         >
-          <header className="grid gap-10 md:grid-cols-2 md:items-start">
+          <header className="grid gap-8 md:grid-cols-2 md:items-start md:gap-10">
             <div>
-              <p className="text-[0.6875rem] font-medium uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
-                Results
-              </p>
+              <p className={labelMuted}>Results</p>
               <h1
                 className={cn(
                   editorial.className,
-                  "mt-2 text-[1.75rem] font-semibold leading-[1.12] tracking-[-0.03em] text-[#111111] sm:text-[2rem] dark:text-zinc-50"
+                  "mt-2 text-[1.75rem] font-semibold leading-[1.2] tracking-[-0.03em] text-zinc-900 sm:text-[2rem] dark:text-zinc-50"
                 )}
               >
                 Review for {jobCategory}
               </h1>
-              <p className="mt-4 max-w-[65ch] text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
+              <p className={cn("mt-4 max-w-[65ch] text-base leading-[1.5]", bodySecondary)}>
                 Numbers use category weights. Strengths are anchors; improvements are edit targets.
               </p>
             </div>
-            <div className={cn(panel, "flex items-center gap-4 p-6 transition-shadow duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-none")}>
+            <div
+              className={cn(
+                panel,
+                "flex items-center gap-4 p-6 transition-colors duration-200 ease-out hover:border-zinc-300/95 dark:hover:border-zinc-600"
+              )}
+            >
               <div
                 className={cn(
                   "flex h-14 w-14 shrink-0 items-center justify-center rounded-lg text-xl font-semibold tabular-nums",
@@ -441,13 +449,11 @@ function CVAnalysisContent() {
               </ul>
             </section>
             <section className={cn(panel, "p-6 md:p-8")}>
-              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
-                Improvements
-              </h2>
+              <h2 className={labelMuted}>Improvements</h2>
               <ul className="mt-6 space-y-4">
                 {result.improvements.map((s, i) => (
-                  <li key={i} className="flex gap-3 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-300">
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#FBF3DB] dark:bg-[#2d2610]">
+                  <li key={i} className="flex gap-3 text-sm leading-[1.5] text-zinc-800 dark:text-zinc-300">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] bg-[#FBF3DB] dark:bg-[#2d2610]">
                       <WarningCircle className="h-3.5 w-3.5 text-[#956400] dark:text-[#e8d48a]" weight="bold" aria-hidden />
                     </span>
                     <span>{s}</span>
@@ -457,9 +463,14 @@ function CVAnalysisContent() {
             </section>
           </div>
 
-          <div className="rounded-xl border border-[#EAEAEA] bg-[#F7F6F3] p-6 dark:border-zinc-700 dark:bg-zinc-900/60 md:p-8">
-            <p className="text-center text-sm font-medium text-[#111111] sm:text-left dark:text-zinc-100">Practice with Nova</p>
-            <p className="mx-auto mt-2 max-w-[65ch] text-center text-sm leading-[1.6] text-[#787774] sm:mx-0 sm:text-left dark:text-zinc-400">
+          <div className="rounded-[10px] border border-zinc-200/90 bg-[#F4F4F3] p-6 dark:border-zinc-800 dark:bg-zinc-900/50 md:p-8">
+            <p className="text-center text-sm font-medium text-zinc-900 sm:text-left dark:text-zinc-100">Practice with Nova</p>
+            <p
+              className={cn(
+                "mx-auto mt-2 max-w-[65ch] text-center text-sm leading-[1.5] sm:mx-0 sm:text-left",
+                bodySecondary
+              )}
+            >
               Mock interview pulls from the same CV signals recruiters infer in a first pass.
             </p>
             <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:justify-center md:justify-start">
@@ -471,7 +482,7 @@ function CVAnalysisContent() {
               <Button
                 variant="outline"
                 onClick={() => setResult(null)}
-                className="w-full rounded-md border-[#EAEAEA] shadow-none sm:w-auto dark:border-zinc-600"
+                className="w-full rounded-[10px] border-zinc-200/90 shadow-none transition-colors duration-200 ease-out hover:bg-zinc-100/80 sm:w-auto dark:border-zinc-700 dark:hover:bg-zinc-800/60"
               >
                 New analysis
               </Button>

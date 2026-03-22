@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
@@ -66,22 +66,35 @@ const plans: PlanDef[] = [
 
 const motionEase = [0.16, 1, 0.3, 1] as const;
 
-const listParent = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
-  },
-};
+function listParentVariants(reduceMotion: boolean) {
+  if (reduceMotion) {
+    return { hidden: { opacity: 1 }, show: { opacity: 1, transition: { duration: 0 } } };
+  }
+  return {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.06, delayChildren: 0.03 },
+    },
+  };
+}
 
-const listItem = {
-  hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: motionEase },
-  },
-};
+function listItemVariants(reduceMotion: boolean) {
+  if (reduceMotion) {
+    return {
+      hidden: { opacity: 1, y: 0 },
+      show: { opacity: 1, y: 0, transition: { duration: 0 } },
+    };
+  }
+  return {
+    hidden: { opacity: 0, y: 12 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.35, ease: motionEase },
+    },
+  };
+}
 
 const btnMinimal =
   "rounded-md shadow-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:focus:ring-zinc-500 dark:focus:ring-offset-zinc-950";
@@ -113,6 +126,7 @@ function PricingSkeleton() {
 
 export default function CandidatePricingPage() {
   const supabase = createClient();
+  const preferReducedMotion = useReducedMotion() === true;
   const [currentPlan, setCurrentPlan] = useState<CandidatePlan>("free");
   const [usage, setUsage] = useState<Record<UsageFeature, number>>({
     cv_analysis: 0,
@@ -183,14 +197,21 @@ export default function CandidatePricingPage() {
 
   const cvLimit = PLAN_LIMITS[currentPlan].cv_analysis;
   const mockLimit = PLAN_LIMITS[currentPlan].mock_interview;
+  const listParent = listParentVariants(preferReducedMotion);
+  const listItem = listItemVariants(preferReducedMotion);
+  const enterTransition = preferReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.4, ease: motionEase };
 
   function PlanCard({ plan, className }: { plan: PlanDef; className?: string }) {
     const isCurrent = plan.id === currentPlan;
+    const headingId = `plan-title-${plan.id}`;
     return (
-      <motion.div
+      <motion.article
         variants={listItem}
+        aria-labelledby={headingId}
         className={cn(
-          "group relative flex h-full flex-col rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-6 transition-shadow duration-200 dark:border-zinc-800 dark:bg-zinc-950",
+          "group relative flex h-full flex-col rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-6 transition-shadow duration-200 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-950",
           "hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
           plan.featured && "border-l-[3px] border-l-[#FBF3DB] dark:border-l-[#3f3a2e]",
           className
@@ -202,7 +223,12 @@ export default function CandidatePricingPage() {
           </span>
         )}
         <div className={cn(plan.featured && "pr-[5.5rem]")}>
-          <h3 className="text-[15px] font-semibold tracking-tight text-[#111111] dark:text-zinc-50">{plan.name}</h3>
+          <h3
+            id={headingId}
+            className="text-[15px] font-semibold tracking-tight text-[#111111] dark:text-zinc-50"
+          >
+            {plan.name}
+          </h3>
           <p className="mt-1 text-[13px] leading-[1.6] text-[#787774] dark:text-zinc-400">{plan.blurb}</p>
         </div>
         <div className="mt-5 flex flex-wrap items-baseline gap-x-1.5">
@@ -239,7 +265,7 @@ export default function CandidatePricingPage() {
             <Button
               variant={plan.featured ? "primary" : "secondary"}
               className={cn(
-                "w-full",
+                "w-full cursor-pointer",
                 btnMinimal,
                 plan.featured ? btnPrimaryMinimal : btnSecondaryMinimal
               )}
@@ -250,7 +276,7 @@ export default function CandidatePricingPage() {
             </Button>
           )}
         </div>
-      </motion.div>
+      </motion.article>
     );
   }
 
@@ -271,12 +297,12 @@ export default function CandidatePricingPage() {
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[#FBFBFA]/80 dark:bg-zinc-950/90" aria-hidden />
 
       <motion.header
-        initial={{ opacity: 0, y: 12 }}
+        initial={preferReducedMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: motionEase }}
+        transition={enterTransition}
         className="max-w-3xl"
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500">
           Plans
         </p>
         <h1 className="mt-3 font-serif text-[1.75rem] font-normal leading-[1.15] tracking-[-0.02em] text-[#111111] dark:text-zinc-50 sm:text-[2rem]">
@@ -287,12 +313,13 @@ export default function CandidatePricingPage() {
         </p>
       </motion.header>
 
-      <motion.p
-        initial={{ opacity: 0, y: 12 }}
+      <motion.div
+        initial={preferReducedMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.06, ease: motionEase }}
+        transition={{ ...enterTransition, delay: preferReducedMotion ? 0 : 0.04 }}
         className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#EAEAEA] pb-4 text-[13px] text-[#787774] dark:border-zinc-800 dark:text-zinc-500"
       >
+        <span className="sr-only">Your subscription and this week&apos;s usage:</span>
         <span className="font-medium capitalize text-[#111111] dark:text-zinc-200">{currentPlan}</span>
         <span className="text-[#EAEAEA] dark:text-zinc-600" aria-hidden>
           ·
@@ -306,32 +333,51 @@ export default function CandidatePricingPage() {
         <span className="font-mono tabular-nums text-[#2F3437] dark:text-zinc-300">
           Mock {usage.mock_interview}/{mockLimit === Infinity ? "∞" : mockLimit}/wk
         </span>
-      </motion.p>
+      </motion.div>
 
       {checkoutError && (
         <div
-          className="mt-4 rounded-md border border-[#FDEBEC] bg-[#FDEBEC] px-3 py-2 text-[13px] leading-[1.6] text-[#9F2F2D] dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200"
+          className="mt-4 flex flex-col gap-3 rounded-md border border-[#FDEBEC] bg-[#FDEBEC] px-3 py-3 text-[13px] leading-[1.6] text-[#9F2F2D] dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200 sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
-          {checkoutError}
+          <p className="min-w-0 flex-1">
+            {checkoutError}{" "}
+            <span className="text-[#7a2826] dark:text-red-300/90">Choose a plan below to try again.</span>
+          </p>
+          <button
+            type="button"
+            onClick={() => setCheckoutError(null)}
+            className="shrink-0 cursor-pointer rounded-md border border-[#e8c5c7] bg-white/80 px-3 py-2 text-xs font-medium text-[#7a2826] transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9F2F2D] focus-visible:ring-offset-2 dark:border-red-800/50 dark:bg-red-950/50 dark:text-red-100 dark:hover:bg-red-950/80 dark:focus-visible:ring-red-300 dark:focus-visible:ring-offset-zinc-950"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
-      <motion.div
-        variants={listParent}
-        initial="hidden"
-        animate="show"
-        className="mt-10 grid grid-cols-1 items-stretch gap-5 md:grid-cols-3"
-      >
-        {plans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} />
-        ))}
-      </motion.div>
+      <section aria-labelledby="pricing-plan-comparison">
+        <h2
+          id="pricing-plan-comparison"
+          className="mt-10 text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500"
+        >
+          Compare plans
+        </h2>
+
+        <motion.div
+          variants={listParent}
+          initial="hidden"
+          animate="show"
+          className="mt-4 grid grid-cols-1 items-stretch gap-5 md:grid-cols-3"
+        >
+          {plans.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} />
+          ))}
+        </motion.div>
+      </section>
 
       <motion.p
-        initial={{ opacity: 0, y: 12 }}
+        initial={preferReducedMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.32, ease: motionEase }}
+        transition={{ ...enterTransition, delay: preferReducedMotion ? 0 : 0.12 }}
         className="mt-10 max-w-[65ch] text-[13px] leading-[1.6] text-[#787774] dark:text-zinc-500"
       >
         Prices in USD. You can change or cancel anytime from billing after checkout.

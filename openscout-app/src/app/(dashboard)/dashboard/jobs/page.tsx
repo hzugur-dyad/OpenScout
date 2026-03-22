@@ -64,26 +64,27 @@ export default async function DashboardJobsPage() {
 
   return (
     <div className="relative mx-auto w-full max-w-5xl">
-      <div className="rounded-xl border border-[#eaeaea] bg-[#fbfbfb] px-5 py-10 dark:border-zinc-800 dark:bg-zinc-950/80 sm:px-8 sm:py-12 md:px-10 md:py-14">
-        <header className="mb-12 flex flex-col gap-8 border-b border-[#eaeaea] pb-10 dark:border-zinc-800 md:mb-16 md:flex-row md:items-end md:justify-between md:gap-12 md:pb-12">
+      <div className="overflow-hidden rounded-consistent border border-[var(--border-strong)] bg-[#FAFAF9] px-6 py-10 dark:border-zinc-800 dark:bg-zinc-950 sm:px-8 sm:py-12 md:px-10 md:py-14">
+        <header className="mb-10 flex flex-col gap-8 md:mb-12 md:flex-row md:items-end md:justify-between md:gap-12">
           <div className="min-w-0 max-w-3xl">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
               <span
-                className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-[#fbf3db] text-[#956400] dark:bg-amber-950/40 dark:text-amber-200/90"
+                className="flex size-11 shrink-0 items-center justify-center rounded-consistent bg-[#f5edd8] text-[#8a6a1e] dark:bg-amber-950/35 dark:text-amber-200/85"
                 aria-hidden
               >
                 <RscBriefcaseBoldIcon className="size-[22px]" />
               </span>
               <div className="min-w-0">
                 <h1
+                  id="dashboard-jobs-title"
                   className={cn(
                     jobsSerif.className,
-                    "text-[1.75rem] font-normal leading-[1.1] tracking-[-0.03em] text-[#111111] sm:text-[2rem] dark:text-zinc-50"
+                    "text-[1.75rem] font-normal leading-[1.2] tracking-[-0.03em] text-[#111111] sm:text-[2rem] dark:text-zinc-50"
                   )}
                 >
-                  Job listings
+                  Job Listings
                 </h1>
-                <p className="mt-4 max-w-[60ch] text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
+                <p className="mt-4 max-w-[60ch] text-base leading-[1.5] text-[#111111]/60 dark:text-zinc-400">
                   Roles posted by hiring partners. Choose a row to read the full brief and apply when it fits your plan.
                 </p>
               </div>
@@ -91,10 +92,10 @@ export default async function DashboardJobsPage() {
           </div>
           {count > 0 ? (
             <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
-              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+              <span className="text-[10px] font-medium uppercase tracking-[0.05em] text-[#111111]/55 dark:text-zinc-500">
                 Open
               </span>
-              <p className="font-mono text-sm tabular-nums tracking-tight text-[#2f3437] dark:text-zinc-200">
+              <p className="font-mono text-sm font-medium tabular-nums tracking-tight text-[#111111] dark:text-zinc-200">
                 {count}
                 {count === 1 ? " role" : " roles"}
               </p>
@@ -104,7 +105,7 @@ export default async function DashboardJobsPage() {
 
         {!listings || listings.length === 0 ? (
           <EmptyState
-            className="mt-0 rounded-xl border border-dashed border-[#eaeaea] bg-white px-8 py-14 dark:border-zinc-700 dark:bg-zinc-950"
+            className="mt-0 rounded-consistent border border-dashed border-[var(--border-strong)] bg-[#FCFCFB] px-8 py-14 dark:border-zinc-700 dark:bg-zinc-900/40"
             iconName="briefcase"
             title="No open roles yet"
             description="Nothing is live at the moment. Keep your profile and CV current so you can move quickly when listings return."
@@ -120,7 +121,7 @@ export default async function DashboardJobsPage() {
             <Link href="/cv-analysis">
               <Button
                 variant="outline"
-                className="rounded-md border-[#eaeaea] hover:bg-[#f7f6f3] dark:border-zinc-700 dark:hover:bg-zinc-900"
+                className="rounded-consistent border-[var(--border-strong)] hover:bg-[#F2F1EF] active:bg-[#eae9e6] dark:border-zinc-700 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/80"
               >
                 Run CV analysis
               </Button>

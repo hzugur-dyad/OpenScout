@@ -21,7 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 const candidateNavItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: SquaresFour },
-  { href: "/onboarding", label: "My profile", icon: FileText },
+  { href: "/onboarding", label: "My Profile", icon: FileText },
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
   { href: "/mock-interview", label: "Mock Interview", icon: ChatCircle },
   { href: "/dashboard/interviews", label: "Interview History", icon: ClockCounterClockwise },
@@ -140,7 +140,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div
       className={
         isCandidateDashboardHome
-          ? "flex min-h-[100dvh] bg-[#F7F6F3] dark:bg-zinc-950"
+          ? "flex min-h-[100dvh] bg-[#FAFAF9] dark:bg-zinc-950"
           : "flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950"
       }
     >

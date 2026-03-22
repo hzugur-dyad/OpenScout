@@ -137,62 +137,65 @@ export default async function CandidateApplicationsPage({
   const showing = applications.length;
   const isFiltered = showing !== total && total > 0;
 
-  const actionLinkClass =
-    "inline-flex items-center gap-1.5 rounded-md py-1 text-sm font-medium text-[#111] transition-[transform,opacity] duration-200 hover:underline active:scale-[0.98] dark:text-zinc-100";
-  const actionMutedClass =
-    "inline-flex items-center gap-1.5 rounded-md py-1 text-sm font-medium text-[#787774] transition-[transform,opacity] duration-200 hover:underline hover:text-[#2F3437] active:scale-[0.98] dark:text-zinc-500 dark:hover:text-zinc-300";
+  const editorialEase = "[transition-timing-function:cubic-bezier(0.16,1,0.3,1)]";
+  const focusRing =
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FBFBFA] dark:focus-visible:ring-zinc-100 dark:focus-visible:ring-offset-zinc-900";
+  const actionLinkClass = `inline-flex min-h-11 w-full cursor-pointer touch-manipulation items-center gap-2 rounded-[10px] px-1 -mx-1 py-2 text-sm font-medium text-[#111] transition-[transform,opacity,color] duration-200 ${editorialEase} hover:bg-black/[0.03] hover:text-[#111] hover:no-underline active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-zinc-100 dark:hover:bg-white/[0.04] ${focusRing}`;
+  const actionMutedClass = `inline-flex min-h-11 w-full cursor-pointer touch-manipulation items-center gap-2 rounded-[10px] px-1 -mx-1 py-2 text-sm font-medium text-[#787774] transition-[transform,opacity,color,background-color] duration-200 ${editorialEase} hover:bg-black/[0.03] hover:text-[#2F3437] hover:no-underline active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-zinc-500 dark:hover:bg-white/[0.04] dark:hover:text-zinc-300 ${focusRing}`;
+  const actionLinkClassTable = `inline-flex min-h-11 w-max max-w-full cursor-pointer touch-manipulation items-center gap-1.5 rounded-[10px] px-1 -mx-1 py-2 text-sm font-medium text-[#111] transition-[transform,opacity,color,background-color] duration-200 ${editorialEase} hover:bg-black/[0.03] hover:text-[#111] hover:no-underline active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-zinc-100 dark:hover:bg-white/[0.04] ${focusRing}`;
+  const actionMutedClassTable = `inline-flex min-h-11 w-max max-w-full cursor-pointer touch-manipulation items-center gap-1.5 rounded-[10px] px-1 -mx-1 py-2 text-sm font-medium text-[#787774] transition-[transform,opacity,color,background-color] duration-200 ${editorialEase} hover:bg-black/[0.03] hover:text-[#2F3437] hover:no-underline active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:text-zinc-500 dark:hover:bg-white/[0.04] dark:hover:text-zinc-300 ${focusRing}`;
 
   return (
     <div className="relative -mx-4 min-h-full bg-[#F7F6F3] px-4 py-10 pb-24 lg:-mx-8 lg:px-8 dark:bg-transparent">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 mx-auto h-72 max-w-5xl bg-[radial-gradient(ellipse_70%_55%_at_50%_0%,rgba(251,251,250,0.9),transparent)] opacity-90 dark:hidden"
-        aria-hidden
-      />
-
-      <div className="relative mx-auto w-full max-w-5xl">
+      <main
+        id="applications-main"
+        aria-labelledby="applications-heading"
+        className="relative mx-auto w-full max-w-5xl"
+      >
         <MinimalSection>
-          <header className="grid gap-10 border-b border-[#EAEAEA] pb-12 dark:border-zinc-800 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-14">
+          <header className="grid gap-8 pb-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end lg:gap-14">
             <div className="min-w-0">
               <h1
-                className={`${applicationsSerif.className} text-[2rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111] md:text-[2.35rem] dark:text-zinc-50`}
+                id="applications-heading"
+                className={`${applicationsSerif.className} text-[2rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[#111] md:text-[2.35rem] dark:text-zinc-50`}
               >
                 Applications
               </h1>
-              <p className="mt-4 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-300">
+              <p className="mt-4 max-w-[65ch] text-base font-normal leading-[1.5] text-[#2F3437] dark:text-zinc-300">
                 Roles you have submitted to, with CV and interview scores where the employer has recorded them.
               </p>
-              <p className="mt-3 max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-500">
+              <p className="mt-3 max-w-[65ch] text-sm font-normal leading-[1.5] text-[#787774] dark:text-zinc-500">
                 Status follows the employer pipeline. &quot;Applied&quot; means your file is in review; employers move you
                 to Shortlisted or Rejected.
               </p>
             </div>
             {total > 0 && (
               <div className="flex flex-col gap-4 lg:items-end">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#787774] dark:text-zinc-500">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
                   Overview
                 </p>
-                <dl className="grid grid-cols-2 gap-x-8 gap-y-3 sm:grid-cols-4 lg:flex lg:flex-wrap lg:justify-end lg:gap-x-10">
-                  <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs text-[#787774] dark:text-zinc-500">Total</dt>
-                    <dd className="font-mono text-lg tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
+                <dl className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4 lg:flex lg:flex-wrap lg:justify-end lg:gap-x-10">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-normal text-[#787774] dark:text-zinc-500">Total</dt>
+                    <dd className="font-mono text-lg font-medium tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
                       {total}
                     </dd>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs text-[#787774] dark:text-zinc-500">In review</dt>
-                    <dd className="font-mono text-lg tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-normal text-[#787774] dark:text-zinc-500">In review</dt>
+                    <dd className="font-mono text-lg font-medium tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
                       {inReview}
                     </dd>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs text-[#787774] dark:text-zinc-500">Shortlisted</dt>
-                    <dd className="font-mono text-lg tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-normal text-[#787774] dark:text-zinc-500">Shortlisted</dt>
+                    <dd className="font-mono text-lg font-medium tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
                       {shortlisted}
                     </dd>
                   </div>
-                  <div className="flex flex-col gap-0.5">
-                    <dt className="text-xs text-[#787774] dark:text-zinc-500">Rejected</dt>
-                    <dd className="font-mono text-lg tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
+                  <div className="flex flex-col gap-1">
+                    <dt className="text-xs font-normal text-[#787774] dark:text-zinc-500">Rejected</dt>
+                    <dd className="font-mono text-lg font-medium tabular-nums tracking-tight text-[#111] dark:text-zinc-100">
                       {rejected}
                     </dd>
                   </div>
@@ -213,16 +216,16 @@ export default async function CandidateApplicationsPage({
           <Suspense
             fallback={
               <div
-                className="grid animate-pulse grid-cols-1 gap-6 rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-8 sm:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-900"
+                className="grid animate-pulse grid-cols-1 gap-6 rounded-xl border border-[#E6E5E2] bg-[#FBFBFA] p-8 sm:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-900"
                 aria-hidden
               >
                 <div className="flex flex-col gap-2">
-                  <div className="h-3 w-14 rounded-sm bg-[#EAEAEA] dark:bg-zinc-800" />
-                  <div className="h-11 w-full rounded-[10px] bg-[#F7F6F3] dark:bg-zinc-800/80" />
+                  <div className="h-3 w-14 rounded-sm bg-[#E8E7E4] dark:bg-zinc-800" />
+                  <div className="h-11 w-full rounded-[10px] bg-[#F0EFEC] dark:bg-zinc-800/80" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <div className="h-3 w-10 rounded-sm bg-[#EAEAEA] dark:bg-zinc-800" />
-                  <div className="h-11 w-full rounded-[10px] bg-[#F7F6F3] dark:bg-zinc-800/80" />
+                  <div className="h-3 w-10 rounded-sm bg-[#E8E7E4] dark:bg-zinc-800" />
+                  <div className="h-11 w-full rounded-[10px] bg-[#F0EFEC] dark:bg-zinc-800/80" />
                 </div>
               </div>
             }
@@ -236,7 +239,7 @@ export default async function CandidateApplicationsPage({
         {applications.length === 0 ? (
           <MinimalSection className="mt-12" delay={0.16}>
             <EmptyState
-              className="border-[#EAEAEA] bg-[#FFFFFF] dark:border-zinc-800 dark:bg-zinc-900"
+              className="border-[#E6E5E2] bg-[#FBFBFA] dark:border-zinc-800 dark:bg-zinc-900"
               iconName="briefcase"
               title={rows.length === 0 ? "No applications yet" : "No matches for this filter"}
               description={
@@ -277,19 +280,19 @@ export default async function CandidateApplicationsPage({
               return (
                 <div
                   key={r.id}
-                  className="rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-6 shadow-none transition-[box-shadow,transform] duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+                  className="rounded-xl border border-[#E6E5E2] bg-[#FBFBFA] p-6 transition-[border-color,transform] duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none hover:border-[#D4D3CF] active:scale-[0.99] motion-reduce:active:scale-100 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <h2 className="font-semibold text-[#111] dark:text-zinc-100">{title}</h2>
-                      <p className="mt-1 text-sm text-[#787774] dark:text-zinc-400">{company}</p>
+                      <h2 className="text-base font-semibold leading-snug text-[#111] dark:text-zinc-100">{title}</h2>
+                      <p className="mt-1 text-sm font-normal text-[#787774] dark:text-zinc-400">{company}</p>
                     </div>
                     <CandidateApplicationStatusBadge applicationStatus={pipeline} />
                   </div>
-                  <p className="mt-3 text-xs text-[#787774] dark:text-zinc-500">Applied {applied}</p>
-                  <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[#EAEAEA] pt-4 dark:border-zinc-800">
+                  <p className="mt-4 text-xs font-normal text-[#787774] dark:text-zinc-500">Applied {applied}</p>
+                  <div className="mt-6 grid grid-cols-3 gap-4">
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">
                         CV
                       </p>
                       <p className="mt-0.5 font-mono text-sm tabular-nums text-[#111] dark:text-zinc-100">
@@ -305,13 +308,13 @@ export default async function CandidateApplicationsPage({
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                      <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">
                         Hiring
                       </p>
                       <p className="mt-0.5 font-mono text-sm tabular-nums text-[#111] dark:text-zinc-100">{hiring}</p>
                     </div>
                   </div>
-                  <div className="mt-4 flex flex-col gap-2 border-t border-[#EAEAEA] pt-4 dark:border-zinc-800">
+                  <div className="mt-6 flex flex-col gap-1">
                     <Link href={`/dashboard/jobs/${r.job_id}`} className={actionLinkClass}>
                       <RscArrowSquareOutIcon className="h-4 w-4 shrink-0" />
                       Open listing
@@ -335,27 +338,52 @@ export default async function CandidateApplicationsPage({
             <div className="mt-10 hidden overflow-hidden rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] dark:border-zinc-800 dark:bg-zinc-900 md:block">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="sticky top-0 z-[1] border-b border-[#EAEAEA] bg-[#F7F6F3] dark:border-zinc-800 dark:bg-zinc-900">
+                <caption className="sr-only">
+                  Your job applications: role, applied date, pipeline status, CV and interview scores, hiring score, and
+                  links to the listing, details, and interview result when available.
+                </caption>
+                <thead className="sticky top-0 z-[1] border-b border-[#E6E5E2] bg-[#F2F1EE] dark:border-zinc-800 dark:bg-zinc-950">
                   <tr>
-                    <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Job
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Applied
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Status
                     </th>
-                    <th className="px-5 py-3.5 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       CV
                     </th>
-                    <th className="px-5 py-3.5 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Interview
                     </th>
-                    <th className="px-5 py-3.5 text-right text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Hiring
                     </th>
-                    <th className="px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                    <th
+                      scope="col"
+                      className="px-5 py-3.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500"
+                    >
                       Actions
                     </th>
                   </tr>
@@ -373,12 +401,12 @@ export default async function CandidateApplicationsPage({
                     return (
                       <tr
                         key={r.id}
-                        className="transition-colors duration-200 hover:bg-[#FBFBFA] dark:hover:bg-zinc-800/40"
+                        className="transition-colors duration-200 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none hover:bg-[#F5F4F1] dark:hover:bg-zinc-800/40"
                       >
-                        <td className="px-5 py-4 align-top">
+                        <th scope="row" className="px-5 py-4 align-top font-normal">
                           <div className="font-medium text-[#111] dark:text-zinc-100">{title}</div>
-                          <div className="mt-0.5 text-xs text-[#787774] dark:text-zinc-400">{company}</div>
-                        </td>
+                          <div className="mt-1 text-xs font-normal text-[#787774] dark:text-zinc-400">{company}</div>
+                        </th>
                         <td className="px-5 py-4 align-top text-[#2F3437] dark:text-zinc-400">
                           {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
                         </td>
@@ -396,14 +424,14 @@ export default async function CandidateApplicationsPage({
                         </td>
                         <td className="px-5 py-4 align-top">
                           <div className="flex flex-col gap-1.5">
-                            <Link href={`/dashboard/jobs/${r.job_id}`} className={actionLinkClass}>
+                            <Link href={`/dashboard/jobs/${r.job_id}`} className={actionLinkClassTable}>
                               Listing
                             </Link>
-                            <Link href={`/dashboard/applications/${r.id}`} className={actionMutedClass}>
+                            <Link href={`/dashboard/applications/${r.id}`} className={actionMutedClassTable}>
                               Details
                             </Link>
                             {resultHref && (
-                              <Link href={resultHref} className={actionLinkClass}>
+                              <Link href={resultHref} className={actionLinkClassTable}>
                                 Interview
                               </Link>
                             )}
@@ -418,7 +446,7 @@ export default async function CandidateApplicationsPage({
             </div>
           </MinimalSection>
         )}
-      </div>
+      </main>
     </div>
   );
 }

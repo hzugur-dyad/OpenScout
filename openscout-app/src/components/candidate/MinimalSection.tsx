@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -16,13 +16,16 @@ export function MinimalSection({
   className?: string;
   delay?: number;
 }) {
+  const reduceMotion = useReducedMotion();
   return (
     <motion.div
       className={cn(className)}
-      initial={{ opacity: 0, y: 12 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-48px" }}
-      transition={{ duration: 0.6, ease: editorialEase, delay }}
+      transition={
+        reduceMotion ? { duration: 0 } : { duration: 0.6, ease: editorialEase, delay }
+      }
     >
       {children}
     </motion.div>

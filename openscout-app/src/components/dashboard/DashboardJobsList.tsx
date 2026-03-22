@@ -51,7 +51,7 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
       show: {
         opacity: 1,
         y: 0,
-        transition: { duration: 0.6, ease: editorialEase },
+        transition: { duration: 0.32, ease: editorialEase },
       },
     }),
     [reduceMotion]
@@ -60,14 +60,17 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
   return (
     <motion.div
       className={cn(
-        "overflow-hidden rounded-xl border border-[#eaeaea] bg-white",
-        "dark:border-zinc-800 dark:bg-zinc-950"
+        "border-t border-[var(--border-strong)] bg-[#FCFCFB]",
+        "dark:border-zinc-800 dark:bg-zinc-900/35"
       )}
       variants={containerVariants}
       initial="hidden"
       animate="show"
     >
-      <ul className="divide-y divide-[#eaeaea] dark:divide-zinc-800">
+      <ul
+        className="divide-y divide-[#eaeaea] dark:divide-zinc-800"
+        aria-labelledby="dashboard-jobs-title"
+      >
         {jobs.map((job) => {
           const posted = formatPosted(job.postedAt);
           return (
@@ -75,30 +78,30 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
               <Link
                 href={`/dashboard/jobs/${job.id}`}
                 className={cn(
-                  "group block px-6 py-7 transition-[background-color,box-shadow] duration-200 sm:px-8 sm:py-8",
-                  "hover:bg-[#f9f9f8] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
-                  "active:scale-[0.99] dark:hover:bg-zinc-900/80 dark:hover:shadow-none",
-                  "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 focus-visible:ring-inset dark:focus-visible:ring-zinc-500"
+                  "group block touch-manipulation px-6 py-8 transition-[background-color,transform] duration-200 ease-out sm:px-8",
+                  "hover:bg-[#F5F4F2] active:bg-[#EFEEEB] dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800",
+                  "motion-reduce:active:scale-100 active:scale-[0.99]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset dark:focus-visible:ring-zinc-500"
                 )}
               >
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-10">
+                <div className="grid grid-cols-1 gap-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-10">
                   <div className="min-w-0 space-y-3">
-                    <span className="inline-flex max-w-full rounded-full bg-[#e1f3fe] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-[#1f6c9f] dark:bg-sky-950/50 dark:text-sky-200">
+                    <span className="inline-flex max-w-full rounded-full bg-[#e8f4fa] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.05em] text-[#1a5f8a] dark:bg-sky-950/45 dark:text-sky-200/95">
                       <span className="truncate">{job.companyName}</span>
                     </span>
-                    <h2 className="text-lg font-semibold leading-tight tracking-tight text-[#111111] dark:text-zinc-50 md:text-xl">
+                    <h2 className="text-lg font-medium leading-[1.25] tracking-tight text-[#111111] dark:text-zinc-50 md:text-xl">
                       {job.title}
                     </h2>
                     {job.description ? (
-                      <p className="line-clamp-2 max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                      <p className="line-clamp-2 max-w-[65ch] text-sm leading-[1.5] text-[#111111]/60 dark:text-zinc-400">
                         {job.description}
                       </p>
                     ) : null}
-                    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 pt-0.5 font-mono text-xs text-[#787774] dark:text-zinc-500">
+                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 pt-1 font-mono text-xs text-[#111111]/55 dark:text-zinc-500">
                       {posted ? (
                         <span>
                           Posted{" "}
-                          <time dateTime={job.postedAt ?? undefined} className="tabular-nums text-[#2f3437] dark:text-zinc-300">
+                          <time dateTime={job.postedAt ?? undefined} className="tabular-nums text-[#111111] dark:text-zinc-300">
                             {posted}
                           </time>
                         </span>
@@ -106,7 +109,7 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
                       {job.minCvScore != null ? (
                         <span>
                           Min. CV{" "}
-                          <span className="tabular-nums text-[#2f3437] dark:text-zinc-300">{job.minCvScore}</span>
+                          <span className="tabular-nums text-[#111111] dark:text-zinc-300">{job.minCvScore}</span>
                         </span>
                       ) : null}
                     </div>
@@ -114,9 +117,9 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
                   <div className="flex md:justify-end">
                     <span
                       className={cn(
-                        "inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium",
-                        "bg-[#111111] text-white transition-colors duration-200",
-                        "group-hover:bg-[#333333] dark:bg-zinc-100 dark:text-[#111111] dark:group-hover:bg-white"
+                        "inline-flex h-10 shrink-0 items-center gap-2 rounded-consistent px-4 text-sm font-medium",
+                        "bg-[#111111] text-white transition-colors duration-200 ease-out",
+                        "group-hover:bg-[#2a2a2a] group-active:bg-[#1a1a1a] dark:bg-zinc-100 dark:text-[#111111] dark:group-hover:bg-white dark:group-active:bg-zinc-200"
                       )}
                     >
                       View role

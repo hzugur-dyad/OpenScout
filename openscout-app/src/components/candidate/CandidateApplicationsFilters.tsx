@@ -46,7 +46,7 @@ export function CandidateApplicationsFilters({ className }: { className?: string
       <div className="flex flex-col gap-2">
         <label
           htmlFor="applications-status"
-          className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#787774] dark:text-zinc-500"
+          className="text-xs font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500"
         >
           Status
         </label>
@@ -56,13 +56,13 @@ export function CandidateApplicationsFilters({ className }: { className?: string
           value={status}
           onChange={(v) => push({ status: v as CandidateApplicationStatusFilter })}
           aria-label="Filter by status"
-          triggerClassName="border-[#EAEAEA] bg-[#FBFBFA] dark:border-zinc-700 dark:bg-zinc-800"
+          triggerClassName="rounded-[10px] border-[#E6E5E2] bg-[#FBFBFA] dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
       <div className="flex flex-col gap-2">
         <label
           htmlFor="applications-sort"
-          className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#787774] dark:text-zinc-500"
+          className="text-xs font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500"
         >
           Sort
         </label>
@@ -72,7 +72,7 @@ export function CandidateApplicationsFilters({ className }: { className?: string
           value={sort}
           onChange={(v) => push({ sort: v as CandidateApplicationSort })}
           aria-label="Sort applications"
-          triggerClassName="border-[#EAEAEA] bg-[#FBFBFA] dark:border-zinc-700 dark:bg-zinc-800"
+          triggerClassName="rounded-[10px] border-[#E6E5E2] bg-[#FBFBFA] dark:border-zinc-700 dark:bg-zinc-800"
         />
       </div>
     </div>

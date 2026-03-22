@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Microphone, MicrophoneSlash, PhoneDisconnect } from "@phosphor-icons/react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTTS } from "@/hooks/useTTS";
 import { createClient } from "@/lib/supabase/client";
 import { Orb, type AgentState } from "@/components/ui/orb";
@@ -38,7 +38,6 @@ export default function MockInterviewSessionPage() {
   const copy = interviewCopy[locale];
 
   const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
-  const [micOk, setMicOk] = useState(false);
   const [micError, setMicError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
@@ -58,6 +57,8 @@ export default function MockInterviewSessionPage() {
   const controlStateRef = useRef<InterviewControl | null>(null);
   const RESPONSE_LIMIT_MS = 30_000;
   const [providerError, setProviderError] = useState<string | null>(null);
+  const reduceMotion = useReducedMotion();
+  const endDialogContinueRef = useRef<HTMLButtonElement>(null);
 
   const tts = useTTS();
   ttsStopRef.current = tts.stop;
@@ -441,6 +442,19 @@ export default function MockInterviewSessionPage() {
   const MIN_INTERVIEW_MS = 5 * 60 * 1000;
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
+  useEffect(() => {
+    if (!showEndConfirm) return;
+    endDialogContinueRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setShowEndConfirm(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showEndConfirm]);
+
   const releaseMicrophoneResources = useCallback(() => {
     recognitionRef.current?.stop();
     recognitionRef.current?.abort();
@@ -566,21 +580,26 @@ export default function MockInterviewSessionPage() {
 
   if (step === "mic-test") {
     return (
-      <div className="mx-auto max-w-md">
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+      <main id="mock-interview-session" className="mx-auto max-w-md px-4 py-2">
+        <div className="rounded-[10px] border border-[var(--border)] bg-[#FAFAF9] p-6 sm:p-8 dark:border-white/[0.08] dark:bg-zinc-900">
           <div
-            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[10px]"
             style={{ backgroundColor: "var(--primary-muted)" }}
           >
             <Microphone className="h-8 w-8" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
           </div>
-          <h2 className="text-center text-xl font-bold text-gray-900 dark:text-zinc-100">{ui.testMicTitle}</h2>
-          <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
+          <h2 className="text-center text-xl font-semibold leading-[1.25] tracking-tight text-[#111111] dark:text-zinc-100">
+            {ui.testMicTitle}
+          </h2>
+          <p className="mt-3 text-center text-base font-normal leading-[1.5] text-[#111111]/60 dark:text-zinc-400">
             {ui.testMicHint}
           </p>
-          <div className="mt-6 h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700">
+          <div
+            className="mt-6 h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-700"
+            aria-hidden
+          >
             <div
-              className="h-full rounded-full transition-all duration-150"
+              className="h-full rounded-full transition-all duration-150 motion-reduce:transition-none"
               style={{
                 width: `${micLevel}%`,
                 backgroundColor: "var(--primary)",
@@ -588,29 +607,34 @@ export default function MockInterviewSessionPage() {
             />
           </div>
           {providerError && (
-            <p className="mt-4 text-center text-sm text-amber-800 dark:text-amber-200">{providerError}</p>
+            <p className="mt-4 text-center text-sm text-amber-800 dark:text-amber-200" role="alert">
+              {providerError}
+            </p>
           )}
           {micError && (
-            <p className="mt-4 text-center text-sm text-red-600 dark:text-red-400">{micError}</p>
+            <p className="mt-4 text-center text-sm text-red-600 dark:text-red-400" role="alert">
+              {micError}
+            </p>
           )}
           {micStream && !micError && (
-            <p className="mt-4 text-center text-sm text-green-600 dark:text-green-400">
+            <p className="mt-4 text-center text-sm text-green-700 dark:text-green-400">
               {ui.micWorking}
             </p>
           )}
           <button
+            type="button"
             onClick={() => {
-              setMicOk(true);
               startInterview();
             }}
             disabled={!micStream || !!micError}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-white disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={ui.continueMicTestAria}
+            className="mt-6 flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-[10px] px-4 py-3 text-sm font-semibold text-white transition-[filter,colors] hover:brightness-105 active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-zinc-900"
             style={{ backgroundColor: "var(--primary)" }}
           >
             {ui.continue}
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
@@ -620,33 +644,86 @@ export default function MockInterviewSessionPage() {
     );
   }
 
+  const orbAnimate =
+    reduceMotion || step !== "interview"
+      ? { scale: 1, opacity: 1 }
+      : agentState === "listening"
+        ? { scale: 1 + (micLevel / 100) * 0.12, opacity: 1 }
+        : agentState === "thinking"
+          ? { scale: [1, 1.06, 1], opacity: [0.88, 1, 0.92] }
+          : agentState === "talking"
+            ? { scale: [1, 1.09, 1.04, 1], opacity: 1 }
+            : { scale: [1, 1.025, 1], opacity: [0.96, 1, 0.98] };
+
+  const orbTransition =
+    reduceMotion
+      ? { duration: 0 }
+      : agentState === "listening"
+        ? { duration: 0.12, ease: "easeOut" as const }
+        : {
+            duration: agentState === "talking" ? 0.78 : 1.45,
+            repeat:
+              step === "interview" &&
+              (agentState === null || agentState === "thinking" || agentState === "talking")
+                ? Infinity
+                : 0,
+            ease: "easeInOut" as const,
+          };
+
+  const micAriaLabel = isAiSpeaking
+    ? ui.statusWaitNova
+    : isListening
+      ? ui.micAriaStopListening
+      : ui.micAriaStartListening;
+
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-4 py-2">
-      {/* End confirmation modal */}
+    <main
+      id="mock-interview-session-live"
+      className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-4 py-2"
+    >
       {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50"
+          role="presentation"
+          onClick={() => setShowEndConfirm(false)}
+        >
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="end-interview-dialog-title"
+            initial={reduceMotion ? false : { scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:border dark:border-white/[0.06] dark:bg-zinc-900"
+            transition={
+              reduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
+            }
+            onClick={(e) => e.stopPropagation()}
+            className="mx-4 w-full max-w-sm rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] p-6 dark:border-zinc-700 dark:bg-zinc-900"
           >
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto dark:bg-red-950/50">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] bg-red-100/90 dark:bg-red-950/40">
               <PhoneDisconnect className="h-6 w-6 text-red-600 dark:text-red-400" weight="regular" aria-hidden />
             </div>
-            <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{ui.endInterviewTitle}</h3>
-            <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
+            <h3
+              id="end-interview-dialog-title"
+              className="text-center text-lg font-semibold leading-snug text-[#111111] dark:text-zinc-100"
+            >
+              {ui.endInterviewTitle}
+            </h3>
+            <p className="mt-2 text-center text-sm font-normal leading-[1.5] text-[#111111]/60 dark:text-zinc-400">
               {ui.endInterviewBody}
             </p>
-            <div className="mt-6 flex gap-3">
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:gap-3">
               <button
+                ref={endDialogContinueRef}
+                type="button"
                 onClick={() => setShowEndConfirm(false)}
-                className="flex-1 rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                className="min-h-11 flex-1 touch-manipulation rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] px-4 py-2.5 text-sm font-normal text-[#111111]/80 hover:bg-[#F2F1EF] active:bg-[#EAE9E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/80 dark:focus-visible:ring-zinc-500 dark:focus-visible:ring-offset-zinc-900"
               >
                 {ui.continueInterview}
               </button>
               <button
+                type="button"
                 onClick={handleEndInterview}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+                className="min-h-11 flex-1 touch-manipulation rounded-[10px] bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 active:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:bg-red-600 dark:hover:bg-red-700 dark:active:bg-red-800 dark:focus-visible:ring-offset-zinc-900"
               >
                 {ui.endEvaluate}
               </button>
@@ -655,22 +732,24 @@ export default function MockInterviewSessionPage() {
         </div>
       )}
 
-      <div className="mb-1 flex shrink-0 items-center justify-between">
-        <h2 className="font-semibold text-gray-900 dark:text-zinc-100">
+      <div className="mb-1 flex shrink-0 items-center justify-between gap-3">
+        <h2 className="min-w-0 truncate text-base font-semibold leading-snug text-[#111111] sm:text-lg dark:text-zinc-100">
           {`${jobCategory} ${ui.interviewSuffix}`}
         </h2>
         {step !== "goodbye" && (
           <button
+            type="button"
             onClick={() => setShowEndConfirm(true)}
-            className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
+            aria-label={ui.endInterviewButtonAria}
+            className="flex min-h-11 shrink-0 touch-manipulation items-center gap-2 rounded-[10px] border border-red-200/90 bg-[#FAFAF9] px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 active:bg-red-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 dark:border-red-900/60 dark:bg-zinc-900 dark:text-red-400 dark:hover:bg-red-950/35 dark:active:bg-red-950/50 dark:focus-visible:ring-offset-zinc-950"
           >
-            <PhoneDisconnect className="h-4 w-4" weight="regular" aria-hidden />
+            <PhoneDisconnect className="h-4 w-4 shrink-0" weight="regular" aria-hidden />
             {ui.end}
           </button>
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-zinc-900 sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-[#FAFAF9] p-3 dark:border-white/[0.08] dark:bg-zinc-900 sm:p-4">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
           <motion.div
@@ -681,51 +760,32 @@ export default function MockInterviewSessionPage() {
               width: "min(380px, 48vmin)",
               height: "min(380px, 48vmin)",
             }}
-            animate={
-              step !== "interview"
-                ? { scale: 1, opacity: 1 }
-                : agentState === "listening"
-                  ? { scale: 1 + (micLevel / 100) * 0.12, opacity: 1 }
-                  : agentState === "thinking"
-                    ? { scale: [1, 1.06, 1], opacity: [0.88, 1, 0.92] }
-                    : agentState === "talking"
-                      ? { scale: [1, 1.09, 1.04, 1], opacity: 1 }
-                      : { scale: [1, 1.025, 1], opacity: [0.96, 1, 0.98] }
-            }
-            transition={
-              agentState === "listening"
-                ? { duration: 0.12, ease: "easeOut" }
-                : {
-                    duration: agentState === "talking" ? 0.78 : 1.45,
-                    repeat:
-                      step === "interview" &&
-                      (agentState === null ||
-                        agentState === "thinking" ||
-                        agentState === "talking")
-                        ? Infinity
-                        : 0,
-                    ease: "easeInOut",
-                  }
-            }
+            animate={orbAnimate}
+            transition={orbTransition}
           >
-            <Orb agentState={agentState} colors={["#FFE066", "#FFCB05"]} className="relative z-10 h-full w-full" />
+            <Orb agentState={agentState} colors={["#E8D078", "#D4B84A"]} className="relative z-10 h-full w-full" />
           </motion.div>
 
           <motion.div
             key={aiMessage}
-            initial={{ opacity: 0, y: 8 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
+            transition={
+              reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.16, 1, 0.3, 1] }
+            }
             className="w-full max-w-[600px] shrink-0"
           >
-            <p className="rounded-2xl border border-[var(--border)] bg-gray-50/60 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100">
+            <p
+              className="rounded-2xl border border-[var(--border)] bg-gray-50/60 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-gray-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              aria-live="polite"
+              aria-atomic="true"
+            >
               {aiMessage}
             </p>
           </motion.div>
 
-          {/* Mic button */}
           <div className="relative mt-1 flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
-            {step !== "goodbye" && isListening && (
+            {step !== "goodbye" && isListening && !reduceMotion && (
               <>
                 <motion.div
                   className="absolute inset-0 rounded-full border-2 border-[var(--primary)]"
@@ -744,11 +804,16 @@ export default function MockInterviewSessionPage() {
               </>
             )}
             <button
+              type="button"
               onClick={toggleListen}
               disabled={isAiSpeaking || step === "goodbye"}
-              className={`relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-200 sm:h-14 sm:w-14 ${
-                isListening ? "bg-red-500 text-white shadow-lg shadow-red-200 dark:shadow-red-900/30" : "text-white"
-              } disabled:cursor-not-allowed disabled:opacity-50`}
+              aria-pressed={isListening}
+              aria-label={micAriaLabel}
+              className={`relative flex h-12 w-12 touch-manipulation items-center justify-center rounded-full transition-colors duration-200 motion-reduce:transition-none sm:h-14 sm:w-14 ${
+                isListening
+                  ? "bg-red-600 text-white ring-2 ring-red-500/25 dark:ring-red-400/20"
+                  : "text-white"
+              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-zinc-900`}
               style={!isListening ? { backgroundColor: "var(--primary)" } : {}}
             >
               {isListening ? (
@@ -758,7 +823,7 @@ export default function MockInterviewSessionPage() {
               )}
             </button>
           </div>
-          <p className="text-xs text-gray-500 dark:text-zinc-400 sm:text-sm">
+          <p className="text-center text-sm font-normal leading-[1.5] text-[#111111]/55 dark:text-zinc-500">
             {step === "goodbye"
               ? ui.statusWrapping
               : isAiSpeaking
@@ -768,17 +833,23 @@ export default function MockInterviewSessionPage() {
                   : ui.statusClickToRespond}
           </p>
           {providerError && step === "interview" && (
-            <p className="mt-2 max-w-md text-center text-xs text-amber-800 dark:text-amber-200 sm:text-sm">
+            <p
+              className="mt-2 max-w-md text-center text-sm text-amber-900 dark:text-amber-200"
+              role="alert"
+            >
               {providerError}
             </p>
           )}
           {tts.error && (
-            <p className="mt-1 max-w-md text-center text-xs text-red-600 dark:text-red-400 sm:text-sm">
+            <p
+              className="mt-1 max-w-md text-center text-sm text-red-700 dark:text-red-400"
+              role="alert"
+            >
               {ui.voiceErrorPrefix}: {tts.error}
             </p>
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
