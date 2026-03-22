@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { Hamburger, X } from "@phosphor-icons/react";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,10 +24,14 @@ export function Navbar({
   isAuthenticated = false,
 }: NavbarProps) {
   const pathname = usePathname();
+  const showUserTypeToggle = pathname === "/";
   const [mobileOpen, setMobileOpen] = useState(false);
   const heroEntrance = useHeroEntranceOptional();
   const phase = heroEntrance?.phase ?? "content";
-  const isAnimating = phase === "centered";
+  // Hero entrance only runs on "/"; elsewhere phase stays "centered" forever if we hide the bar globally.
+  const isHomeHeroEntrance = pathname === "/";
+  const isAnimating = isHomeHeroEntrance && phase === "centered";
+  const heroIntroMotion = isHomeHeroEntrance && phase !== "content";
 
   const navLinks = [
     { href: "/jobs", label: "Job Listings" },
@@ -38,7 +42,7 @@ export function Navbar({
     <>
       {/* ── Navbar ── */}
       <header
-        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur transition-opacity duration-300 dark:border-[#111] dark:bg-black ${
+        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/95 backdrop-blur transition-opacity duration-300 dark:border-zinc-800 dark:bg-zinc-950 ${
           isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
@@ -60,7 +64,7 @@ export function Navbar({
 
             <motion.div
               className="hidden items-center gap-5 md:flex"
-              initial={phase !== "content" ? { opacity: 0 } : false}
+              initial={heroIntroMotion ? { opacity: 0 } : false}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4, delay: 0.2 }}
             >
@@ -83,7 +87,7 @@ export function Navbar({
           {/* Right: auth + theme toggle (far-right) */}
           <motion.div
             className="flex items-center gap-3"
-            initial={phase !== "content" ? { opacity: 0 } : false}
+            initial={heroIntroMotion ? { opacity: 0 } : false}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, delay: 0.3 }}
           >
@@ -112,7 +116,11 @@ export function Navbar({
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
-              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileOpen ? (
+                <X className="h-6 w-6" weight="regular" aria-hidden />
+              ) : (
+                <Hamburger className="h-6 w-6" weight="regular" aria-hidden />
+              )}
             </button>
           </motion.div>
         </nav>
@@ -124,27 +132,29 @@ export function Navbar({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="border-t border-[var(--border)] bg-white dark:border-[#111] dark:bg-black md:hidden"
+              className="border-t border-[var(--border)] bg-white dark:border-zinc-800 dark:bg-zinc-950 md:hidden"
             >
               <div className="space-y-2 px-4 py-4">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { onUserTypeChange?.("job_seeker"); setMobileOpen(false); }}
-                    className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
-                      userType === "job_seeker" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
-                    }`}
-                  >
-                    Find Jobs
-                  </button>
-                  <button
-                    onClick={() => { onUserTypeChange?.("employer"); setMobileOpen(false); }}
-                    className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
-                      userType === "employer" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
-                    }`}
-                  >
-                    I&apos;m Hiring
-                  </button>
-                </div>
+                {showUserTypeToggle && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { onUserTypeChange?.("job_seeker"); setMobileOpen(false); }}
+                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
+                        userType === "job_seeker" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
+                      }`}
+                    >
+                      Find Jobs
+                    </button>
+                    <button
+                      onClick={() => { onUserTypeChange?.("employer"); setMobileOpen(false); }}
+                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
+                        userType === "employer" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
+                      }`}
+                    >
+                      I&apos;m Hiring
+                    </button>
+                  </div>
+                )}
                 {navLinks.map((link) => (
                   <Link
                     key={link.href}
@@ -161,44 +171,46 @@ export function Navbar({
         </AnimatePresence>
       </header>
 
-      {/* ── Find Jobs / I'm Hiring pill — floating, centered below navbar (desktop only) ── */}
-      <motion.div
-        className="relative z-40 hidden justify-center md:flex"
-        style={{ marginTop: -1 }}
-        initial={phase !== "content" ? { opacity: 0 } : false}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4, delay: 0.4 }}
-      >
-        <div className="absolute top-3">
-          <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/90 p-1 shadow-soft backdrop-blur dark:border-[#23292C] dark:bg-[#111]">
-            <motion.div
-              layout
-              className="absolute inset-y-1 z-0 rounded-full"
-              animate={{ x: userType === "employer" ? "100%" : 0 }}
-              transition={{ type: "spring", stiffness: 500, damping: 32 }}
-              style={{
-                left: 4,
-                width: "calc(50% - 5px)",
-                backgroundColor: "var(--primary)",
-              }}
-            />
-            <button
-              onClick={() => onUserTypeChange?.("job_seeker")}
-              className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
-              style={{ color: userType === "job_seeker" ? "white" : undefined }}
-            >
-              Find Jobs
-            </button>
-            <button
-              onClick={() => onUserTypeChange?.("employer")}
-              className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
-              style={{ color: userType === "employer" ? "white" : undefined }}
-            >
-              I&apos;m Hiring
-            </button>
+      {/* ── Find Jobs / I'm Hiring pill — homepage only, floating below navbar (desktop) ── */}
+      {showUserTypeToggle && (
+        <motion.div
+          className="relative z-40 hidden justify-center md:flex"
+          style={{ marginTop: -1 }}
+          initial={heroIntroMotion ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+        >
+          <div className="absolute top-3">
+            <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/90 p-1 shadow-soft backdrop-blur dark:border-zinc-700 dark:bg-zinc-900/90">
+              <motion.div
+                layout
+                className="absolute inset-y-1 z-0 rounded-full"
+                animate={{ x: userType === "employer" ? "100%" : 0 }}
+                transition={{ type: "spring", stiffness: 500, damping: 32 }}
+                style={{
+                  left: 4,
+                  width: "calc(50% - 5px)",
+                  backgroundColor: "var(--primary)",
+                }}
+              />
+              <button
+                onClick={() => onUserTypeChange?.("job_seeker")}
+                className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
+                style={{ color: userType === "job_seeker" ? "white" : undefined }}
+              >
+                Find Jobs
+              </button>
+              <button
+                onClick={() => onUserTypeChange?.("employer")}
+                className="relative z-10 rounded-full px-5 py-1.5 text-sm font-medium transition-colors"
+                style={{ color: userType === "employer" ? "white" : undefined }}
+              >
+                I&apos;m Hiring
+              </button>
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
     </>
   );
 }

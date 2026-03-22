@@ -4,7 +4,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { ChevronDown, X, Plus } from "lucide-react";
+import { CaretDown, Plus, X } from "@phosphor-icons/react";
 import { JOB_TITLES, SKILLS_TECH_OPTIONS, WORK_TRAIT_OPTIONS } from "@/constants/jobFormOptions";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import {
@@ -155,7 +155,7 @@ export function EmployerJobForm(props: {
             className="mt-2 flex w-full items-center justify-between rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-left text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
           >
             <span className={!titleDisplay ? "text-gray-400 dark:text-zinc-500" : ""}>{titleDisplay || "Select role..."}</span>
-            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${titleOpen ? "rotate-180" : ""}`} />
+            <CaretDown className={`h-4 w-4 shrink-0 transition-transform ${titleOpen ? "rotate-180" : ""}`} weight="regular" aria-hidden />
           </button>
           {titleOpen && (
             <div className="dropdown-list absolute top-full left-0 right-0 z-10 mt-1 max-h-60 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
@@ -198,7 +198,7 @@ export function EmployerJobForm(props: {
               >
                 {t}
                 <button type="button" onClick={() => setDescTags(descTags.filter((x) => x !== t))} className="hover:opacity-70">
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" weight="regular" aria-hidden />
                 </button>
               </span>
             ))}
@@ -248,7 +248,7 @@ export function EmployerJobForm(props: {
               >
                 {t}
                 <button type="button" onClick={() => setReqTags(reqTags.filter((x) => x !== t))} className="hover:opacity-70">
-                  <X className="h-3 w-3" />
+                  <X className="h-3 w-3" weight="regular" aria-hidden />
                 </button>
               </span>
             ))}
@@ -317,7 +317,7 @@ export function EmployerJobForm(props: {
               onClick={() => setCustomQuestions([...customQuestions, ""])}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary dark:text-zinc-400"
             >
-              <Plus className="h-4 w-4" /> Add question
+              <Plus className="h-4 w-4" weight="regular" aria-hidden /> Add question
             </button>
           </div>
         </div>
@@ -354,7 +354,7 @@ export function EmployerJobForm(props: {
               onClick={() => setCvRequiredItems([...cvRequiredItems, ""])}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary dark:text-zinc-400"
             >
-              <Plus className="h-4 w-4" /> Add item
+              <Plus className="h-4 w-4" weight="regular" aria-hidden /> Add item
             </button>
           </div>
         </div>

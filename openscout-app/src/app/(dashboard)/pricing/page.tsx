@@ -1,17 +1,31 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
+import { SkeletonBlock } from "@/components/ui/Skeleton";
 import { PLAN_LIMITS, type CandidatePlan, type UsageFeature, getUserPlan } from "@/lib/usage";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
 
-const plans = [
+type PlanDef = {
+  id: CandidatePlan;
+  name: string;
+  price: string;
+  period: string;
+  blurb: string;
+  features: string[];
+  featured?: boolean;
+};
+
+const plans: PlanDef[] = [
   {
-    id: "free" as CandidatePlan,
+    id: "free",
     name: "Free",
     price: "$0",
     period: "forever",
+    blurb: "Core tools to get started",
     features: [
       "1 CV analysis per week",
       "1 mock interview per week",
@@ -20,72 +34,133 @@ const plans = [
     ],
   },
   {
-    id: "plus" as CandidatePlan,
+    id: "plus",
     name: "Plus",
     price: "$9.99",
     period: "/month",
+    blurb: "More practice each week",
     features: [
       "5 CV analyses per week",
       "5 mock interviews per week",
       "Detailed reports",
       "Priority support",
-      "Job browsing & applications",
+      "Job browsing and applications",
     ],
   },
   {
-    id: "pro" as CandidatePlan,
+    id: "pro",
     name: "Pro",
     price: "$19.99",
     period: "/month",
-    popular: true,
+    blurb: "Unlimited runway for serious prep",
+    featured: true,
     features: [
       "Unlimited CV analyses",
       "Unlimited mock interviews",
       "Full detailed reports",
       "Priority support",
-      "Job browsing & applications",
+      "Job browsing and applications",
     ],
   },
 ];
 
+const motionEase = [0.16, 1, 0.3, 1] as const;
+
+const listParent = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
+  },
+};
+
+const listItem = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: motionEase },
+  },
+};
+
+const btnMinimal =
+  "rounded-md shadow-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:focus:ring-zinc-500 dark:focus:ring-offset-zinc-950";
+
+const btnPrimaryMinimal =
+  "bg-zinc-950 text-white hover:bg-zinc-800 active:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:active:bg-zinc-200";
+
+const btnOutlineMinimal =
+  "rounded-md border-[#EAEAEA] bg-transparent shadow-none hover:bg-[#F7F6F3] dark:border-zinc-700 dark:hover:bg-zinc-800/80";
+
+const btnSecondaryMinimal =
+  "rounded-md border border-[#EAEAEA] bg-[#F7F6F3] text-[#111111] shadow-none hover:bg-[#EFEEE9] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700";
+
+function PricingSkeleton() {
+  return (
+    <div className="relative mx-auto max-w-5xl" aria-busy="true" aria-label="Loading plans">
+      <SkeletonBlock className="h-3 w-24" />
+      <SkeletonBlock className="mt-3 h-9 w-full max-w-md" />
+      <SkeletonBlock className="mt-3 h-4 w-full max-w-lg" />
+      <SkeletonBlock className="mt-6 h-4 w-64 max-w-full" />
+      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+        <SkeletonBlock className="h-72 w-full rounded-xl" />
+        <SkeletonBlock className="h-72 w-full rounded-xl" />
+        <SkeletonBlock className="h-72 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
+
 export default function CandidatePricingPage() {
   const supabase = createClient();
   const [currentPlan, setCurrentPlan] = useState<CandidatePlan>("free");
-  const [usage, setUsage] = useState<Record<UsageFeature, number>>({ cv_analysis: 0, mock_interview: 0 });
+  const [usage, setUsage] = useState<Record<UsageFeature, number>>({
+    cv_analysis: 0,
+    mock_interview: 0,
+  });
   const [loading, setLoading] = useState<string | null>(null);
+  const [pageReady, setPageReady] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      setCurrentPlan(getUserPlan(profile?.plan));
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("plan")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        setCurrentPlan(getUserPlan(profile?.plan));
 
-      const weekAgo = new Date();
-      weekAgo.setDate(weekAgo.getDate() - 7);
-      const { count: cvCount } = await supabase
-        .from("usage_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("feature", "cv_analysis")
-        .gte("created_at", weekAgo.toISOString());
-      const { count: mockCount } = await supabase
-        .from("usage_logs")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("feature", "mock_interview")
-        .gte("created_at", weekAgo.toISOString());
-      setUsage({ cv_analysis: cvCount ?? 0, mock_interview: mockCount ?? 0 });
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const { count: cvCount } = await supabase
+          .from("usage_logs")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("feature", "cv_analysis")
+          .gte("created_at", weekAgo.toISOString());
+        const { count: mockCount } = await supabase
+          .from("usage_logs")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("feature", "mock_interview")
+          .gte("created_at", weekAgo.toISOString());
+        setUsage({ cv_analysis: cvCount ?? 0, mock_interview: mockCount ?? 0 });
+      } finally {
+        setPageReady(true);
+      }
     }
-    load();
+    void load();
   }, [supabase]);
 
   async function handleUpgrade(planId: CandidatePlan) {
     if (planId === "free") return;
+    setCheckoutError(null);
     setLoading(planId);
     try {
       const res = await fetch("/api/candidate/create-checkout-session", {
@@ -93,14 +168,14 @@ export default function CandidatePricingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan: planId }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as { url?: string; error?: string };
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || "Could not start checkout");
+        setCheckoutError(data.error || "Could not start checkout");
       }
     } catch {
-      alert("Something went wrong. Please try again.");
+      setCheckoutError("Something went wrong. Please try again.");
     } finally {
       setLoading(null);
     }
@@ -109,78 +184,158 @@ export default function CandidatePricingPage() {
   const cvLimit = PLAN_LIMITS[currentPlan].cv_analysis;
   const mockLimit = PLAN_LIMITS[currentPlan].mock_interview;
 
-  return (
-    <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Upgrade Your Plan</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">Get more CV analyses and mock interviews each week.</p>
-
-      <div className="mt-4 rounded-[10px] border border-[var(--border)] bg-white p-4 dark:border-white/[0.06] dark:bg-zinc-900">
-        <p className="text-sm text-gray-600 dark:text-zinc-300">
-          Current plan: <span className="font-semibold capitalize">{currentPlan}</span>
-          {" — "}
-          CV analysis: {usage.cv_analysis}/{cvLimit === Infinity ? "∞" : cvLimit} this week
-          {" · "}
-          Mock interview: {usage.mock_interview}/{mockLimit === Infinity ? "∞" : mockLimit} this week
-        </p>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
-        {plans.map((plan) => {
-          const isCurrent = plan.id === currentPlan;
-          return (
-            <div
-              key={plan.id}
-              className={`relative flex flex-col rounded-[10px] border bg-white p-6 shadow-soft dark:bg-zinc-900 ${
-                plan.popular
-                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)]/20 dark:border-[var(--primary)]"
-                  : "border-[var(--border)] dark:border-white/[0.06]"
-              }`}
+  function PlanCard({ plan, className }: { plan: PlanDef; className?: string }) {
+    const isCurrent = plan.id === currentPlan;
+    return (
+      <motion.div
+        variants={listItem}
+        className={cn(
+          "group relative flex h-full flex-col rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-6 transition-shadow duration-200 dark:border-zinc-800 dark:bg-zinc-950",
+          "hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
+          plan.featured && "border-l-[3px] border-l-[#FBF3DB] dark:border-l-[#3f3a2e]",
+          className
+        )}
+      >
+        {plan.featured && (
+          <span className="absolute right-5 top-5 rounded-full bg-[#FBF3DB] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.05em] text-[#956400] dark:bg-[#2a2619] dark:text-[#d4a84b]">
+            Most chosen
+          </span>
+        )}
+        <div className={cn(plan.featured && "pr-[5.5rem]")}>
+          <h3 className="text-[15px] font-semibold tracking-tight text-[#111111] dark:text-zinc-50">{plan.name}</h3>
+          <p className="mt-1 text-[13px] leading-[1.6] text-[#787774] dark:text-zinc-400">{plan.blurb}</p>
+        </div>
+        <div className="mt-5 flex flex-wrap items-baseline gap-x-1.5">
+          <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-50">
+            {plan.price}
+          </span>
+          <span className="text-[13px] font-medium text-[#787774] dark:text-zinc-500">{plan.period}</span>
+        </div>
+        <ul className="mt-5 flex flex-1 flex-col gap-2.5 border-t border-[#EAEAEA] pt-5 dark:border-zinc-800">
+          {plan.features.map((f) => (
+            <li
+              key={f}
+              className="flex items-start gap-2 text-[13px] leading-[1.6] text-[#2F3437] dark:text-zinc-300"
             >
-              {plan.popular && (
-                <span
-                  className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-xs font-semibold text-white"
-                  style={{ backgroundColor: "var(--primary)" }}
-                >
-                  Most Popular
-                </span>
+              <Check
+                className="mt-0.5 h-4 w-4 shrink-0 text-[#346538] dark:text-[#8fb88f]"
+                weight="bold"
+                aria-hidden
+              />
+              {f}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6">
+          {isCurrent ? (
+            <Button variant="outline" className={cn("w-full", btnMinimal, btnOutlineMinimal)} disabled>
+              Current plan
+            </Button>
+          ) : plan.id === "free" ? (
+            <Button variant="outline" className={cn("w-full", btnMinimal, btnOutlineMinimal)} disabled>
+              Free
+            </Button>
+          ) : (
+            <Button
+              variant={plan.featured ? "primary" : "secondary"}
+              className={cn(
+                "w-full",
+                btnMinimal,
+                plan.featured ? btnPrimaryMinimal : btnSecondaryMinimal
               )}
-              <h3 className="text-lg font-bold text-gray-900 dark:text-zinc-100">{plan.name}</h3>
-              <div className="mt-2">
-                <span className="text-3xl font-bold text-gray-900 dark:text-zinc-100">{plan.price}</span>
-                <span className="text-sm text-gray-500 dark:text-zinc-500">{plan.period}</span>
-              </div>
-              <ul className="mt-6 flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600 dark:text-zinc-400">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--primary)" }} />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-6">
-                {isCurrent ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Current Plan
-                  </Button>
-                ) : plan.id === "free" ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    Free
-                  </Button>
-                ) : (
-                  <Button
-                    variant={plan.popular ? "primary" : "secondary"}
-                    className="w-full"
-                    isLoading={loading === plan.id}
-                    onClick={() => handleUpgrade(plan.id)}
-                  >
-                    Upgrade to {plan.name}
-                  </Button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              isLoading={loading === plan.id}
+              onClick={() => void handleUpgrade(plan.id)}
+            >
+              Upgrade to {plan.name}
+            </Button>
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!pageReady) {
+    return <PricingSkeleton />;
+  }
+
+  return (
+    <div className="relative mx-auto max-w-5xl">
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 opacity-100 dark:opacity-60"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 45% at 0% 0%, rgba(251, 243, 219, 0.35), transparent 55%), radial-gradient(ellipse 55% 40% at 100% 10%, rgba(0,0,0,0.03), transparent 50%)",
+        }}
+      />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[#FBFBFA]/80 dark:bg-zinc-950/90" aria-hidden />
+
+      <motion.header
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: motionEase }}
+        className="max-w-3xl"
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500">
+          Plans
+        </p>
+        <h1 className="mt-3 font-serif text-[1.75rem] font-normal leading-[1.15] tracking-[-0.02em] text-[#111111] dark:text-zinc-50 sm:text-[2rem]">
+          Upgrade when you need more reps
+        </h1>
+        <p className="mt-4 max-w-[65ch] text-[15px] leading-[1.6] text-[#787774] dark:text-zinc-400">
+          Higher tiers add weekly CV reviews and mock interviews. Stay on Free for as long as it fits your pace.
+        </p>
+      </motion.header>
+
+      <motion.p
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.06, ease: motionEase }}
+        className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#EAEAEA] pb-4 text-[13px] text-[#787774] dark:border-zinc-800 dark:text-zinc-500"
+      >
+        <span className="font-medium capitalize text-[#111111] dark:text-zinc-200">{currentPlan}</span>
+        <span className="text-[#EAEAEA] dark:text-zinc-600" aria-hidden>
+          ·
+        </span>
+        <span className="font-mono tabular-nums text-[#2F3437] dark:text-zinc-300">
+          CV {usage.cv_analysis}/{cvLimit === Infinity ? "∞" : cvLimit}/wk
+        </span>
+        <span className="text-[#EAEAEA] dark:text-zinc-600" aria-hidden>
+          ·
+        </span>
+        <span className="font-mono tabular-nums text-[#2F3437] dark:text-zinc-300">
+          Mock {usage.mock_interview}/{mockLimit === Infinity ? "∞" : mockLimit}/wk
+        </span>
+      </motion.p>
+
+      {checkoutError && (
+        <div
+          className="mt-4 rounded-md border border-[#FDEBEC] bg-[#FDEBEC] px-3 py-2 text-[13px] leading-[1.6] text-[#9F2F2D] dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200"
+          role="alert"
+        >
+          {checkoutError}
+        </div>
+      )}
+
+      <motion.div
+        variants={listParent}
+        initial="hidden"
+        animate="show"
+        className="mt-10 grid grid-cols-1 items-stretch gap-5 md:grid-cols-3"
+      >
+        {plans.map((plan) => (
+          <PlanCard key={plan.id} plan={plan} />
+        ))}
+      </motion.div>
+
+      <motion.p
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.32, ease: motionEase }}
+        className="mt-10 max-w-[65ch] text-[13px] leading-[1.6] text-[#787774] dark:text-zinc-500"
+      >
+        Prices in USD. You can change or cancel anytime from billing after checkout.
+      </motion.p>
     </div>
   );
 }

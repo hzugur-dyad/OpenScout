@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Loader2 } from "lucide-react";
+import { Spinner } from "@phosphor-icons/react";
 
 type Plan = "growth" | "scale";
 
@@ -50,7 +50,7 @@ export function EmployerCheckoutButton({ plan, companyId }: { plan: Plan; compan
       >
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Spinner className="h-4 w-4 animate-spin" weight="regular" aria-hidden />
             Redirecting…
           </>
         ) : (

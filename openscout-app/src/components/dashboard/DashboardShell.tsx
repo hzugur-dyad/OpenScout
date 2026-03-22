@@ -1,16 +1,16 @@
 "use client";
 
-import { Menu } from "lucide-react";
 import {
-  LayoutDashboard,
-  FileText,
-  MessageCircle,
   Briefcase,
+  ChatCircle,
+  ClipboardText,
+  ClockCounterClockwise,
   CreditCard,
+  FileText,
+  Hamburger,
+  SquaresFour,
   User,
-  History,
-  ClipboardList,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { ReferralAttribute } from "./ReferralAttribute";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sidebar, type NavItem } from "@/components/layout/Sidebar";
@@ -20,18 +20,18 @@ import { useRouter, usePathname } from "next/navigation";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const candidateNavItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: SquaresFour },
   { href: "/onboarding", label: "My profile", icon: FileText },
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
-  { href: "/mock-interview", label: "Mock Interview", icon: MessageCircle },
-  { href: "/dashboard/interviews", label: "Interview History", icon: History },
-  { href: "/dashboard/applications", label: "Applications", icon: ClipboardList },
+  { href: "/mock-interview", label: "Mock Interview", icon: ChatCircle },
+  { href: "/dashboard/interviews", label: "Interview History", icon: ClockCounterClockwise },
+  { href: "/dashboard/applications", label: "Applications", icon: ClipboardText },
   { href: "/dashboard/jobs", label: "Job Listings", icon: Briefcase },
   { href: "/pricing", label: "Upgrade Plan", icon: CreditCard },
 ];
 
 const employerNavItems: NavItem[] = [
-  { href: "/employer", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/employer", label: "Dashboard", icon: SquaresFour },
   { href: "/employer/profile", label: "Profile", icon: User },
   { href: "/employer/pricing", label: "Billing", icon: CreditCard },
 ];
@@ -136,12 +136,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div className="flex min-h-screen bg-gray-50/50 dark:bg-black">
+    <div className="flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950">
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-zinc-950/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -157,17 +157,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content - offset by sidebar width on desktop (hover expands/collapses) */}
       <div
-        className={`flex min-h-screen flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
+        className={`flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarExpanded ? "lg:ml-[240px]" : "lg:ml-[72px]"
         }`}
       >
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 dark:border-zinc-800 dark:bg-black lg:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-zinc-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 lg:px-8">
           <button
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-6 w-6 text-gray-700 dark:text-zinc-200" />
+            <Hamburger className="h-6 w-6 text-gray-700 dark:text-zinc-200" weight="regular" aria-hidden />
           </button>
           <div className="ml-auto flex items-center">
             <ThemeToggle />

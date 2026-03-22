@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { AlertCircle } from "lucide-react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { INTERVIEW_LOCALE_LABEL, type InterviewLocale } from "@/lib/interview-locale";
@@ -161,7 +161,7 @@ export default function JobApplyPage() {
         <p className="mt-1 text-gray-500 dark:text-zinc-400">{(job.companies as { name: string })?.name || "Company"}</p>
         <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
-            <AlertCircle className="h-6 w-6 shrink-0" />
+            <WarningCircle className="h-6 w-6 shrink-0" weight="regular" aria-hidden />
             <div>
               <h3 className="font-semibold">{CV_READINESS_COPY_EN.applyGateTitle}</h3>
               <div className="mt-1 space-y-2 text-sm dark:text-amber-300">
@@ -239,7 +239,7 @@ export default function JobApplyPage() {
         {/* Score too low */}
         {cvScore !== null && !canProceed && (
           <div className="flex items-start gap-3 text-amber-700 dark:text-amber-300">
-            <AlertCircle className="h-6 w-6 shrink-0" />
+            <WarningCircle className="h-6 w-6 shrink-0" weight="regular" aria-hidden />
             <div>
               <h3 className="font-semibold">Your CV score does not meet the minimum requirement for this position.</h3>
               <p className="mt-2 text-sm">

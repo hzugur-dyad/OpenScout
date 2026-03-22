@@ -18,7 +18,7 @@
 }
 
 .dark {
-  --background: #000000;
+  --background: #09090b;
   --foreground: #fafafa;
   --border: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.12);

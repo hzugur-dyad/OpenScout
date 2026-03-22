@@ -10,36 +10,59 @@ import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProf
 import { Button } from "@/components/ui/Button";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileText, Upload, X } from "lucide-react";
+import { FileText, UploadSimple } from "@phosphor-icons/react";
+import { Newsreader } from "next/font/google";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
 
-const STEPS = [
-  {
-    id: 1,
-    title: "About",
-    component: "AboutStep",
-  },
-  {
-    id: 2,
-    title: "Work Experience",
-    component: "WorkExperienceStep",
-  },
-  {
-    id: 3,
-    title: "Education",
-    component: "EducationStep",
-  },
-  {
-    id: 4,
-    title: "Job Preferences",
-    component: "JobPreferencesStep",
-  },
-  {
-    id: 5,
-    title: "Links",
-    component: "LinksStep",
-  },
-];
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+});
+
+const stepEase = { duration: 0.55, ease: [0.16, 1, 0.3, 1] as const };
+
+const inputClass =
+  "w-full rounded-md border border-[#EAEAEA] bg-white px-3.5 py-2.5 text-sm leading-[1.6] text-[#111111] transition-colors placeholder:text-[#787774] focus:border-[#111111] focus:outline-none focus:ring-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400";
+
+const inputClassSm =
+  "w-full rounded-md border border-[#EAEAEA] bg-white px-3 py-2 text-sm leading-[1.6] text-[#111111] transition-colors placeholder:text-[#787774] focus:border-[#111111] focus:outline-none focus:ring-0 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500 dark:focus:border-zinc-400";
+
+/** Minimalist primary CTA: off-black surface, crisp radius (overrides theme gold on this page). */
+const minimalPrimaryBtn =
+  "rounded-md !bg-[#111111] !text-white hover:!bg-[#333333] active:scale-[0.98] dark:!bg-zinc-100 dark:!text-[#111111] dark:hover:!bg-white";
+
+const minimalOutlineBtn =
+  "rounded-md border-[#EAEAEA] bg-transparent hover:bg-[#F7F6F3] dark:border-zinc-700 dark:hover:bg-zinc-900";
+
+/** Match dashboard page: full-bleed bone canvas, same radial wash, max-w-5xl content */
+function OnboardingShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.38),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.06),transparent_55%)]"
+      />
+      <div className="relative mx-auto w-full max-w-5xl">{children}</div>
+    </div>
+  );
+}
+
+const pageTitleClass = `text-[2.25rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111111] md:text-5xl dark:text-zinc-100 ${newsreader.className}`;
+
+const stepHeadingClass =
+  "text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100";
+
+const labelUI = "text-sm font-medium text-[#2F3437] dark:text-zinc-200";
+
+const labelCompact = "text-xs font-medium text-[#787774] dark:text-zinc-400";
+
+const requiredMark = "text-[#9F2F2D] dark:text-red-300/90";
+
+const mainFormCard =
+  "mt-8 rounded-xl border border-[#EAEAEA] bg-white p-8 transition-[box-shadow] duration-200 md:mt-12 md:p-10 dark:border-zinc-800 dark:bg-[#141312] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]";
+
+const bentoInnerCard =
+  "space-y-3 rounded-lg border border-[#EAEAEA] bg-[#F9F9F8] p-5 transition-[box-shadow] duration-200 dark:border-zinc-800 dark:bg-[#141312] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)]";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
@@ -47,6 +70,7 @@ export default function OnboardingPage() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [cvFileUrl, setCvFileUrl] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
   const [onboardingCompletedAt, setOnboardingCompletedAt] = useState<string | null>(null);
@@ -186,6 +210,7 @@ export default function OnboardingPage() {
 
   function handleNext() {
     setValidationError(null);
+    setSaveError(null);
     const err = validateStep(step);
     if (err) {
       setValidationError(err);
@@ -202,6 +227,7 @@ export default function OnboardingPage() {
       return;
     }
     setIsLoading(true);
+    setSaveError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Session not found");
@@ -301,6 +327,7 @@ export default function OnboardingPage() {
       router.refresh();
     } catch (e) {
       console.error(e);
+      setSaveError("We could not save your profile. Check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
@@ -308,89 +335,125 @@ export default function OnboardingPage() {
 
   if (profileLoading) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <OnboardingShell>
+        <div className="grid gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:gap-16">
+          <div className="hidden space-y-5 md:block">
+            <div className="h-5 w-24 animate-pulse rounded bg-[#EAEAEA] dark:bg-zinc-800" />
+            <ul className="space-y-4">
+              {[0, 1, 2, 3, 4].map((k) => (
+                <li key={k} className="flex gap-3">
+                  <div className="h-7 w-7 shrink-0 animate-pulse rounded-md bg-[#EAEAEA] dark:bg-zinc-800" />
+                  <div className="h-3.5 flex-1 animate-pulse rounded-sm bg-[#EAEAEA]/80 dark:bg-zinc-800/90" />
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div
+            className="rounded-xl border border-[#EAEAEA] bg-white p-8 md:p-10 dark:border-zinc-800 dark:bg-[#141312]"
+            aria-busy
+            aria-label="Loading profile form"
+          >
+            <div className="h-8 w-2/3 max-w-xs animate-pulse rounded-md bg-[#EAEAEA] dark:bg-zinc-800" />
+            <div className="mt-4 h-3.5 w-full max-w-[38ch] animate-pulse rounded-sm bg-[#EAEAEA]/90 dark:bg-zinc-800/90" />
+            <div className="mt-12 grid gap-4 sm:grid-cols-2">
+              <div className="h-10 animate-pulse rounded-md border border-[#EAEAEA] bg-[#F9F9F8] dark:border-zinc-800 dark:bg-zinc-900" />
+              <div className="h-10 animate-pulse rounded-md border border-[#EAEAEA] bg-[#F9F9F8] dark:border-zinc-800 dark:bg-zinc-900" />
+            </div>
+            <div className="mt-4 h-10 max-w-lg animate-pulse rounded-md border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="mt-10 h-24 animate-pulse rounded-md border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+          </div>
         </div>
-      </div>
+      </OnboardingShell>
     );
   }
 
   if (!editing) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">My profile</h1>
-            <p className="mt-1 text-gray-500 dark:text-zinc-400">
-              Summary of your candidate profile. Edit anytime to keep it current.
+      <OnboardingShell>
+        <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between md:gap-12">
+          <div className="max-w-2xl">
+            <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+              Candidate profile
+            </p>
+            <h1 className={`mt-4 ${pageTitleClass}`}>My profile</h1>
+            <p className="mt-3 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
+              Read-only summary for employers. Edit when something changes.
             </p>
           </div>
-          <Button variant="primary" onClick={() => setEditing(true)}>
+          <Button
+            variant="primary"
+            className={`shrink-0 ${minimalPrimaryBtn}`}
+            onClick={() => {
+              setSaveError(null);
+              setEditing(true);
+            }}
+          >
             Edit profile
           </Button>
         </div>
 
-        <div className="mt-8 space-y-8">
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">About</h2>
+        <div className="mt-14 max-w-3xl divide-y divide-[#EAEAEA] border-t border-[#EAEAEA] dark:divide-zinc-800 dark:border-zinc-800">
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">
+              About
+            </h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">First name</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.first_name || "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">First name</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.first_name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Last name</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.last_name || "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Last name</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.last_name || "—"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Email</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.email || "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Email</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.email || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Location</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.location || "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Location</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.location || "—"}</dd>
               </div>
               {form.professional_summary && (
                 <div className="sm:col-span-2">
-                  <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Professional summary</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap text-gray-900 dark:text-zinc-100">{form.professional_summary}</dd>
+                  <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Professional summary</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-[#111111] dark:text-zinc-100">{form.professional_summary}</dd>
                 </div>
               )}
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Work Experience</h2>
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Work experience</h2>
             {form.work_experiences.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No work experience added yet.</p>
+              <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No roles listed yet.</p>
             ) : (
               <ul className="mt-4 space-y-4">
                 {form.work_experiences.map((we, i) => (
-                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-700">
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">{we.job_title || "—"} at {we.company_name || "—"}</p>
+                  <li key={i} className="border-b border-[#EAEAEA] pb-4 last:border-0 last:pb-0 dark:border-zinc-800">
+                    <p className="font-medium text-[#111111] dark:text-zinc-100">{we.job_title || "—"} at {we.company_name || "—"}</p>
                     {(we.start_date || we.end_date) && (
-                      <p className="text-sm text-gray-500 dark:text-zinc-500">{we.start_date} – {we.end_date || "Present"}</p>
+                      <p className="text-sm text-[#787774] dark:text-zinc-400">{we.start_date} – {we.end_date || "Present"}</p>
                     )}
-                    {we.description && <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{we.description}</p>}
+                    {we.description && <p className="mt-1 text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">{we.description}</p>}
                   </li>
                 ))}
               </ul>
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Education</h2>
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Education</h2>
             {form.educations.length === 0 ? (
-              <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">No education added yet.</p>
+              <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No education listed yet.</p>
             ) : (
               <ul className="mt-4 space-y-4">
                 {form.educations.map((ed, i) => (
-                  <li key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-700">
-                    <p className="font-medium text-gray-900 dark:text-zinc-100">{ed.institution || "—"}</p>
-                    <p className="text-sm text-gray-600 dark:text-zinc-400">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
+                  <li key={i} className="border-b border-[#EAEAEA] pb-4 last:border-0 last:pb-0 dark:border-zinc-800">
+                    <p className="font-medium text-[#111111] dark:text-zinc-100">{ed.institution || "—"}</p>
+                    <p className="text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-400">{ed.degree_type} {ed.field_of_study && `in ${ed.field_of_study}`}</p>
                     {(ed.start_year || ed.end_year) && (
-                      <p className="text-sm text-gray-500 dark:text-zinc-500">{ed.start_year} – {ed.end_year || "Present"}</p>
+                      <p className="text-sm text-[#787774] dark:text-zinc-400">{ed.start_year} – {ed.end_year || "Present"}</p>
                     )}
                   </li>
                 ))}
@@ -398,47 +461,47 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Job Preferences</h2>
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Job preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Job search status</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Job search status</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.job_search_status?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Available to start</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Available to start</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.available_start?.replace(/_/g, " ") ?? "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Domain</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.domain ?? "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Domain</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.domain ?? "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">Links</h2>
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">LinkedIn</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.linkedin}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">LinkedIn</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.linkedin}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">GitHub</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.github}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">GitHub</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.github}</a> : "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-zinc-500">Portfolio</dt>
-                <dd className="mt-0.5 text-gray-900 dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{form.portfolio}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-[#787774] dark:text-zinc-500">Portfolio</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-zinc-100">CV</h2>
+          <section className="py-10">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-[#787774] dark:text-zinc-500">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">
-                <FileText className="h-5 w-5 text-primary" />
+                <FileText className="h-5 w-5 text-[#111111] dark:text-zinc-200" weight="bold" aria-hidden />
                 <a
                   href="#"
                   onClick={async (e) => {
@@ -446,7 +509,7 @@ export default function OnboardingPage() {
                     const { data } = await supabase.storage.from("cvs").createSignedUrl(cvFileUrl!, 60);
                     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
                   }}
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300"
                 >
                   Download CV
                 </a>
@@ -471,7 +534,13 @@ export default function OnboardingPage() {
                     try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
                   } finally { setCvUploading(false); }
                 }} />
-                <Button variant="outline" size="sm" onClick={() => cvInputRef.current?.click()} isLoading={cvUploading}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={minimalOutlineBtn}
+                  onClick={() => cvInputRef.current?.click()}
+                  isLoading={cvUploading}
+                >
                   Re-upload
                 </Button>
               </div>
@@ -501,9 +570,9 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => cvInputRef.current?.click()}
-                  className="flex w-full items-center justify-center gap-2 rounded-[10px] border-2 border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-500 hover:border-primary hover:text-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-[#EAEAEA] bg-[#F7F6F3] p-6 text-sm leading-[1.6] text-[#2F3437] transition-[border-color,background-color,box-shadow] duration-200 hover:border-[#111111]/20 hover:bg-[#FBFBFA] hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-200"
                 >
-                  <Upload className="h-5 w-5" />
+                  <UploadSimple className="h-5 w-5" weight="bold" aria-hidden />
                   {cvUploading ? "Uploading..." : "Upload your CV (PDF or TXT, max 10MB)"}
                 </button>
               </div>
@@ -511,129 +580,165 @@ export default function OnboardingPage() {
           </section>
         </div>
 
-        <div className="mt-6">
-          <Button variant="primary" onClick={() => setEditing(true)}>
+        <div className="mt-10">
+          <Button
+            variant="primary"
+            className={minimalPrimaryBtn}
+            onClick={() => {
+              setSaveError(null);
+              setEditing(true);
+            }}
+          >
             Edit profile
           </Button>
         </div>
-      </div>
+      </OnboardingShell>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Complete your profile</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">
-        One setup flow for your professional details—whether you just created your account or are updating later.
-      </p>
-      {!onboardingCompletedAt && (
-        <p
-          className="mt-4 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary-muted)]/30 px-4 py-3 text-sm text-gray-800 dark:border-zinc-600 dark:bg-zinc-800/50 dark:text-zinc-200"
-          role="status"
-        >
-          Your account is ready. Continue the steps below to finish setup; you can change any field later.
-        </p>
-      )}
-      <Link href="/cv-analysis" className="mt-2 inline-block text-sm text-primary hover:underline">
-        Upload new CV
-      </Link>
-
-      <div className="mt-4">
-        <SharePublicProfileButton />
-      </div>
-
-      <div className="mt-8">
-        <OnboardingStepper currentStep={step} />
-      </div>
-
-      <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
-        {validationError && (
-          <div
-            role="alert"
-            data-testid="onboarding-validation-error"
-            className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300"
+    <OnboardingShell>
+      <div className="grid gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">
+        <aside className="md:pt-0.5">
+          <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+            Setup
+          </p>
+          <h1 className={`mt-4 ${pageTitleClass}`}>Complete your profile</h1>
+          <p className="mt-3 max-w-[65ch] text-base leading-[1.6] text-[#2F3437] dark:text-zinc-400">
+            One pass for your details—whether you just signed up or are updating later.
+          </p>
+          {!onboardingCompletedAt && (
+            <p
+              className="mt-6 rounded-md border border-[#EAEAEA] bg-[#FBF3DB] px-4 py-3 text-sm leading-[1.6] text-[#956400] dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-300"
+              role="status"
+            >
+              Account is ready. Move through the steps; you can edit fields anytime after saving.
+            </p>
+          )}
+          <Link
+            href="/cv-analysis"
+            className="mt-5 inline-flex text-sm font-medium text-[#111111] underline decoration-[#EAEAEA] underline-offset-4 transition-colors hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300"
           >
-            {validationError}
+            Upload new CV
+          </Link>
+          <div className="mt-6">
+            <SharePublicProfileButton />
           </div>
-        )}
+          <div className="mt-10 hidden md:block">
+            <OnboardingStepper currentStep={step} />
+          </div>
+        </aside>
+
+        <div className="min-w-0">
+          <div className="md:hidden">
+            <OnboardingStepper currentStep={step} />
+          </div>
+
+          <div className={mainFormCard}>
+            {validationError && (
+              <div
+                role="alert"
+                data-testid="onboarding-validation-error"
+                className="mb-5 rounded-md border border-[#EAEAEA] bg-[#FDEBEC] px-4 py-3 text-sm leading-[1.6] text-[#9F2F2D] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
+              >
+                {validationError}
+              </div>
+            )}
+            {saveError && (
+              <div
+                role="alert"
+                className="mb-5 rounded-md border border-[#EAEAEA] bg-[#FDEBEC] px-4 py-3 text-sm leading-[1.6] text-[#9F2F2D] dark:border-zinc-700 dark:bg-red-950/30 dark:text-red-200"
+              >
+                {saveError}
+              </div>
+            )}
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
               key="1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={stepEase}
               className="space-y-4"
               data-testid="onboarding-step-about"
             >
-              <h2 className="text-lg font-semibold">About</h2>
-              <p className="text-sm text-gray-500 dark:text-zinc-400">
-                Pre-filled from your account when available. Edit anything that needs an update.
+              <h2 className={stepHeadingClass}>About</h2>
+              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                Pre-filled from your account when available. Adjust anything that is out of date.
               </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">First Name <span className="text-red-500">*</span></label>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <label className={labelUI}>
+                    First name <span className={requiredMark}>*</span>
+                  </label>
                   <input
                     value={form.first_name}
                     onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
-                    className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                    className={inputClass}
                     required
                     aria-invalid={!!(validationError && !form.first_name.trim())}
                   />
                   {validationError && !form.first_name.trim() && (
-                    <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                    <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                   )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Last Name <span className="text-red-500">*</span></label>
+                <div className="flex flex-col gap-2">
+                  <label className={labelUI}>
+                    Last name <span className={requiredMark}>*</span>
+                  </label>
                   <input
                     value={form.last_name}
                     onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
-                    className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                    className={inputClass}
                     required
                     aria-invalid={!!(validationError && !form.last_name.trim())}
                   />
                   {validationError && !form.last_name.trim() && (
-                    <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                    <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                   )}
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Email <span className="text-red-500">*</span></label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>
+                  Email <span className={requiredMark}>*</span>
+                </label>
                 <input
                   type="email"
                   value={form.email}
                   onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                   required
                   aria-invalid={!!(validationError && !form.email.trim())}
                 />
                 {validationError && !form.email.trim() && (
-                  <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                  <p className="mt-1 text-sm text-[#9F2F2D] dark:text-red-300/90" role="alert">Required</p>
                 )}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Location <span className="text-red-500">*</span></label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>
+                  Location <span className={requiredMark}>*</span>
+                </label>
                 <input
                   value={form.location}
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   placeholder="Berlin, Germany"
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                   required
                   aria-invalid={!!(validationError && !form.location.trim())}
                 />
                 {validationError && !form.location.trim() && (
-                  <p className="mt-1 text-sm text-red-600" role="alert">Required</p>
+                  <p className="text-sm text-[#9F2F2D]" role="alert">Required</p>
                 )}
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Professional Summary</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>Professional summary</label>
                 <textarea
                   value={form.professional_summary}
                   onChange={(e) => setForm((f) => ({ ...f, professional_summary: e.target.value }))}
                   rows={4}
                   placeholder="A brief overview of your experience, skills, and career goals"
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                 />
               </div>
             </motion.div>
@@ -642,21 +747,24 @@ export default function OnboardingPage() {
           {step === 2 && (
             <motion.div
               key="2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={stepEase}
               className="space-y-4"
               data-testid="onboarding-step-work-experience"
             >
-              <h2 className="text-lg font-semibold">Work Experience</h2>
-              <p className="text-sm text-gray-600">Work experience: add your past roles below.</p>
+              <h2 className={stepHeadingClass}>Work experience</h2>
+              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                Add roles in reverse chronological order when you can; you can skip this step and return later.
+              </p>
               {form.work_experiences.length === 0 ? (
-                <p className="text-sm text-gray-500">No work experience added yet.</p>
+                <p className="text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No roles yet. Use the button below to add one.</p>
               ) : (
                 form.work_experiences.map((we, i) => (
-                  <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
+                  <div key={i} className={bentoInnerCard}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Experience {i + 1}</span>
+                      <span className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">Role {i + 1}</span>
                       <button
                         type="button"
                         onClick={() =>
@@ -665,14 +773,14 @@ export default function OnboardingPage() {
                             work_experiences: f.work_experiences.filter((_, idx) => idx !== i),
                           }))
                         }
-                        className="text-sm text-red-600 hover:underline"
+                        className="text-sm font-medium text-[#9F2F2D] transition-colors hover:text-[#7a2523] dark:text-red-300/90 dark:hover:text-red-200"
                       >
                         Remove
                       </button>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Company</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Company</label>
                         <input
                           value={we.company_name}
                           onChange={(e) =>
@@ -684,11 +792,11 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="Company name"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Job Title</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Job title</label>
                         <input
                           value={we.job_title}
                           onChange={(e) =>
@@ -700,13 +808,13 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="Job title"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Start Date</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Start date</label>
                         <input
                           type="month"
                           value={we.start_date}
@@ -718,11 +826,11 @@ export default function OnboardingPage() {
                               ),
                             }))
                           }
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">End Date</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>End date</label>
                         <input
                           type="month"
                           value={we.end_date}
@@ -735,12 +843,12 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="Present"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Description</label>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelCompact}>Description</label>
                       <textarea
                         value={we.description}
                         onChange={(e) =>
@@ -753,7 +861,7 @@ export default function OnboardingPage() {
                         }
                         rows={2}
                         placeholder="Brief description of your role"
-                        className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                        className={inputClassSm}
                       />
                     </div>
                   </div>
@@ -762,6 +870,7 @@ export default function OnboardingPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className={minimalOutlineBtn}
                 data-testid="add-work-experience"
                 onClick={() =>
                   setForm((f) => ({
@@ -783,7 +892,7 @@ export default function OnboardingPage() {
                   }))
                 }
               >
-                + Add Experience
+                Add role
               </Button>
             </motion.div>
           )}
@@ -791,19 +900,20 @@ export default function OnboardingPage() {
           {step === 3 && (
             <motion.div
               key="3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={stepEase}
               className="space-y-4"
             >
-              <h2 className="text-lg font-semibold">Education</h2>
+              <h2 className={stepHeadingClass}>Education</h2>
               {form.educations.length === 0 ? (
-                <p className="text-sm text-gray-500">No education added yet.</p>
+                <p className="text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">No entries yet. Add a school or program below.</p>
               ) : (
                 form.educations.map((ed, i) => (
-                  <div key={i} className="space-y-3 rounded-lg border border-[var(--border)] p-4">
+                  <div key={i} className={bentoInnerCard}>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Education {i + 1}</span>
+                      <span className="text-sm font-medium text-[#2F3437] dark:text-zinc-200">Entry {i + 1}</span>
                       <button
                         type="button"
                         onClick={() =>
@@ -812,13 +922,13 @@ export default function OnboardingPage() {
                             educations: f.educations.filter((_, idx) => idx !== i),
                           }))
                         }
-                        className="text-sm text-red-600 hover:underline"
+                        className="text-sm font-medium text-[#9F2F2D] transition-colors hover:text-[#7a2523] dark:text-red-300/90 dark:hover:text-red-200"
                       >
                         Remove
                       </button>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-600">Institution</label>
+                    <div className="flex flex-col gap-2">
+                      <label className={labelCompact}>Institution</label>
                       <input
                         value={ed.institution}
                         onChange={(e) =>
@@ -830,12 +940,12 @@ export default function OnboardingPage() {
                           }))
                         }
                         placeholder="School or university"
-                        className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                        className={inputClassSm}
                       />
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-zinc-400">Degree</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Degree</label>
                         <CustomSelect
                           options={[
                             { value: "bachelor", label: "Bachelor" },
@@ -869,13 +979,13 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="e.g. Computer Science"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Start Year</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Start year</label>
                         <input
                           type="number"
                           min={1950}
@@ -890,11 +1000,11 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="2020"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">End Year</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>End year</label>
                         <input
                           type="number"
                           min={1950}
@@ -909,11 +1019,11 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="2024"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-gray-600">Location</label>
+                      <div className="flex flex-col gap-2">
+                        <label className={labelCompact}>Location</label>
                         <input
                           value={ed.location}
                           onChange={(e) =>
@@ -925,7 +1035,7 @@ export default function OnboardingPage() {
                             }))
                           }
                           placeholder="City, Country"
-                          className="w-full rounded-[10px] border border-[var(--border)] px-3 py-2 text-sm"
+                          className={inputClassSm}
                         />
                       </div>
                     </div>
@@ -935,6 +1045,7 @@ export default function OnboardingPage() {
               <Button
                 variant="outline"
                 size="sm"
+                className={minimalOutlineBtn}
                 onClick={() =>
                   setForm((f) => ({
                     ...f,
@@ -953,7 +1064,7 @@ export default function OnboardingPage() {
                   }))
                 }
               >
-                + Add Education
+                Add education
               </Button>
             </motion.div>
           )}
@@ -961,14 +1072,15 @@ export default function OnboardingPage() {
           {step === 4 && (
             <motion.div
               key="4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={stepEase}
               className="space-y-4"
             >
-              <h2 className="text-lg font-semibold">Job Preferences</h2>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">Job search status</label>
+              <h2 className={stepHeadingClass}>Job preferences</h2>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>Job search status</label>
                 <CustomSelect
                   options={[
                     { value: "actively_looking", label: "Actively looking" },
@@ -980,8 +1092,8 @@ export default function OnboardingPage() {
                   aria-label="Job search status"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">When can you start?</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>When can you start?</label>
                 <CustomSelect
                   options={[
                     { value: "immediately", label: "Immediately" },
@@ -993,8 +1105,8 @@ export default function OnboardingPage() {
                   aria-label="When can you start"
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-gray-900 dark:text-zinc-200">Domain</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>Domain</label>
                 <CustomSelect
                   options={[
                     { value: "engineering", label: "Engineering" },
@@ -1012,67 +1124,72 @@ export default function OnboardingPage() {
           {step === 5 && (
             <motion.div
               key="5"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={stepEase}
               className="space-y-4"
             >
-              <h2 className="text-lg font-semibold">Links & Extras</h2>
-              <div>
-                <label className="mb-1 block text-sm font-medium">LinkedIn <span className="text-red-500">*</span></label>
+              <h2 className={stepHeadingClass}>Links</h2>
+              <p className="max-w-[65ch] text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                LinkedIn is required so recruiters can verify your background. Other links are optional.
+              </p>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>
+                  LinkedIn <span className={requiredMark}>*</span>
+                </label>
                 <input
                   value={form.linkedin}
                   onChange={(e) => setForm((f) => ({ ...f, linkedin: e.target.value }))}
                   placeholder="https://linkedin.com/in/..."
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">GitHub (optional)</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>GitHub (optional)</label>
                 <input
                   value={form.github}
                   onChange={(e) => setForm((f) => ({ ...f, github: e.target.value }))}
                   placeholder="https://github.com/..."
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                 />
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Portfolio (optional)</label>
+              <div className="flex flex-col gap-2">
+                <label className={labelUI}>Portfolio (optional)</label>
                 <input
                   value={form.portfolio}
                   onChange={(e) => setForm((f) => ({ ...f, portfolio: e.target.value }))}
                   placeholder="https://..."
-                  className="w-full rounded-[10px] border border-[var(--border)] px-4 py-2"
+                  className={inputClass}
                 />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="mt-8 flex justify-between">
-          {step === 1 ? (
-            <Button variant="ghost" onClick={() => setEditing(false)}>
-              Back to profile
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              onClick={() => setStep((s) => Math.max(1, s - 1))}
-            >
-              Back
-            </Button>
-          )}
-          {step < 5 ? (
-            <Button variant="primary" onClick={handleNext}>
-              Next
-            </Button>
-          ) : (
-            <Button variant="primary" onClick={handleSave} isLoading={isLoading}>
-              Save
-            </Button>
-          )}
+            <div className="mt-12 flex flex-col-reverse gap-3 border-t border-[#EAEAEA] pt-10 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+              {step === 1 ? (
+                <Button variant="ghost" onClick={() => setEditing(false)}>
+                  Back to profile
+                </Button>
+              ) : (
+                <Button variant="ghost" onClick={() => setStep((s) => Math.max(1, s - 1))}>
+                  Back
+                </Button>
+              )}
+              {step < 5 ? (
+                <Button variant="primary" className={minimalPrimaryBtn} onClick={handleNext}>
+                  Next
+                </Button>
+              ) : (
+                <Button variant="primary" className={minimalPrimaryBtn} onClick={handleSave} isLoading={isLoading}>
+                  Save
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </OnboardingShell>
   );
 }

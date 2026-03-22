@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Check, Copy, ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import {
@@ -80,7 +80,7 @@ export function InterviewResultShareBlock({
   return (
     <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
       <div className="flex items-center gap-2">
-        <Share2 className="h-5 w-5 text-gray-600 dark:text-zinc-400" aria-hidden />
+        <ShareNetwork className="h-5 w-5 text-gray-600 dark:text-zinc-400" weight="regular" aria-hidden />
         <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Share your result</h3>
       </div>
       <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">

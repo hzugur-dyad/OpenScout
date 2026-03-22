@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Play,
-  Building2,
-  Code2,
+  Buildings,
+  Code,
   Cpu,
-  Palette,
-  Zap,
-  Layers,
   Globe,
-} from "lucide-react";
+  Lightning,
+  Palette,
+  Play,
+  Stack,
+} from "@phosphor-icons/react";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
@@ -45,7 +45,7 @@ const fadeUp = {
   },
 };
 
-const techIcons = [Code2, Cpu, Palette, Zap, Layers, Globe];
+const techIcons = [Code, Cpu, Palette, Lightning, Stack, Globe];
 
 export function AnimatedHero() {
   const { phase, setPhase } = useHeroEntrance();
@@ -69,12 +69,12 @@ export function AnimatedHero() {
   }, [phase]);
 
   return (
-    <section className="relative overflow-hidden bg-white dark:bg-black">
+    <section className="relative overflow-hidden bg-white dark:bg-zinc-950">
       {/* 1. Center reveal — logo + brand name fade in at center */}
       <AnimatePresence>
         {phase === "centered" && (
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-white dark:bg-black"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-white dark:bg-zinc-950"
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
           >
@@ -160,6 +160,8 @@ export function AnimatedHero() {
                         <Icon
                           key={i}
                           className="h-5 w-5 text-gray-400 dark:text-zinc-500"
+                          weight="regular"
+                          aria-hidden
                         />
                       ))}
                     </motion.div>
@@ -219,7 +221,7 @@ export function AnimatedHero() {
                       <Button
                         variant="primary"
                         size="lg"
-                        icon={Building2}
+                        icon={Buildings}
                         iconPosition="left"
                       >
                         Post a job
@@ -240,6 +242,8 @@ export function AnimatedHero() {
                       <Icon
                         key={i}
                         className="h-5 w-5 text-gray-400 dark:text-zinc-500"
+                        weight="regular"
+                        aria-hidden
                       />
                     ))}
                   </motion.div>

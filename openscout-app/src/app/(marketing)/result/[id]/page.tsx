@@ -1,7 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { CheckCircle, AlertCircle, Briefcase } from "lucide-react";
+import {
+  RscBriefcaseIcon,
+  RscCheckCircleIcon,
+  RscWarningCircleIcon,
+} from "@/components/icons/PhosphorRscIcons";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { HiringFitBadge } from "@/components/employer/HiringFitBadge";
@@ -126,7 +130,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
                   <div>
                     <p className="text-sm text-gray-500 dark:text-zinc-400">Role</p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-gray-500 dark:text-zinc-400" aria-hidden />
+                      <RscBriefcaseIcon className="h-4 w-4 text-gray-500 dark:text-zinc-400" />
                       <p className="font-semibold text-gray-900 dark:text-zinc-100">
                         {data.job_category || "—"}
                       </p>
@@ -160,7 +164,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
                 <ul className="mt-2 space-y-2">
                   {data.strengths.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-zinc-300">
-                      <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" aria-hidden />
+                      <RscCheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
                       {s}
                     </li>
                   ))}
@@ -174,7 +178,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
                 <ul className="mt-2 space-y-2">
                   {data.improvements.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-zinc-300">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden />
+                      <RscWarningCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
                       {s}
                     </li>
                   ))}

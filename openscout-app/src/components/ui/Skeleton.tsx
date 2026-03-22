@@ -16,52 +16,66 @@ export function SkeletonBlock({ className }: { className?: string }) {
 /** Full-width analysis result placeholder while AI runs */
 export function CVAnalysisLoadingSkeleton() {
   return (
-    <div className="mt-8 space-y-6" aria-busy="true" aria-label="Analyzing CV">
-      <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-        <SkeletonBlock className="mb-4 h-5 w-40" />
-        <div className="grid gap-3 sm:grid-cols-2">
+    <div
+      className="mx-auto mt-10 w-full max-w-4xl space-y-16 px-4"
+      aria-busy="true"
+      aria-label="Analyzing CV"
+    >
+      <div className="grid gap-10 md:grid-cols-2 md:items-start">
+        <div className="space-y-3">
+          <SkeletonBlock className="h-3 w-20" />
+          <SkeletonBlock className="h-9 w-full max-w-[16rem]" />
           <SkeletonBlock className="h-4 w-full" />
-          <SkeletonBlock className="h-4 w-full" />
-              <SkeletonBlock className="h-4 w-[75%]" />
-          <SkeletonBlock className="h-4 w-full" />
+          <SkeletonBlock className="mt-2 h-4 w-full max-w-md" />
         </div>
-        <SkeletonBlock className="mt-4 h-16 w-full" />
-      </div>
-      <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-        <div className="flex items-center gap-4">
-          <SkeletonBlock className="h-16 w-16 shrink-0 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <SkeletonBlock className="h-6 w-48" />
-            <SkeletonBlock className="h-4 w-64" />
+        <div className="rounded-xl border border-[#EAEAEA] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-950">
+          <div className="flex items-center gap-4">
+            <SkeletonBlock className="h-14 w-14 shrink-0 rounded-lg" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <SkeletonBlock className="h-4 w-32" />
+              <SkeletonBlock className="h-3 w-44" />
+            </div>
           </div>
         </div>
       </div>
-      <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-        <SkeletonBlock className="h-5 w-56" />
-        <div className="mt-4 space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="space-y-2 border-b border-zinc-100 pb-4 last:border-0 dark:border-zinc-800">
-              <div className="flex justify-between gap-4">
-                <SkeletonBlock className="h-4 w-32" />
-                <SkeletonBlock className="h-4 w-12" />
+      <div className="grid gap-10 lg:grid-cols-2">
+        <div className="rounded-xl border border-[#EAEAEA] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-950">
+          <SkeletonBlock className="mb-4 h-3 w-36" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-full" />
+            <SkeletonBlock className="h-4 w-[75%]" />
+            <SkeletonBlock className="h-4 w-full" />
+          </div>
+          <SkeletonBlock className="mt-4 h-14 w-full" />
+        </div>
+        <div className="rounded-xl border border-[#EAEAEA] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-950">
+          <SkeletonBlock className="h-3 w-44" />
+          <div className="mt-4 divide-y divide-[#EAEAEA] dark:divide-zinc-800">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="space-y-2 py-4 first:pt-0 last:pb-0">
+                <div className="flex justify-between gap-4">
+                  <SkeletonBlock className="h-4 w-32" />
+                  <SkeletonBlock className="h-4 w-12" />
+                </div>
+                <SkeletonBlock className="h-1 w-full rounded-sm" />
+                <SkeletonBlock className="h-10 w-full" />
               </div>
-              <SkeletonBlock className="h-2 w-full rounded-full" />
-              <SkeletonBlock className="h-12 w-full" />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-      <div className="grid gap-6 sm:grid-cols-2">
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-          <SkeletonBlock className="h-5 w-24" />
+      <div className="grid gap-10 md:grid-cols-2">
+        <div className="rounded-xl border border-[#EAEAEA] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-950">
+          <SkeletonBlock className="h-3 w-28" />
           <div className="mt-3 space-y-2">
             <SkeletonBlock className="h-4 w-full" />
             <SkeletonBlock className="h-4 w-full" />
             <SkeletonBlock className="h-4 w-5/6" />
           </div>
         </div>
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-          <SkeletonBlock className="h-5 w-36" />
+        <div className="rounded-xl border border-[#EAEAEA] bg-white p-6 dark:border-zinc-700 dark:bg-zinc-950">
+          <SkeletonBlock className="h-3 w-36" />
           <div className="mt-3 space-y-2">
             <SkeletonBlock className="h-4 w-full" />
             <SkeletonBlock className="h-4 w-full" />
@@ -91,13 +105,17 @@ export function JobApplyPageSkeleton() {
 
 export function CVAnalysisPageSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl py-6">
-      <SkeletonBlock className="h-8 w-48" />
-      <SkeletonBlock className="mt-2 h-4 w-full max-w-md" />
+    <div className="mx-auto w-full max-w-4xl px-4 py-6">
+      <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
+        <SkeletonBlock className="h-10 w-52 max-w-full" />
+        <SkeletonBlock className="mt-4 h-4 w-full max-w-lg" />
+        <SkeletonBlock className="mt-2 h-4 w-full max-w-md" />
+      </div>
+      <SkeletonBlock className="mx-auto mt-10 h-24 w-full max-w-lg rounded-xl sm:mx-0" />
       <div className="mt-8 space-y-4">
-        <SkeletonBlock className="h-10 w-full max-w-sm" />
-        <SkeletonBlock className="h-40 w-full rounded-[10px]" />
-        <SkeletonBlock className="h-11 w-full" />
+        <SkeletonBlock className="mx-auto h-10 w-full max-w-md sm:mx-0" />
+        <SkeletonBlock className="h-48 w-full rounded-xl sm:h-52" />
+        <SkeletonBlock className="mx-auto h-10 w-full max-w-[12rem] sm:mx-0" />
       </div>
     </div>
   );

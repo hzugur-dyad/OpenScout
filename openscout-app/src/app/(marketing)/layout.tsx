@@ -8,7 +8,7 @@ export default function MarketingLayout({
 }) {
   return (
     <NavbarProvider>
-      <div className="flex min-h-screen flex-col dark:bg-transparent">
+      <div className="flex min-h-[100dvh] flex-col dark:bg-transparent">
         <main className="flex-1">{children}</main>
         <Footer />
       </div>

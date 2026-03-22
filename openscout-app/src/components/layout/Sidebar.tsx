@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { X, LogOut, type LucideIcon } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
+import { SignOut, X } from "@phosphor-icons/react";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { Tooltip } from "@/components/ui/Tooltip";
 
-export type NavItem = { href: string; label: string; icon: LucideIcon };
+export type NavItem = { href: string; label: string; icon: Icon };
 
 type SidebarProps = {
   navItems: NavItem[];
@@ -74,10 +75,10 @@ export function Sidebar({
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
       className={`
-        fixed left-0 top-0 z-50 flex h-screen shrink-0 flex-col overflow-x-hidden
+        fixed left-0 top-0 z-50 flex h-[100dvh] shrink-0 flex-col overflow-x-hidden
         border-r border-[var(--border)] bg-white
         transition-[width] duration-200 ease-in-out
-        dark:border-zinc-800 dark:bg-black
+        dark:border-zinc-800 dark:bg-zinc-950
         ${mobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0
         ${collapsed ? "lg:w-[72px]" : "lg:w-[240px]"}
@@ -111,7 +112,7 @@ export function Sidebar({
           className="lg:hidden shrink-0 text-gray-600 hover:text-gray-900 dark:text-zinc-300 dark:hover:text-zinc-100"
           aria-label="Close menu"
         >
-          <X className="h-6 w-6" />
+          <X className="h-6 w-6" weight="regular" aria-hidden />
         </button>
       </div>
 
@@ -136,7 +137,7 @@ export function Sidebar({
                     ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
                   `}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" />
+                  <item.icon className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
                 </Link>
               </Tooltip>
             );
@@ -151,7 +152,7 @@ export function Sidebar({
                 ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
               `}
             >
-              <item.icon className="h-5 w-5 shrink-0" />
+              <item.icon className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
               <span className="truncate transition-opacity duration-200">{item.label}</span>
             </Link>
           );
@@ -172,7 +173,7 @@ export function Sidebar({
               onClick={onSignOut}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              <LogOut className="h-5 w-5 shrink-0" />
+              <SignOut className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
             </button>
           </Tooltip>
         ) : (
@@ -181,7 +182,7 @@ export function Sidebar({
             onClick={onSignOut}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            <LogOut className="h-5 w-5 shrink-0" />
+            <SignOut className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
             <span className={`truncate transition-opacity duration-200 ${labelsVisible ? "opacity-100" : "opacity-0"}`}>Sign Out</span>
           </button>
         )}

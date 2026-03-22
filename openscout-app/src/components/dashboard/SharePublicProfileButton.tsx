@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Share2 } from "lucide-react";
+import { ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException } from "@/lib/monitoring";
@@ -74,14 +74,18 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
         type="button"
         variant={variant}
         size={size}
-        icon={Share2}
-        iconPosition="left"
         onClick={handleClick}
         disabled={busy}
+        className="rounded-md border-[#EAEAEA] dark:border-zinc-700"
       >
-        {busy ? "Working…" : "Share your profile"}
+        <span className="inline-flex items-center gap-2">
+          <ShareNetwork className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
+          {busy ? "Working…" : "Share your profile"}
+        </span>
       </Button>
-      {msg && <span className="text-xs text-gray-500 dark:text-zinc-400">{msg}</span>}
+      {msg && (
+        <span className="text-xs text-[#787774] dark:text-zinc-500">{msg}</span>
+      )}
     </div>
   );
 }

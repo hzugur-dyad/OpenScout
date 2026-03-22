@@ -1,14 +1,14 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Briefcase, Inbox, MessageCircle } from "lucide-react";
+import { Briefcase, ChatCircle, Tray } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
-/** Serializable icon key so Server Components can render EmptyState (no passing Lucide components across the RSC boundary). */
+/** Serializable icon key so Server Components can render EmptyState (no passing component refs across the RSC boundary). */
 const EMPTY_STATE_ICONS = {
   briefcase: Briefcase,
-  inbox: Inbox,
-  messageCircle: MessageCircle,
+  inbox: Tray,
+  messageCircle: ChatCircle,
 } as const;
 
 export type EmptyStateIconName = keyof typeof EMPTY_STATE_ICONS;
@@ -34,7 +34,7 @@ export function EmptyState({ iconName, title, description, className, children }
         className="flex h-14 w-14 items-center justify-center rounded-full"
         style={{ backgroundColor: "var(--primary-muted)" }}
       >
-        <Icon className="h-7 w-7" style={{ color: "var(--primary-dark)" }} aria-hidden />
+        <Icon className="h-7 w-7" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
       </div>
       <h3 className="mt-5 text-lg font-semibold text-gray-900 dark:text-zinc-100">{title}</h3>
       {description && (

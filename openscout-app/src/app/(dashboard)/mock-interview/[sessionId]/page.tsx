@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { Mic, MicOff, PhoneOff } from "lucide-react";
+import { Microphone, MicrophoneSlash, PhoneDisconnect } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { useTTS } from "@/hooks/useTTS";
 import { createClient } from "@/lib/supabase/client";
@@ -572,7 +572,7 @@ export default function MockInterviewSessionPage() {
             className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
             style={{ backgroundColor: "var(--primary-muted)" }}
           >
-            <Mic className="h-8 w-8" style={{ color: "var(--primary-dark)" }} />
+            <Microphone className="h-8 w-8" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
           </div>
           <h2 className="text-center text-xl font-bold text-gray-900 dark:text-zinc-100">{ui.testMicTitle}</h2>
           <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
@@ -624,14 +624,14 @@ export default function MockInterviewSessionPage() {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-4 py-2">
       {/* End confirmation modal */}
       {showEndConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/40 backdrop-blur-sm">
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="mx-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:border dark:border-white/[0.06] dark:bg-zinc-900"
           >
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 mx-auto dark:bg-red-950/50">
-              <PhoneOff className="h-6 w-6 text-red-600 dark:text-red-400" />
+              <PhoneDisconnect className="h-6 w-6 text-red-600 dark:text-red-400" weight="regular" aria-hidden />
             </div>
             <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{ui.endInterviewTitle}</h3>
             <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
@@ -664,13 +664,13 @@ export default function MockInterviewSessionPage() {
             onClick={() => setShowEndConfirm(true)}
             className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/40"
           >
-            <PhoneOff className="h-4 w-4" />
+            <PhoneDisconnect className="h-4 w-4" weight="regular" aria-hidden />
             {ui.end}
           </button>
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-black sm:p-4">
+      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-white p-3 shadow-card dark:border-white/[0.06] dark:bg-zinc-900 sm:p-4">
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
           <motion.div
@@ -751,7 +751,11 @@ export default function MockInterviewSessionPage() {
               } disabled:cursor-not-allowed disabled:opacity-50`}
               style={!isListening ? { backgroundColor: "var(--primary)" } : {}}
             >
-              {isListening ? <MicOff className="h-6 w-6 sm:h-7 sm:w-7" /> : <Mic className="h-6 w-6 sm:h-7 sm:w-7" />}
+              {isListening ? (
+                <MicrophoneSlash className="h-6 w-6 sm:h-7 sm:w-7" weight="regular" aria-hidden />
+              ) : (
+                <Microphone className="h-6 w-6 sm:h-7 sm:w-7" weight="regular" aria-hidden />
+              )}
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-zinc-400 sm:text-sm">

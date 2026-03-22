@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, FileText, MessageCircle, Briefcase, Users, Building2 } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
+import {
+  Briefcase,
+  Buildings,
+  CaretDown,
+  ChatCircle,
+  FileText,
+  Users,
+} from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
@@ -49,7 +57,7 @@ export default function LandingPage() {
       <AnimatedHero />
 
       {/* Stats/Benefits */}
-      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-800 dark:bg-black">
+      <section className="border-y border-[var(--border)] bg-white py-16 dark:border-zinc-800 dark:bg-zinc-950">
         <Container>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
@@ -104,15 +112,15 @@ export default function LandingPage() {
             {(!isEmployer
               ? [
                   { step: 1, title: "Build Profile", desc: "Upload your CV and fill in your details. AI evaluates and scores you.", icon: FileText },
-                  { step: 2, title: "Get your Scout Score", desc: "Take one AI interview per role. Get a shareable credential and report.", icon: MessageCircle },
+                  { step: 2, title: "Get your Scout Score", desc: "Take one AI interview per role. Get a shareable credential and report.", icon: ChatCircle },
                   { step: 3, title: "Apply everywhere", desc: "One credential, many companies. Connect with employers who trust Scout.", icon: Briefcase },
                 ]
               : [
-                  { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Building2 },
+                  { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Buildings },
                   { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and AI interview report.", icon: Users },
                   { step: 3, title: "Hire faster", desc: "Skip first-round screening. Compare candidates on the same score and report format.", icon: Briefcase },
                 ]
-            ).map((item: { step: number; title: string; desc: string; icon: typeof FileText }, i) => (
+            ).map((item: { step: number; title: string; desc: string; icon: Icon }, i) => (
               <motion.div
                 key={item.step}
                 initial={{ opacity: 0, y: 20 }}
@@ -125,7 +133,7 @@ export default function LandingPage() {
                   className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full text-white"
                   style={{ backgroundColor: "var(--primary)" }}
                 >
-                  <item.icon className="h-6 w-6" />
+                  <item.icon className="h-6 w-6" weight="regular" aria-hidden />
                 </div>
                 <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{item.title}</h3>
                 <p className="mt-2 text-center text-sm text-gray-500 dark:text-zinc-400">
@@ -133,7 +141,7 @@ export default function LandingPage() {
                 </p>
                 {i < 2 && (
                   <div className="absolute -right-4 top-6 hidden text-gray-200 dark:text-zinc-600 md:block">
-                    <ChevronDown className="h-8 w-8 rotate-[-90deg]" />
+                    <CaretDown className="h-8 w-8 rotate-[-90deg]" weight="regular" aria-hidden />
                   </div>
                 )}
               </motion.div>
@@ -143,7 +151,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why OpenScout - different heading and cards for employer */}
-      <section className="border-t border-[var(--border)] bg-gray-50/50 py-20 dark:border-zinc-800 dark:bg-black">
+      <section className="border-t border-[var(--border)] bg-zinc-50/50 py-20 dark:border-zinc-800 dark:bg-zinc-950">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             {!isEmployer ? "Why Candidates Choose OpenScout" : "Why Employers Use OpenScout"}
@@ -204,7 +212,7 @@ export default function LandingPage() {
       </section>
 
       {/* For employers */}
-      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-black">
+      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-zinc-950">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">
