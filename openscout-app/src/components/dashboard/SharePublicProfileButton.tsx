@@ -3,22 +3,15 @@
 import { useState } from "react";
 import { ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException } from "@/lib/monitoring";
 
 type Props = {
   variant?: "outline" | "primary";
   size?: "sm" | "md" | "lg";
-  /** Editorial minimal chrome (dashboard home): crisp border, flat outline. */
-  minimal?: boolean;
 };
 
-export function SharePublicProfileButton({
-  variant = "outline",
-  size = "sm",
-  minimal = false,
-}: Props) {
+export function SharePublicProfileButton({ variant = "outline", size = "sm" }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -81,29 +74,17 @@ export function SharePublicProfileButton({
         type="button"
         variant={variant}
         size={size}
-        icon={ShareNetwork}
-        iconPosition="left"
         onClick={handleClick}
         disabled={busy}
-        className={cn(
-          minimal &&
-            variant === "outline" &&
-            "rounded-md border-[#EAEAEA] bg-transparent text-[#111111] shadow-none hover:bg-white hover:text-[#111111] dark:border-white/[0.12] dark:text-neutral-100 dark:hover:bg-white/[0.06]"
-        )}
+        className="rounded-md border-[#EAEAEA] dark:border-zinc-700"
       >
-        {busy ? "Working…" : "Share your profile"}
+        <span className="inline-flex items-center gap-2">
+          <ShareNetwork className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
+          {busy ? "Working…" : "Share your profile"}
+        </span>
       </Button>
       {msg && (
-        <span
-          className={cn(
-            "text-xs leading-[1.6] text-[#787774] dark:text-[#A09C98]",
-            minimal && "max-w-md"
-          )}
-          role="status"
-          aria-live="polite"
-        >
-          {msg}
-        </span>
+        <span className="text-xs text-[#787774] dark:text-zinc-500">{msg}</span>
       )}
     </div>
   );

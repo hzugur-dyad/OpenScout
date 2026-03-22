@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
-import { Pencil } from "lucide-react";
+import { PencilSimple } from "@phosphor-icons/react";
 
 export function EditCompanyName({
   companyId,
@@ -75,7 +75,7 @@ export function EditCompanyName({
         className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
         aria-label="Edit company name"
       >
-        <Pencil className="h-4 w-4" />
+        <PencilSimple className="h-4 w-4" weight="regular" aria-hidden />
         Edit
       </button>
     </span>

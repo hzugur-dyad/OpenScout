@@ -3,8 +3,9 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { MessageCircle, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { motion } from "framer-motion";
+import { Newsreader } from "next/font/google";
+import { ChatCircle, CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
@@ -14,6 +15,14 @@ import { INTERVIEW_LOCALE_LABEL, interviewUi, type InterviewLocale } from "@/lib
 import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { getJobTitleBySlug } from "@/lib/seo/job-titles";
 import { computeCvReadiness, type CvReadiness } from "@/lib/cv-readiness";
+import { cn } from "@/lib/utils";
+
+const editorialSerif = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+});
+
+const EASE_MINIMAL: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
   en: {
@@ -29,6 +38,19 @@ const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
     location: "Konum",
   },
 };
+
+/** 1px #EAEAEA, 12px radius, flat surface (minimalist-ui) */
+const surfaceCard =
+  "rounded-xl border border-[#EAEAEA] bg-white transition-shadow duration-200 hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]";
+
+const selectTriggerMinimal =
+  "rounded-md border-[#EAEAEA] bg-white py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
+
+const btnPrimary =
+  "inline-flex h-10 min-w-[180px] items-center justify-center gap-2 rounded-md bg-[#111111] px-5 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200";
+
+const btnOutline =
+  "inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#EAEAEA] bg-white px-5 text-sm font-medium text-[#111111] transition-colors hover:bg-[#F7F6F3] active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800";
 
 function jobTitleFromJobQuery(searchParams: ReturnType<typeof useSearchParams>): string | null {
   const slug = searchParams.get("job");
@@ -54,7 +76,9 @@ function MockInterviewContent() {
 
   useEffect(() => {
     async function loadGuard() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         setReadiness(null);
         setGuardLoading(false);
@@ -65,7 +89,9 @@ function MockInterviewContent() {
         supabase.from("profile_private").select("cv_file_url, cv_raw_text").eq("user_id", user.id).maybeSingle(),
         supabase.from("cv_analyses").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
       ]);
-      const profile = profileRes.data as { first_name?: string; last_name?: string; email?: string; location?: string } | null;
+      const profile = profileRes.data as
+        | { first_name?: string; last_name?: string; email?: string; location?: string }
+        | null;
       const pv = privateRes.data as { cv_file_url?: string | null; cv_raw_text?: string | null } | null;
       setReadiness(
         computeCvReadiness({
@@ -98,127 +124,229 @@ function MockInterviewContent() {
   const showMainFlow =
     !guardLoading && (!readiness || (readiness.canAccessFlow && !readiness.needsCvAnalysisBeforeInterview));
 
+  const gateWarningSurface =
+    "rounded-xl border border-[#EAEAEA] bg-[#FBF3DB] dark:border-zinc-800 dark:bg-[#2d2608]/80";
+
+  const nudgeSurface =
+    "rounded-xl border border-[#EAEAEA] bg-[#E1F3FE] dark:border-zinc-800 dark:bg-zinc-900";
+
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold">{ui.mockInterviewTitle}</h1>
-      <p className="mt-1 text-gray-500">
-        {ui.mockInterviewSubtitle}
-      </p>
-
-      <UsageBanner feature="mock_interview" />
-
-      {guardLoading ? (
-        <div className="mt-8">
-          <CVAnalysisPageSkeleton />
-        </div>
-      ) : showProfileGate && readiness ? (
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
-            <AlertCircle className="h-6 w-6 shrink-0" />
-            <div>
-              <h3 className="font-semibold">{ui.profileIncompleteTitle}</h3>
-              <p className="mt-1 text-sm dark:text-amber-200/90">{ui.profileIncompleteBody}</p>
-              {readiness.missingProfileFieldKeys.length > 0 && (
-                <p className="mt-2 text-sm dark:text-amber-200/90">
-                  {ui.missingPrefix}:{" "}
-                  {readiness.missingProfileFieldKeys
-                    .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
-                    .join(", ")}
-                  .
-                </p>
+    <div className="relative min-h-[100dvh] bg-[#FBFBFA] dark:bg-zinc-950">
+      <div
+        className="pointer-events-none fixed inset-0 z-0"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(212,168,67,0.045), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0,0,0,0.02), transparent 50%)",
+        }}
+      />
+      <div className="relative z-10 mx-auto max-w-4xl px-4 py-4 md:py-5">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: EASE_MINIMAL }}
+          className="flex flex-col items-center"
+        >
+          <header className="w-full text-center">
+            <h1
+              className={cn(
+                editorialSerif.className,
+                "text-xl font-semibold leading-tight tracking-[-0.03em] text-[#111111] sm:text-2xl md:text-[1.65rem] dark:text-zinc-50"
               )}
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Link href="/onboarding">
-              <Button variant="primary">{ui.completeProfile}</Button>
-            </Link>
-            <Link href="/cv-analysis">
-              <Button variant="outline">{ui.runCvAnalysis}</Button>
-            </Link>
-          </div>
-        </div>
-      ) : showNoCvGate && readiness ? (
-        <div className="mt-8 rounded-[10px] border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="flex items-start gap-3 text-amber-800 dark:text-amber-200">
-            <AlertCircle className="h-6 w-6 shrink-0" />
-            <div>
-              <h3 className="font-semibold">{ui.noCvMaterialTitle}</h3>
-              <p className="mt-1 text-sm dark:text-amber-200/90">{ui.noCvMaterialBody}</p>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Link href="/onboarding">
-              <Button variant="primary">{ui.completeProfile}</Button>
-            </Link>
-            <Link href="/cv-analysis">
-              <Button variant="outline">{ui.runCvAnalysis}</Button>
-            </Link>
-          </div>
-        </div>
-      ) : showAnalysisNudge && readiness ? (
-        <div className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-          <div className="flex items-start gap-3 text-gray-800 dark:text-zinc-200">
-            <AlertCircle className="h-6 w-6 shrink-0 text-[var(--primary)]" />
-            <div>
-              <h3 className="font-semibold">{ui.cvAnalysisNudgeTitle}</h3>
-              <p className="mt-1 text-sm text-gray-600 dark:text-zinc-400">{ui.cvAnalysisNudgeBody}</p>
-            </div>
-          </div>
-          <div className="mt-6 flex flex-wrap gap-4">
-            <Link href="/cv-analysis">
-              <Button variant="primary">{ui.runCvAnalysis}</Button>
-            </Link>
-            <Link href="/onboarding">
-              <Button variant="outline">{ui.completeProfile}</Button>
-            </Link>
-          </div>
-        </div>
-      ) : showMainFlow ? (
-        <div className="mt-8 space-y-6">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.interviewLanguage}</label>
-            <CustomSelect
-              options={[
-                { value: "en", label: INTERVIEW_LOCALE_LABEL.en },
-                { value: "tr", label: INTERVIEW_LOCALE_LABEL.tr },
-              ]}
-              value={interviewLang}
-              onChange={(v) => setInterviewLang(v === "tr" ? "tr" : "en")}
-              aria-label={ui.interviewLanguage}
-            />
-          </div>
-          <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-zinc-300">{ui.jobCategory}</label>
-            <CustomSelect
-              options={JOB_TITLES}
-              value={jobCategory}
-              onChange={setJobCategory}
-              aria-label={ui.jobCategory}
-            />
-          </div>
-
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.whatToExpect}</h3>
-            <ul className="mt-3 space-y-2 text-sm text-gray-600 dark:text-zinc-400">
-              {ui.expectBullets.map((line) => (
-                <li key={line}>• {line}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="flex gap-4">
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={handleStart}
-              icon={MessageCircle}
             >
-              {ui.startInterview}
-            </Button>
+              {ui.mockInterviewTitle}
+            </h1>
+            <p className="mx-auto mt-1.5 max-w-[52ch] text-sm leading-snug text-[#787774] dark:text-zinc-400">
+              {ui.mockInterviewSubtitle}
+            </p>
+          </header>
+
+          <div className="mt-3 w-full">
+            <UsageBanner feature="mock_interview" />
           </div>
-        </div>
-      ) : null}
+
+          <div className="mt-3 w-full">
+            {guardLoading ? (
+              <div className={cn(surfaceCard, "p-4 md:p-5")}>
+                <CVAnalysisPageSkeleton />
+              </div>
+            ) : showProfileGate && readiness ? (
+              <motion.div
+                className={cn(gateWarningSurface, "p-4 md:p-5")}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+              >
+                <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/70 dark:bg-zinc-950/40"
+                    aria-hidden
+                  >
+                    <WarningCircle className="h-5 w-5 text-[#956400] dark:text-amber-300" weight="bold" />
+                  </div>
+                  <div className="min-w-0 text-center sm:text-left">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.05em] text-[#956400] dark:text-amber-200">
+                      {ui.profileIncompleteTitle}
+                    </h3>
+                    <p className="mt-1 text-sm leading-snug text-[#111111]/85 dark:text-zinc-200">
+                      {ui.profileIncompleteBody}
+                    </p>
+                    {readiness.missingProfileFieldKeys.length > 0 && (
+                      <p className="mt-1 text-sm leading-snug text-[#111111]/85 dark:text-zinc-200">
+                        {ui.missingPrefix}{" "}
+                        {readiness.missingProfileFieldKeys
+                          .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
+                          .join(", ")}
+                        .
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+                  <Link href="/onboarding" className={btnPrimary}>
+                    {ui.completeProfile}
+                  </Link>
+                  <Link href="/cv-analysis" className={btnOutline}>
+                    {ui.runCvAnalysis}
+                  </Link>
+                </div>
+              </motion.div>
+            ) : showNoCvGate && readiness ? (
+              <motion.div
+                className={cn(gateWarningSurface, "p-4 md:p-5")}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+              >
+                <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/70 dark:bg-zinc-950/40"
+                    aria-hidden
+                  >
+                    <WarningCircle className="h-5 w-5 text-[#956400] dark:text-amber-300" weight="bold" />
+                  </div>
+                  <div className="min-w-0 text-center sm:text-left">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.05em] text-[#956400] dark:text-amber-200">
+                      {ui.noCvMaterialTitle}
+                    </h3>
+                    <p className="mt-2 text-sm leading-[1.6] text-[#111111]/85 dark:text-zinc-200">
+                      {ui.noCvMaterialBody}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-8 flex flex-wrap justify-center gap-3 sm:justify-start">
+                  <Link href="/onboarding" className={btnPrimary}>
+                    {ui.completeProfile}
+                  </Link>
+                  <Link href="/cv-analysis" className={btnOutline}>
+                    {ui.runCvAnalysis}
+                  </Link>
+                </div>
+              </motion.div>
+            ) : showAnalysisNudge && readiness ? (
+              <motion.div
+                className={cn(nudgeSurface, "p-4 md:p-5")}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }}
+              >
+                <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/80 dark:bg-zinc-800/80"
+                    aria-hidden
+                  >
+                    <WarningCircle className="h-5 w-5 text-[#1F6C9F] dark:text-sky-300" weight="bold" />
+                  </div>
+                  <div className="min-w-0 text-center sm:text-left">
+                    <h3 className="text-sm font-semibold uppercase tracking-[0.05em] text-[#1F6C9F] dark:text-sky-200">
+                      {ui.cvAnalysisNudgeTitle}
+                    </h3>
+                    <p className="mt-1 text-sm leading-snug text-[#111111]/80 dark:text-zinc-300">
+                      {ui.cvAnalysisNudgeBody}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">
+                  <Link href="/cv-analysis" className={btnPrimary}>
+                    {ui.runCvAnalysis}
+                  </Link>
+                  <Link href="/onboarding" className={btnOutline}>
+                    {ui.completeProfile}
+                  </Link>
+                </div>
+              </motion.div>
+            ) : showMainFlow ? (
+              <div className={cn(surfaceCard, "p-4 md:p-5")}>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                  <div className="flex flex-col gap-2">
+                    <label
+                      className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-400"
+                      htmlFor="mock-interview-lang"
+                    >
+                      {ui.interviewLanguage}
+                    </label>
+                    <CustomSelect
+                      id="mock-interview-lang"
+                      triggerClassName={selectTriggerMinimal}
+                      options={[
+                        { value: "en", label: INTERVIEW_LOCALE_LABEL.en },
+                        { value: "tr", label: INTERVIEW_LOCALE_LABEL.tr },
+                      ]}
+                      value={interviewLang}
+                      onChange={(v) => setInterviewLang(v === "tr" ? "tr" : "en")}
+                      aria-label={ui.interviewLanguage}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label
+                      className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-400"
+                      htmlFor="mock-interview-job"
+                    >
+                      {ui.jobCategory}
+                    </label>
+                    <CustomSelect
+                      id="mock-interview-job"
+                      triggerClassName={selectTriggerMinimal}
+                      options={JOB_TITLES}
+                      value={jobCategory}
+                      onChange={setJobCategory}
+                      aria-label={ui.jobCategory}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-4 border-t border-[#EAEAEA] pt-4 dark:border-zinc-800">
+                  <h3 className="text-center font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-[#787774] dark:text-zinc-500">
+                    {ui.whatToExpect}
+                  </h3>
+                  <ul className="mx-auto mt-2 max-w-[48ch] border-t border-[#EAEAEA] dark:border-zinc-800" role="list">
+                    {ui.expectBullets.map((line) => (
+                      <li
+                        key={line}
+                        className="flex gap-2 border-b border-[#EAEAEA] py-2 last:border-b-0 dark:border-zinc-800"
+                      >
+                        <CheckCircle
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[#346538] dark:text-emerald-400"
+                          weight="bold"
+                          aria-hidden
+                        />
+                        <span className="text-xs leading-snug text-[#111111]/85 dark:text-zinc-300">{line}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-4 flex justify-center">
+                  <button type="button" onClick={handleStart} className={btnPrimary}>
+                    <ChatCircle className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
+                    {ui.startInterview}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

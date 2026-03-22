@@ -77,7 +77,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-[var(--foreground)] dark:bg-black dark:text-zinc-100`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-[var(--foreground)] dark:bg-zinc-950 dark:text-zinc-100`}
       >
         <PostHogProvider>
           <ThemeProviderWrapper>{children}</ThemeProviderWrapper>

@@ -2,20 +2,37 @@ import { candidatePipelineLabel } from "@/lib/candidate-applications-list";
 
 /**
  * Same `application_status` as employer (`applied` | `shortlisted` | `rejected`).
- * For `applied`, we use the same "Applied" label as the employer UI; candidates can still be "in review" while in this state.
+ * Minimalist-ui: pill tags, muted pastels, uppercase + tracking.
  */
 export function CandidateApplicationStatusBadge({ applicationStatus }: { applicationStatus: string }) {
-  const base = "inline-flex rounded px-2 py-0.5 text-xs font-medium";
+  const base =
+    "inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em]";
   const s = applicationStatus || "applied";
   const label = candidatePipelineLabel(s);
 
   if (s === "shortlisted") {
     return (
-      <span className={`${base} bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200`}>{label}</span>
+      <span
+        className={`${base} bg-[#EDF3EC] text-[#346538] dark:bg-[#1a2e1c] dark:text-[#a8c4a9]`}
+      >
+        {label}
+      </span>
     );
   }
   if (s === "rejected") {
-    return <span className={`${base} bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-200`}>{label}</span>;
+    return (
+      <span
+        className={`${base} bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#2c1819] dark:text-[#e8a8a6]`}
+      >
+        {label}
+      </span>
+    );
   }
-  return <span className={`${base} bg-gray-100 text-gray-700 dark:bg-zinc-800 dark:text-zinc-300`}>{label}</span>;
+  return (
+    <span
+      className={`${base} bg-[#E1F3FE] text-[#1F6C9F] dark:bg-[#152a38] dark:text-[#8ec5e8]`}
+    >
+      {label}
+    </span>
+  );
 }

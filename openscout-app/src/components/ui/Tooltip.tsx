@@ -41,7 +41,7 @@ export function Tooltip({
             transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
               "z-[100] whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium shadow-lg",
-              "bg-zinc-800 text-white dark:bg-black dark:border dark:border-zinc-800 dark:text-zinc-100"
+              "bg-zinc-800 text-white dark:bg-zinc-950 dark:border dark:border-zinc-800 dark:text-zinc-100"
             )}
           >
             {content}

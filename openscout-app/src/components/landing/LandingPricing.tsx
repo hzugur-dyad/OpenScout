@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@phosphor-icons/react";
 import { Container } from "@/components/ui/Container";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ type Tier = {
 };
 
 const ctaBase =
-  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-black";
+  "inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-zinc-950";
 
 const ctaVariants: Record<Tier["cta"]["variant"], string> = {
   primary:
@@ -115,15 +115,15 @@ export function LandingPricing() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto max-w-2xl text-center"
+          className="max-w-2xl md:pr-8"
         >
           <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
             Pricing
           </p>
-          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
+          <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl md:tracking-tighter">
             {isEmployer ? "Post once. Hire with signal." : "Start free. Scale when you’re ready."}
           </h2>
-          <p className="mt-3 text-pretty text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-base">
+          <p className="mt-3 max-w-[65ch] text-pretty text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-base">
             {isEmployer
               ? "Candidates stay free. You pay for listings, applications, and the time you save on screening."
               : "Upgrade only if you want more CV reviews and mock interviews each week — no surprise fees."}
@@ -199,7 +199,7 @@ export function LandingPricing() {
                       className={cn(ctaBase, ctaVariants[tier.cta.variant], "group w-full")}
                     >
                       {tier.cta.label}
-                      <ArrowUpRight className="h-4 w-4 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      <ArrowUpRight className="h-4 w-4 opacity-70 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" weight="regular" aria-hidden />
                     </Link>
                   </div>
                 </div>
@@ -207,7 +207,7 @@ export function LandingPricing() {
             </div>
           </div>
 
-          <p className="mt-6 text-center text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="mt-6 max-w-[65ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
             {isEmployer
               ? "USD · Billed after sign-in. New accounts get a 7-day trial with one listing."
               : "USD pricing. Upgrade anytime from your dashboard after you create an account."}

@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
-import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import {
   ArrowRight,
   Briefcase,
@@ -11,8 +9,8 @@ import {
   CreditCard,
   FileText,
 } from "@phosphor-icons/react";
-import { CardInteractive } from "@/components/ui/Card";
-import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+import { Newsreader } from "next/font/google";
 import { InviteFriendCard } from "@/components/dashboard/InviteFriendCard";
 import { NextStepCard } from "@/components/dashboard/NextStepCard";
 import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
@@ -26,101 +24,83 @@ import {
   type NextStepCardModel,
 } from "@/lib/next-step-guidance";
 
+const newsreader = Newsreader({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+});
+
 const PENDING_EMPLOYER_KEY = "pending_employer_company";
 
-/** Stitch / design-system default: spring, not linear. */
-const staggerSpring = { type: "spring" as const, stiffness: 100, damping: 20 };
+/** Minimalist-ui: cubic-bezier(0.16, 1, 0.3, 1), 600ms, translateY 12px via Framer whileInView (IntersectionObserver). */
+const editorialEase: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-function staggerVariants(reduceMotion: boolean | null) {
-  if (reduceMotion) {
-    return {
-      parent: { hidden: {}, show: { transition: { staggerChildren: 0 } } },
-      item: { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0, transition: { duration: 0 } } },
-    };
-  }
-  return {
-    parent: {
-      hidden: {},
-      show: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-    },
-    item: {
-      hidden: { opacity: 0, y: 12 },
-      show: { opacity: 1, y: 0, transition: staggerSpring },
-    },
-  };
+const revealTransition = (delay = 0) => ({
+  duration: 0.6,
+  ease: editorialEase,
+  delay,
+});
+
+function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      className={className}
+      initial={{ opacity: 0, y: 12 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-64px" }}
+      transition={revealTransition(delay)}
+    >
+      {children}
+    </motion.div>
+  );
 }
 
-const focusRingTile =
-  "block h-full rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F6F3] dark:focus-visible:ring-primary dark:focus-visible:ring-offset-zinc-950";
+const bentoCard =
+  "group flex h-full flex-col border border-[#EAEAEA] bg-white p-8 transition-[box-shadow,transform] duration-200 dark:border-zinc-800 dark:bg-[#141312] rounded-xl hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] active:scale-[0.99] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]";
+
+const planPanel =
+  "rounded-xl border border-[#EAEAEA] bg-white p-8 dark:border-zinc-800 dark:bg-[#141312]";
+
+const iconWellBase =
+  "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg";
+
+const iconWell = `${iconWellBase} mb-5`;
 
 function DashboardLoadingSkeleton() {
-  const bar =
-    "rounded-md bg-[#E8E6E3] motion-reduce:animate-none dark:bg-zinc-800/90";
   return (
-    <div className="relative z-10 mx-auto max-w-7xl space-y-16 pb-16 lg:space-y-24 lg:pb-24" aria-busy="true" aria-label="Loading dashboard">
-      <div className="grid items-start gap-10 lg:grid-cols-12 lg:gap-16">
-        <div className="max-w-2xl space-y-5 lg:col-span-7">
-          <div className={`h-12 w-48 ${bar}`} />
-          <div className={`h-4 max-w-[min(65ch,100%)] ${bar}`} />
-          <div className={`h-4 max-w-md ${bar} w-[80%]`} />
-          <div className={`mt-8 h-11 w-44 rounded-md ${bar}`} />
+    <div className="-mx-4 min-h-full bg-[#F7F6F3] px-4 py-12 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+      <div className="mx-auto w-full max-w-5xl space-y-16">
+        <div className="grid gap-12 lg:grid-cols-12 lg:items-start">
+          <div className="space-y-4 lg:col-span-7">
+            <div className="h-10 w-2/3 max-w-sm animate-pulse rounded-lg bg-[#EAEAEA]/80 dark:bg-zinc-800" />
+            <div className="h-4 w-full max-w-xl animate-pulse rounded bg-[#EAEAEA]/60 dark:bg-zinc-800/80" />
+            <div className="h-4 w-4/5 max-w-lg animate-pulse rounded bg-[#EAEAEA]/60 dark:bg-zinc-800/80" />
+            <div className="h-9 w-44 animate-pulse rounded-md bg-[#EAEAEA]/60 dark:bg-zinc-800/80" />
+          </div>
+          <div className="h-48 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900 lg:col-span-5" />
         </div>
-        <div
-          className={`h-40 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] ${bar} animate-pulse`}
-        />
-      </div>
-      <div
-        className={`h-24 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] ${bar} animate-pulse`}
-      />
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
-        <div className={`h-44 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] sm:col-span-2 lg:col-span-5 ${bar} animate-pulse`} />
-        <div className={`h-44 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] sm:col-span-2 lg:col-span-7 ${bar} animate-pulse`} />
-        <div className={`h-44 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] lg:col-span-6 ${bar} animate-pulse`} />
-        <div className={`h-44 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] lg:col-span-6 ${bar} animate-pulse`} />
-        <div className={`h-36 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] lg:col-span-12 ${bar} animate-pulse`} />
-        <div className={`h-52 rounded-lg border border-[#EAEAEA] motion-reduce:animate-none dark:border-white/[0.08] lg:col-span-12 ${bar} animate-pulse`} />
+        <div className="h-32 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+          <div className="space-y-6">
+            <div className="h-44 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+            <div className="h-44 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+          </div>
+          <div className="min-h-[220px] animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
+        </div>
+        <div className="h-52 animate-pulse rounded-xl border border-[#EAEAEA] bg-white dark:border-zinc-800 dark:bg-zinc-900" />
       </div>
     </div>
   );
 }
 
-function ActionTile({
-  href,
-  icon: Icon,
-  title,
-  description,
-  cta,
-  className,
-}: {
-  href: string;
-  icon: PhosphorIcon;
-  title: string;
-  description: string;
-  cta: string;
-  className?: string;
-}) {
-  return (
-    <Link href={href} className={className}>
-      <CardInteractive flat className="group h-full p-8 lg:p-10">
-        <div className="flex h-full flex-col">
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg border border-[#EAEAEA] bg-[#FBF3DB] dark:border-[#3d3520] dark:bg-[#2a2618]">
-            <Icon className="h-6 w-6 text-[#956400] dark:text-[#E8D4A8]" weight="bold" aria-hidden />
-          </div>
-          <h3 className="text-base font-medium tracking-tight text-[#111111] dark:text-[#FAFAFA]">{title}</h3>
-          <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-[#A09C98]">{description}</p>
-          <div className="mt-auto flex items-center gap-1.5 pt-8 text-sm font-medium text-[#111111] transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0 dark:text-[#FAFAFA]">
-            {cta}
-            <ArrowRight className="h-4 w-4" weight="bold" aria-hidden />
-          </div>
-        </div>
-      </CardInteractive>
-    </Link>
-  );
-}
-
 export default function DashboardPage() {
-  const reduceMotion = useReducedMotion();
-  const { parent: staggerParent, item: staggerItem } = staggerVariants(reduceMotion);
   const router = useRouter();
   const [plan, setPlan] = useState<CandidatePlan>("free");
   const [cvUsed, setCvUsed] = useState(0);
@@ -135,17 +115,12 @@ export default function DashboardPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace("/login?redirect=" + encodeURIComponent("/dashboard"));
-        return;
-      }
+      if (!user) return;
 
       let pendingEmployer = false;
       try {
         pendingEmployer = !!sessionStorage.getItem(PENDING_EMPLOYER_KEY);
-      } catch {
-        /* ignore */
-      }
+      } catch {}
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -164,10 +139,12 @@ export default function DashboardPage() {
         return;
       }
       try {
-        await applyPendingCandidateProfileIfAny(supabase, user.id, user.email ?? undefined);
-      } catch {
-        /* ignore */
-      }
+        await applyPendingCandidateProfileIfAny(
+          supabase,
+          user.id,
+          user.email ?? undefined
+        );
+      } catch (_) {}
       setCheckedEmployer(true);
     }
     load();
@@ -179,10 +156,7 @@ export default function DashboardPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace("/login?redirect=" + encodeURIComponent("/dashboard"));
-        return;
-      }
+      if (!user) return;
       const { data: profile } = await supabase
         .from("profiles")
         .select("plan, bonus_mock_interview_credits")
@@ -194,7 +168,8 @@ export default function DashboardPage() {
         Math.max(
           0,
           Number(
-            (profile as { bonus_mock_interview_credits?: number } | null)?.bonus_mock_interview_credits
+            (profile as { bonus_mock_interview_credits?: number } | null)
+              ?.bonus_mock_interview_credits
           ) || 0
         )
       );
@@ -217,7 +192,7 @@ export default function DashboardPage() {
       setMockUsed(mock ?? 0);
     }
     loadPlan();
-  }, [supabase, checkedEmployer, router]);
+  }, [supabase, checkedEmployer]);
 
   useEffect(() => {
     if (!checkedEmployer) return;
@@ -225,21 +200,47 @@ export default function DashboardPage() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) {
-        router.replace("/login?redirect=" + encodeURIComponent("/dashboard"));
-        return;
-      }
+      if (!user) return;
       const [profileRes, privRes, cvRes, miRes, jaRes] = await Promise.all([
-        supabase.from("profiles").select("onboarding_completed_at").eq("user_id", user.id).maybeSingle(),
-        supabase.from("profile_private").select("cv_file_url, cv_raw_text").eq("user_id", user.id).maybeSingle(),
-        supabase.from("cv_analyses").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
-        supabase.from("mock_interviews").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
-        supabase.from("job_applications").select("id").eq("user_id", user.id).limit(1).maybeSingle(),
+        supabase
+          .from("profiles")
+          .select("onboarding_completed_at")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("profile_private")
+          .select("cv_file_url, cv_raw_text")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("cv_analyses")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("mock_interviews")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("job_applications")
+          .select("id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle(),
       ]);
-      const priv = privRes.data as { cv_file_url?: string | null; cv_raw_text?: string | null } | null;
+      const priv = privRes.data as {
+        cv_file_url?: string | null;
+        cv_raw_text?: string | null;
+      } | null;
       const signals = buildJourneySignals({
-        onboardingCompletedAt: (profileRes.data as { onboarding_completed_at?: string | null } | null)
-          ?.onboarding_completed_at,
+        onboardingCompletedAt: (
+          profileRes.data as {
+            onboarding_completed_at?: string | null;
+          } | null
+        )?.onboarding_completed_at,
         cvFileUrl: priv?.cv_file_url,
         cvRawText: priv?.cv_raw_text,
         cvAnalysisRowExists: cvRes.data != null,
@@ -249,7 +250,7 @@ export default function DashboardPage() {
       setNextStep(deriveDashboardNextStep(signals));
     }
     loadJourney();
-  }, [supabase, checkedEmployer, router]);
+  }, [supabase, checkedEmployer]);
 
   const cvLimit = PLAN_LIMITS[plan].cv_analysis;
   const mockLimit = PLAN_LIMITS[plan].mock_interview;
@@ -259,178 +260,209 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="relative z-10 mx-auto max-w-7xl pb-20 lg:pb-28">
-      <a
-        href="#dashboard-quick-actions"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:border focus:border-[#EAEAEA] focus:bg-[#FFFFFF] focus:px-4 focus:py-2 focus:text-sm focus:text-[#111111] focus:shadow-none dark:focus:border-white/20 dark:focus:bg-[#141414] dark:focus:text-[#FAFAFA]"
-      >
-        Skip to quick actions
-      </a>
-      <div className="grid items-start gap-12 lg:grid-cols-12 lg:gap-20">
-        <header className="max-w-2xl lg:col-span-7 lg:pt-1">
-          <h1
-            id="dashboard-home-heading"
-            className="text-3xl font-semibold leading-tight tracking-tight text-zinc-950 md:text-4xl dark:text-zinc-50"
-          >
-            Home
-          </h1>
-          <p className="mt-6 max-w-xl text-base leading-[1.6] text-[#787774] dark:text-[#A09C98]">
-            Finish <span className="font-medium text-[#111111] dark:text-[#FAFAFA]">My profile</span>, run a CV check,
-            then practice interviews. Sharing a public profile is optional and stays under your control.
-          </p>
-          <div className="mt-8">
-            <SharePublicProfileButton size="md" minimal />
-          </div>
-        </header>
+    <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.38),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.06),transparent_55%)]"
+      />
 
-        <aside className="lg:col-span-5" aria-label="Plan and weekly usage summary">
-          <div className="rounded-lg border border-[#EAEAEA] bg-[#FFFFFF] p-8 shadow-none dark:border-white/[0.08] dark:bg-[#141414]">
-            <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-[#A09C98]">
-              Plan and weekly usage
-            </p>
-            <div className="mt-8 space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <span
-                  className={cn(
-                    "inline-flex rounded-full px-3 py-1 text-xs font-medium uppercase tracking-[0.05em]",
-                    plan === "free"
-                      ? "bg-[#FBF3DB] text-[#956400] dark:bg-[#3d3520] dark:text-[#E8D4A8]"
-                      : "bg-[#EDF3EC] text-[#346538] dark:bg-[#1e2a1f] dark:text-[#B4D4B8]"
-                  )}
-                >
-                  {plan}
-                </span>
-                {plan === "free" && (
-                  <Link
-                    href="/pricing"
-                    className={cn(
-                      "inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-md border border-[#EAEAEA] bg-transparent px-4 text-sm font-medium text-[#111111] outline-none transition-colors hover:bg-[#F7F6F3] focus-visible:ring-2 focus-visible:ring-[#111111] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF] active:scale-[0.98] dark:border-white/[0.12] dark:text-[#FAFAFA] dark:hover:bg-white/[0.06] dark:focus-visible:ring-neutral-200 dark:focus-visible:ring-offset-[#141414]"
-                    )}
-                  >
-                    <CreditCard className="h-4 w-4 shrink-0" weight="bold" aria-hidden />
-                    Upgrade
-                  </Link>
-                )}
+      <div className="relative mx-auto w-full max-w-5xl">
+        <Reveal>
+          <div className="grid gap-12 lg:grid-cols-12 lg:items-start lg:gap-14">
+            <header className="lg:col-span-7">
+              <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                Candidate home
+              </p>
+              <h1
+                className={`mt-4 text-[2.25rem] font-semibold leading-[1.1] tracking-[-0.03em] text-[#111111] md:text-5xl dark:text-zinc-100 ${newsreader.className}`}
+              >
+                Welcome back
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
+                Open{" "}
+                <span className="font-medium text-[#111111] dark:text-zinc-200">
+                  My profile
+                </span>{" "}
+                to finish setup, then run CV analysis and mock interviews when
+                you are ready.
+              </p>
+              <div className="mt-8">
+                <SharePublicProfileButton />
               </div>
-              <dl className="grid gap-5 text-sm leading-[1.6] text-[#787774] dark:text-[#A09C98]">
-                <div className="flex justify-between gap-4">
-                  <dt>CV analysis</dt>
-                  <dd className="font-mono tabular-nums text-[#111111] dark:text-[#FAFAFA]">
-                    <span className="sr-only">Used this week out of weekly limit. </span>
-                    {cvUsed}/{cvLimit === Infinity ? "∞" : cvLimit}
-                    <span className="ml-1.5 font-sans text-xs font-normal text-[#787774] dark:text-[#A09C98]">
-                      this week
-                    </span>
-                  </dd>
+            </header>
+
+            <aside className="lg:col-span-5">
+              <div className={planPanel}>
+                <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                  Plan and weekly usage
+                </p>
+                <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="text-lg font-semibold capitalize text-[#111111] dark:text-zinc-100">
+                    {plan}
+                  </span>
+                  <span className="text-sm text-[#787774] dark:text-zinc-500">
+                    plan
+                  </span>
                 </div>
-                <div className="flex justify-between gap-4">
-                  <dt>Mock interview</dt>
-                  <dd className="font-mono tabular-nums text-[#111111] dark:text-[#FAFAFA]">
-                    <span className="sr-only">Used this week out of weekly limit. </span>
-                    {mockUsed}/{mockLimit === Infinity ? "∞" : mockLimit}
-                    <span className="ml-1.5 font-sans text-xs font-normal text-[#787774] dark:text-[#A09C98]">
-                      this week
-                    </span>
-                  </dd>
-                </div>
-                {mockBonusCredits > 0 && (
+                <dl className="mt-6 space-y-3 border-t border-[#EAEAEA] pt-6 text-sm dark:border-zinc-800">
                   <div className="flex justify-between gap-4">
-                    <dt>Bonus credits</dt>
-                    <dd className="font-mono tabular-nums text-[#111111] dark:text-[#FAFAFA]">{mockBonusCredits}</dd>
+                    <dt className="text-[#787774] dark:text-zinc-500">
+                      CV analysis
+                    </dt>
+                    <dd className="font-mono tabular-nums text-[#111111] dark:text-zinc-100">
+                      {cvUsed}/{cvLimit === Infinity ? "∞" : cvLimit}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-[#787774] dark:text-zinc-500">
+                      Mock interview
+                    </dt>
+                    <dd className="font-mono tabular-nums text-[#111111] dark:text-zinc-100">
+                      {mockUsed}/{mockLimit === Infinity ? "∞" : mockLimit}
+                    </dd>
+                  </div>
+                  <div className="text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
+                    Counts use a rolling 7-day window.
+                  </div>
+                  {mockBonusCredits > 0 && (
+                    <div className="text-xs leading-relaxed text-[#787774] dark:text-zinc-400">
+                      {mockBonusCredits} bonus interview credit
+                      {mockBonusCredits !== 1 ? "s" : ""} available.
+                    </div>
+                  )}
+                </dl>
+                {plan === "free" && (
+                  <div className="mt-8">
+                    <Link
+                      href="/pricing"
+                      className="inline-flex h-9 items-center gap-2 rounded-md border border-[#EAEAEA] bg-white px-4 text-sm font-medium text-[#111111] transition-colors hover:bg-[#F9F9F8] active:scale-[0.98] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <CreditCard className="h-4 w-4" weight="bold" aria-hidden />
+                      Upgrade
+                    </Link>
                   </div>
                 )}
-              </dl>
-            </div>
+              </div>
+            </aside>
           </div>
-        </aside>
-      </div>
+        </Reveal>
 
-      {nextStep && (
-        <div className="mt-20 lg:mt-28">
-          <NextStepCard step={nextStep} />
-        </div>
-      )}
+        {nextStep && (
+          <Reveal className="mt-20" delay={0.08}>
+            <NextStepCard step={nextStep} />
+          </Reveal>
+        )}
 
-      <section
-        id="dashboard-quick-actions"
-        className="mt-20 lg:mt-28"
-        aria-labelledby="dashboard-quick-actions-heading"
-      >
-        <h2 id="dashboard-quick-actions-heading" className="sr-only">
-          Quick actions
-        </h2>
-        <motion.div
-          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8"
-          variants={staggerParent}
-          initial="hidden"
-          animate="show"
-        >
-        <motion.div variants={staggerItem} className="sm:col-span-2 lg:col-span-5">
-          <ActionTile
-            href="/onboarding"
-            icon={FileText}
-            title="My profile"
-            description="Keep your story, preferences, and links current in one structured flow."
-            cta="Open profile"
-          />
-        </motion.div>
-        <motion.div variants={staggerItem} className="sm:col-span-2 lg:col-span-7">
-          <ActionTile
-            href="/cv-analysis"
-            icon={FileText}
-            title="CV analysis"
-            description="Upload a CV and get structured feedback aligned with how hiring teams read applications."
-            cta="Analyze CV"
-          />
-        </motion.div>
-        <motion.div variants={staggerItem} className="sm:col-span-2 lg:col-span-6">
-          <ActionTile
-            href="/mock-interview"
-            icon={ChatCircle}
-            title="Mock interview"
-            description="Run a timed practice session with AI prompts and a clear rubric."
-            cta="Start session"
-          />
-        </motion.div>
-        <motion.div variants={staggerItem} className="sm:col-span-2 lg:col-span-6">
-          <Link
-            href="/dashboard/jobs"
-            className={cn(focusRingTile)}
-            aria-label="Job listings: browse open roles and apply"
-          >
-            <CardInteractive
-              flat
-              className="group flex h-full flex-col p-8 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:p-10"
-            >
-              <div className="flex flex-1 items-start gap-5">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-[#EAEAEA] bg-[#E1F3FE] dark:border-[#1a3a52] dark:bg-[#0f2433]">
-                  <Briefcase className="h-6 w-6 text-[#1F6C9F] dark:text-[#7EC8F5]" weight="bold" aria-hidden />
-                </div>
-                <div>
-                  <h3 className="text-base font-medium tracking-tight text-[#111111] dark:text-[#FAFAFA]">
-                    Job listings
-                  </h3>
-                  <p className="mt-3 max-w-md text-sm leading-[1.6] text-[#787774] dark:text-[#A09C98]">
-                    Read posts, then apply from the same place so nothing gets lost between tabs.
+        <Reveal className="mt-20" delay={0.04}>
+          <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+            <div className="flex flex-col gap-6">
+              <Link href="/onboarding" className="block h-full">
+                <div className={bentoCard}>
+                  <div
+                    className={`${iconWell} bg-[#FBF3DB] text-[#956400]`}
+                  >
+                    <FileText className="h-6 w-6" weight="bold" aria-hidden />
+                  </div>
+                  <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
+                    My profile
+                  </h2>
+                  <p className="mt-2 flex-1 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                    Finish or update your details in one place.
                   </p>
+                  <div className="mt-6 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200">
+                    Continue
+                    <ArrowRight
+                      className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                      weight="bold"
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </Link>
+
+              <Link href="/cv-analysis" className="block h-full">
+                <div className={bentoCard}>
+                  <div
+                    className={`${iconWell} bg-[#E1F3FE] text-[#1F6C9F]`}
+                  >
+                    <FileText className="h-6 w-6" weight="bold" aria-hidden />
+                  </div>
+                  <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
+                    CV analysis
+                  </h2>
+                  <p className="mt-2 flex-1 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                    Upload a CV and get structured feedback against open roles.
+                  </p>
+                  <div className="mt-6 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200">
+                    Open tool
+                    <ArrowRight
+                      className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                      weight="bold"
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </Link>
+            </div>
+
+            <Link href="/mock-interview" className="block min-h-0">
+              <div className={`${bentoCard} min-h-[280px] lg:min-h-full lg:py-10`}>
+                <div
+                  className={`${iconWell} bg-[#EDF3EC] text-[#346538]`}
+                >
+                  <ChatCircle className="h-6 w-6" weight="bold" aria-hidden />
+                </div>
+                <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
+                  Mock interview
+                </h2>
+                <p className="mt-2 flex-1 text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
+                  Run a structured AI session and read a short scorecard when
+                  you finish.
+                </p>
+                <div className="mt-8 flex items-center text-sm font-medium text-[#111111] dark:text-zinc-200">
+                  Start session
+                  <ArrowRight
+                    className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                    weight="bold"
+                    aria-hidden
+                  />
                 </div>
               </div>
-              <div className="mt-8 flex shrink-0 lg:mt-0">
-                <span
-                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-transparent bg-[#111111] px-5 text-sm font-medium text-white transition-colors duration-200 ease-out group-hover:bg-[#333333] motion-reduce:transition-none dark:bg-neutral-100 dark:text-neutral-950 dark:group-hover:bg-neutral-200"
-                  aria-hidden
-                >
+            </Link>
+          </div>
+        </Reveal>
+
+        <Reveal className="mt-6" delay={0.08}>
+          <Link href="/dashboard/jobs" className="block">
+            <div className={bentoCard}>
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                  <div
+                    className={`${iconWellBase} bg-[#FDEBEC] text-[#9F2F2D]`}
+                  >
+                    <Briefcase className="h-6 w-6" weight="bold" aria-hidden />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold tracking-tight text-[#111111] dark:text-zinc-100">
+                      Job listings
+                    </h2>
+                    <p className="mt-1 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                      Browse open roles and track applications from here.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-[#111111] px-4 text-sm font-medium text-white transition-colors hover:bg-[#333333] active:scale-[0.98] dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">
                   View listings
                 </span>
               </div>
-            </CardInteractive>
+            </div>
           </Link>
-        </motion.div>
-        <motion.div variants={staggerItem} className="sm:col-span-2 lg:col-span-12">
+        </Reveal>
+
+        <Reveal className="mt-6" delay={0.1}>
           <InviteFriendCard />
-        </motion.div>
-        </motion.div>
-      </section>
+        </Reveal>
+      </div>
     </div>
   );
 }

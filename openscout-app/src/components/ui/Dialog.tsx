@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 const Dialog = DialogPrimitive.Root;
@@ -22,7 +22,7 @@ const DialogOverlay = forwardRef<
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]",
+        "fixed inset-0 z-50 bg-zinc-950/60 backdrop-blur-[2px]",
         className
       )}
     />
@@ -45,7 +45,7 @@ const DialogContent = forwardRef<
       className={cn(
         "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2",
         "rounded-xl border border-[var(--border)] bg-white p-6 shadow-xl",
-        "dark:border-zinc-800 dark:bg-black",
+        "dark:border-zinc-800 dark:bg-zinc-900",
         className
       )}
     >
@@ -55,7 +55,7 @@ const DialogContent = forwardRef<
           className="absolute right-4 top-4 rounded-sm p-1 text-gray-500 opacity-70 hover:opacity-100 dark:text-zinc-400"
           aria-label="Close"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" weight="regular" aria-hidden />
         </DialogPrimitive.Close>
       )}
     </motion.div>

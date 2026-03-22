@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { CheckCircle, AlertCircle, Share2, Copy, Sparkles } from "lucide-react";
+import {
+  CheckCircle,
+  Copy,
+  ShareNetwork,
+  Sparkle,
+  WarningCircle,
+} from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ShareScoutScoreModal } from "@/components/dashboard/ShareScoutScoreModal";
@@ -184,7 +190,7 @@ export function MockInterviewResultView({
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: "var(--primary-muted)" }}
                 >
-                  <Sparkles className="h-5 w-5" style={{ color: "var(--primary-dark)" }} aria-hidden />
+                  <Sparkle className="h-5 w-5" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
                 </div>
                 <div className="min-w-0 py-1">
                   <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.aiFeedbackTitle}</h3>
@@ -200,7 +206,7 @@ export function MockInterviewResultView({
           {passUrl && (
             <div className="mt-6 rounded-[10px] border-2 border-[var(--primary)] bg-[var(--primary-lighter)]/30 p-6 shadow-card dark:bg-primary-muted/30">
               <div className="flex items-center gap-2">
-                <Share2 className="h-5 w-5" style={{ color: "var(--primary-dark)" }} />
+                <ShareNetwork className="h-5 w-5" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
                 <h3 className="font-semibold" style={{ color: "var(--primary-dark)" }}>
                   {ui.shareScoutTitle}
                 </h3>
@@ -242,7 +248,7 @@ export function MockInterviewResultView({
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {strengths.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500 dark:text-green-400" />
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-green-500 dark:text-green-400" weight="regular" aria-hidden />
                   {s}
                 </li>
               ))}
@@ -254,7 +260,7 @@ export function MockInterviewResultView({
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {improvements.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
-                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" />
+                  <WarningCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" weight="regular" aria-hidden />
                   {s}
                 </li>
               ))}

@@ -1,16 +1,16 @@
 "use client";
 
-import { List } from "@phosphor-icons/react";
 import {
-  LayoutDashboard,
-  FileText,
-  MessageCircle,
   Briefcase,
+  ChatCircle,
+  ClipboardText,
+  ClockCounterClockwise,
   CreditCard,
+  FileText,
+  Hamburger,
+  SquaresFour,
   User,
-  History,
-  ClipboardList,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { ReferralAttribute } from "./ReferralAttribute";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sidebar, type NavItem } from "@/components/layout/Sidebar";
@@ -20,18 +20,18 @@ import { useRouter, usePathname } from "next/navigation";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const candidateNavItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: SquaresFour },
   { href: "/onboarding", label: "My profile", icon: FileText },
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
-  { href: "/mock-interview", label: "Mock Interview", icon: MessageCircle },
-  { href: "/dashboard/interviews", label: "Interview History", icon: History },
-  { href: "/dashboard/applications", label: "Applications", icon: ClipboardList },
+  { href: "/mock-interview", label: "Mock Interview", icon: ChatCircle },
+  { href: "/dashboard/interviews", label: "Interview History", icon: ClockCounterClockwise },
+  { href: "/dashboard/applications", label: "Applications", icon: ClipboardText },
   { href: "/dashboard/jobs", label: "Job Listings", icon: Briefcase },
   { href: "/pricing", label: "Upgrade Plan", icon: CreditCard },
 ];
 
 const employerNavItems: NavItem[] = [
-  { href: "/employer", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/employer", label: "Dashboard", icon: SquaresFour },
   { href: "/employer/profile", label: "Profile", icon: User },
   { href: "/employer/pricing", label: "Billing", icon: CreditCard },
 ];
@@ -43,7 +43,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const supabase = createClient();
   const pathname = usePathname();
-  const isCandidateDashboardHome = pathname === "/dashboard";
   const { role } = useUserRole();
   const isEmployerPath = pathname.startsWith("/employer");
   const effectiveRole = role ?? (isEmployerPath ? "employer" : "candidate");
@@ -137,26 +136,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div
-      className={`relative flex min-h-[100dvh] dark:bg-zinc-950 ${
-        isCandidateDashboardHome ? "bg-[#F7F6F3]" : "bg-zinc-50"
-      }`}
-    >
-      {isCandidateDashboardHome ? (
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.06]"
-          style={{
-            background:
-              "radial-gradient(ellipse 100% 70% at 50% -25%, rgb(139 115 85), transparent)",
-          }}
-          aria-hidden
-        />
-      ) : null}
+    <div className="flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950">
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-zinc-950/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -172,25 +157,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content - offset by sidebar width on desktop (hover expands/collapses) */}
       <div
-        className={`relative z-10 flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
+        className={`flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarExpanded ? "lg:ml-[240px]" : "lg:ml-[72px]"
         }`}
       >
         {/* Top bar */}
-        <header
-          className={`sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b px-4 backdrop-blur-sm lg:px-8 dark:border-zinc-800 dark:bg-zinc-950/90 ${
-            isCandidateDashboardHome
-              ? "border-[#EAEAEA] bg-[#F7F6F3]/95"
-              : "border-zinc-200/80 bg-zinc-50/95 dark:bg-zinc-950/95"
-          }`}
-        >
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-zinc-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 lg:px-8">
           <button
-            type="button"
-            className="rounded-md p-1.5 text-[#111111] transition-colors hover:bg-black/[0.04] lg:hidden dark:text-zinc-100 dark:hover:bg-white/[0.06]"
+            className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Open menu"
           >
-            <List className="h-6 w-6" weight="bold" aria-hidden />
+            <Hamburger className="h-6 w-6 text-gray-700 dark:text-zinc-200" weight="regular" aria-hidden />
           </button>
           <div className="ml-auto flex items-center">
             <ThemeToggle />

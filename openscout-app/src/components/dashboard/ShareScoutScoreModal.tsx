@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Check, Copy } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import {
   AnimatedDialog,

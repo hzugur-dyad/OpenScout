@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, AlertCircle, Briefcase } from "lucide-react";
+import { Briefcase, CheckCircle, WarningCircle } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import type { ScoutPassData } from "@/lib/types";
@@ -97,7 +97,7 @@ export default function ScoutPassPage() {
                 className="flex h-12 w-12 items-center justify-center rounded-full"
                 style={{ backgroundColor: "var(--primary)" }}
               >
-                <Briefcase className="h-6 w-6 text-white" />
+                <Briefcase className="h-6 w-6 text-white" weight="regular" aria-hidden />
               </div>
               <div>
                 <p className="text-sm text-gray-500">Role</p>
@@ -130,7 +130,7 @@ export default function ScoutPassPage() {
               <ul className="mt-2 space-y-1">
                 {strengths.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-green-500" weight="regular" aria-hidden />
                     {s}
                   </li>
                 ))}
@@ -144,7 +144,7 @@ export default function ScoutPassPage() {
               <ul className="mt-2 space-y-1">
                 {improvements.map((s, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                    <WarningCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" weight="regular" aria-hidden />
                     {s}
                   </li>
                 ))}

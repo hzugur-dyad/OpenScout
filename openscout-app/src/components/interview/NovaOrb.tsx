@@ -477,7 +477,7 @@ export default function NovaOrb({ state = "idle", className, style }: NovaOrbPro
       style={{
         width: 220,
         height: 220,
-        background: "#000",
+        background: "#09090b",
         borderRadius: "50%",
         overflow: "hidden",
         ...style,

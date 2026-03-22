@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useCallback, useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "@phosphor-icons/react";
 import { useTheme } from "next-themes";
 import { flushSync } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ export function AnimatedThemeToggler({
         )}
         {...props}
       >
-        <Sun className="h-4 w-4" aria-hidden />
+        <Sun className="h-4 w-4" weight="regular" aria-hidden />
       </button>
     );
   }
@@ -91,9 +91,9 @@ export function AnimatedThemeToggler({
       {...props}
     >
       {isDark ? (
-        <Sun className="h-4 w-4" aria-hidden />
+        <Sun className="h-4 w-4" weight="regular" aria-hidden />
       ) : (
-        <Moon className="h-4 w-4" aria-hidden />
+        <Moon className="h-4 w-4" weight="regular" aria-hidden />
       )}
       <span className="sr-only">Toggle theme</span>
     </button>

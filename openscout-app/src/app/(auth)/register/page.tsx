@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -97,7 +97,7 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
         <div className="w-full max-w-md">
           <Link href="/" className="mb-8 flex items-center justify-center gap-2">
             <OpenScoutLogoMark className="h-20 w-20" />
@@ -105,7 +105,7 @@ export default function RegisterPage() {
           </Link>
           <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-6 w-6 text-green-600" />
+              <Check className="h-6 w-6 text-green-600" weight="regular" aria-hidden />
             </div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Check your email</h1>
             <p className="mt-2 text-gray-500 dark:text-zinc-400">
@@ -119,7 +119,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 py-8 dark:bg-transparent">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 py-8 dark:bg-transparent">
       <div className="w-full max-w-lg">
         <Link href="/" className="mb-6 flex items-center justify-center gap-2">
           <OpenScoutLogoMark className="h-20 w-20" />

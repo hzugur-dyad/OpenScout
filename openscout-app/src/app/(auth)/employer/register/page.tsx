@@ -134,7 +134,7 @@ export default function EmployerRegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-[var(--primary-lighter)]/30 px-4 dark:bg-transparent">
       <div className="w-full max-w-md">
         <Link href="/" className="mb-8 flex items-center justify-center gap-2">
           <OpenScoutLogoMark className="h-20 w-20" />
