@@ -1,11 +1,26 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import { motion } from "framer-motion";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /** Minimalist-ui: fade + 12px rise, 600ms, cubic-bezier(0.16, 1, 0.3, 1). IntersectionObserver via Framer viewport. */
 const editorialEase: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+function subscribePrefersReducedMotion(onChange: () => void) {
+  const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+function getPrefersReducedMotion(): boolean {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** SSR + first paint must match client hydration; real preference applies after hydrate. */
+function getPrefersReducedMotionServerSnapshot(): boolean {
+  return false;
+}
 
 export function MinimalSection({
   children,
@@ -16,7 +31,11 @@ export function MinimalSection({
   className?: string;
   delay?: number;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSyncExternalStore(
+    subscribePrefersReducedMotion,
+    getPrefersReducedMotion,
+    getPrefersReducedMotionServerSnapshot
+  );
   return (
     <motion.div
       className={cn(className)}

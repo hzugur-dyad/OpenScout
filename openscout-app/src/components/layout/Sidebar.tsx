@@ -6,9 +6,21 @@ import { useCallback, useEffect, useState } from "react";
 import type { Icon } from "@phosphor-icons/react";
 import { SignOut, X } from "@phosphor-icons/react";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
+import { ApplicationsSidebarIcon } from "@/components/icons/ApplicationsSidebarIcon";
+import { DashboardSidebarIcon } from "@/components/icons/DashboardSidebarIcon";
+import { MockInterviewSidebarIcon } from "@/components/icons/MockInterviewSidebarIcon";
+import { ProfileSidebarIcon } from "@/components/icons/ProfileSidebarIcon";
 import { Tooltip } from "@/components/ui/Tooltip";
 
 export type NavItem = { href: string; label: string; icon: Icon };
+
+const NAV_ICON_CLASS = "h-5 w-5 shrink-0";
+
+/** Match `notlar/*.svg` — candidate + employer profile, dashboard, applications, mock interview */
+const PROFILE_NAV_HREFS = new Set(["/onboarding", "/employer/profile"]);
+const DASHBOARD_NAV_HREFS = new Set(["/dashboard", "/employer"]);
+const APPLICATIONS_NAV_HREFS = new Set(["/dashboard/applications"]);
+const MOCK_INTERVIEW_NAV_HREFS = new Set(["/mock-interview"]);
 
 type SidebarProps = {
   navItems: NavItem[];
@@ -70,6 +82,21 @@ export function Sidebar({
   /** Collapsed = icon-only. On mobile with drawer open we always show full layout. */
   const collapsed = !expanded && !mobileOpen;
 
+  /** Longest matching href wins so `/dashboard` does not stay active on `/dashboard/applications`, etc. */
+  const activeNavHref = (() => {
+    let best: string | null = null;
+    let bestLen = -1;
+    for (const { href } of navItems) {
+      if (pathname === href || pathname.startsWith(`${href}/`)) {
+        if (href.length > bestLen) {
+          bestLen = href.length;
+          best = href;
+        }
+      }
+    }
+    return best;
+  })();
+
   return (
     <aside
       onMouseEnter={handleEnter}
@@ -124,8 +151,18 @@ export function Sidebar({
         `}
       >
         {navItems.map((item, index) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = item.href === activeNavHref;
+          const IconGlyph = PROFILE_NAV_HREFS.has(item.href) ? (
+            <ProfileSidebarIcon className={NAV_ICON_CLASS} aria-hidden />
+          ) : DASHBOARD_NAV_HREFS.has(item.href) ? (
+            <DashboardSidebarIcon className={NAV_ICON_CLASS} aria-hidden />
+          ) : APPLICATIONS_NAV_HREFS.has(item.href) ? (
+            <ApplicationsSidebarIcon className={NAV_ICON_CLASS} aria-hidden />
+          ) : MOCK_INTERVIEW_NAV_HREFS.has(item.href) ? (
+            <MockInterviewSidebarIcon className={NAV_ICON_CLASS} aria-hidden />
+          ) : (
+            <item.icon className={NAV_ICON_CLASS} weight="regular" aria-hidden />
+          );
           if (collapsed) {
             return (
               <Tooltip key={`${item.label}-${item.href}-${index}`} content={item.label} side="right">
@@ -137,7 +174,7 @@ export function Sidebar({
                     ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
                   `}
                 >
-                  <item.icon className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
+                  {IconGlyph}
                 </Link>
               </Tooltip>
             );
@@ -152,7 +189,7 @@ export function Sidebar({
                 ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
               `}
             >
-              <item.icon className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
+              {IconGlyph}
               <span className="truncate transition-opacity duration-200">{item.label}</span>
             </Link>
           );
@@ -173,7 +210,7 @@ export function Sidebar({
               onClick={onSignOut}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
-              <SignOut className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
+              <SignOut className={NAV_ICON_CLASS} weight="regular" aria-hidden />
             </button>
           </Tooltip>
         ) : (
@@ -182,7 +219,7 @@ export function Sidebar({
             onClick={onSignOut}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            <SignOut className="h-5 w-5 shrink-0" weight="regular" aria-hidden />
+            <SignOut className={NAV_ICON_CLASS} weight="regular" aria-hidden />
             <span className={`truncate transition-opacity duration-200 ${labelsVisible ? "opacity-100" : "opacity-0"}`}>Sign Out</span>
           </button>
         )}
