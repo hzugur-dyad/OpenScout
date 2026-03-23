@@ -124,7 +124,7 @@ export function AnimatedHero() {
 
                     <motion.p
                       variants={fadeUp}
-                      className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl"
+                      className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl"
                     >
                       One credential, many companies. Take one AI interview, get
                       a shareable score and report — stand out to every
@@ -159,7 +159,7 @@ export function AnimatedHero() {
                       {techIcons.map((Icon, i) => (
                         <Icon
                           key={i}
-                          className="h-5 w-5 text-gray-400 dark:text-zinc-500"
+                          className="h-5 w-5 text-gray-600 dark:text-zinc-300"
                           weight="regular"
                           aria-hidden
                         />
@@ -206,7 +206,7 @@ export function AnimatedHero() {
 
                   <motion.p
                     variants={fadeUp}
-                    className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl"
+                    className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl"
                   >
                     Every candidate has a CV score and AI interview report. Cut
                     screening time and hire faster — only applicants who passed
@@ -241,7 +241,7 @@ export function AnimatedHero() {
                     {techIcons.map((Icon, i) => (
                       <Icon
                         key={i}
-                        className="h-5 w-5 text-gray-400 dark:text-zinc-500"
+                        className="h-5 w-5 text-gray-600 dark:text-zinc-300"
                         weight="regular"
                         aria-hidden
                       />

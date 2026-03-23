@@ -196,7 +196,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
             />
           </div>
 
-          <p className="mt-6 text-center text-xs text-gray-400 dark:text-zinc-500">
+          <p className="mt-6 text-center text-xs text-gray-400 dark:text-zinc-300">
             Practice with AI interviews on{" "}
             <Link href="/mock-interview" className="underline">
               OpenScout

@@ -117,13 +117,13 @@ export function LandingPricing() {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-2xl md:pr-8"
         >
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-zinc-700 dark:text-zinc-300">
             Pricing
           </p>
           <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl md:tracking-tighter">
             {isEmployer ? "Post once. Hire with signal." : "Start free. Scale when you’re ready."}
           </h2>
-          <p className="mt-3 max-w-[65ch] text-pretty text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-base">
+          <p className="mt-3 max-w-[65ch] text-pretty text-sm leading-relaxed text-zinc-800 dark:text-zinc-300 md:text-base">
             {isEmployer
               ? "Candidates stay free. You pay for listings, applications, and the time you save on screening."
               : "Upgrade only if you want more CV reviews and mock interviews each week — no surprise fees."}
@@ -137,7 +137,7 @@ export function LandingPricing() {
           transition={{ duration: 0.5, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto mt-14 max-w-5xl"
         >
-          <div className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white/80 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-black/30 dark:backdrop-blur-xl">
+          <div className="overflow-hidden rounded-[1.25rem] border border-[var(--border)] bg-white/70 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-sm dark:border-white/[0.08] dark:bg-black/45 dark:backdrop-blur-xl">
             <div className="grid divide-y divide-[var(--border)] dark:divide-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0">
               {tiers.map((tier) => (
                 <div
@@ -157,7 +157,7 @@ export function LandingPricing() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">{tier.name}</h3>
-                      <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{tier.tagline}</p>
+                      <p className="mt-1 text-xs text-zinc-700 dark:text-zinc-300">{tier.tagline}</p>
                     </div>
                     {tier.featured && (
                       <span
@@ -177,7 +177,7 @@ export function LandingPricing() {
                       {tier.price}
                     </span>
                     {tier.period ? (
-                      <span className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{tier.period}</span>
+                      <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{tier.period}</span>
                     ) : null}
                   </div>
 
@@ -185,7 +185,7 @@ export function LandingPricing() {
                     {tier.highlights.map((line) => (
                       <li
                         key={line}
-                        className="text-sm leading-snug text-zinc-600 dark:text-zinc-300"
+                        className="text-sm leading-snug text-zinc-800 dark:text-zinc-200"
                       >
                         <span className="mr-2 inline-block h-1 w-1 translate-y-[-0.15em] rounded-full bg-[var(--primary)] align-middle opacity-80" />
                         {line}
@@ -207,7 +207,7 @@ export function LandingPricing() {
             </div>
           </div>
 
-          <p className="mt-6 max-w-[65ch] text-xs leading-relaxed text-zinc-500 dark:text-zinc-500">
+          <p className="mt-6 max-w-[65ch] text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
             {isEmployer
               ? "USD · Billed after sign-in. New accounts get a 7-day trial with one listing."
               : "USD pricing. Upgrade anytime from your dashboard after you create an account."}

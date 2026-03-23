@@ -218,7 +218,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
             </section>
           )}
 
-          <p className="mt-10 text-center text-xs text-gray-500 dark:text-zinc-500">
+          <p className="mt-10 text-center text-xs text-gray-500 dark:text-zinc-300">
             Get your own profile on{" "}
             <Link href="/register" className="text-[var(--primary)] hover:underline">
               OpenScout

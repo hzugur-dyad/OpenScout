@@ -45,7 +45,7 @@ export default async function JobsPage() {
         />
       )}
       <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Job Listings</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">Browse open positions and apply.</p>
+      <p className="mt-1 text-gray-700 dark:text-zinc-300">Browse open positions and apply.</p>
 
       {!listings || listings.length === 0 ? (
         <EmptyState
@@ -73,7 +73,7 @@ export default async function JobsPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{job.title}</h3>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+                      <p className="mt-1 text-sm text-gray-700 dark:text-zinc-300">
                         {String(
                           Array.isArray(job.companies)
                             ? job.companies[0]?.name
@@ -81,7 +81,7 @@ export default async function JobsPage() {
                         ) || "Company"}
                       </p>
                       {job.description && (
-                        <p className="mt-2 line-clamp-2 text-sm text-gray-600 dark:text-zinc-400">
+                        <p className="mt-2 line-clamp-2 text-sm text-gray-800 dark:text-zinc-300">
                           {job.description}
                         </p>
                       )}
@@ -91,7 +91,7 @@ export default async function JobsPage() {
                     </Button>
                   </div>
                   {job.min_cv_score != null && (
-                    <p className="mt-2 text-xs text-gray-400 dark:text-zinc-500">
+                    <p className="mt-2 text-xs text-gray-600 dark:text-zinc-300">
                       Min. CV score: {job.min_cv_score}
                     </p>
                   )}

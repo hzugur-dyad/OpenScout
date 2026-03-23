@@ -26,7 +26,7 @@ export default function BlogPage() {
     <div className="py-12 dark:bg-transparent">
       <Container>
       <h1 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">Blog</h1>
-      <p className="mt-2 text-gray-600 dark:text-zinc-400">
+      <p className="mt-2 text-gray-800 dark:text-zinc-300">
         How Scout Score works and why it matters.
       </p>
       <ul className="mt-10 space-y-6">
@@ -34,7 +34,7 @@ export default function BlogPage() {
           <li key={p.slug}>
             <Link href={`/blog/${p.slug}`} className="block rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl dark:hover:shadow-card">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{p.title}</h2>
-              <p className="mt-2 text-gray-600 dark:text-zinc-400">{p.excerpt}</p>
+              <p className="mt-2 text-gray-800 dark:text-zinc-300">{p.excerpt}</p>
               <span className="mt-3 inline-block text-sm font-medium" style={{ color: "var(--primary)" }}>
                 Read more →
               </span>
