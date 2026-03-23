@@ -20,6 +20,8 @@ import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import type { AnalysisResult } from "@/types/schemas";
 import { CVAnalysisLoadingSkeleton, CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
+import { mapCvAnalysisClientError, messageFromApiErrorBody } from "@/lib/user-facing-errors";
+import { captureException } from "@/lib/monitoring";
 
 const editorial = Newsreader({
   subsets: ["latin"],
@@ -148,13 +150,28 @@ function CVAnalysisContent() {
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed");
-      setResult(data);
+      let data: unknown = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
+      if (!res.ok) {
+        const apiMsg = messageFromApiErrorBody(
+          data,
+          "We could not analyze your CV right now. Please try again."
+        );
+        throw new Error(apiMsg);
+      }
+      setResult(data as AnalysisResult);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Error during analysis";
-      setError(msg);
-      console.error("CV analysis error:", e);
+      if (e instanceof Error) {
+        setError(mapCvAnalysisClientError(e.message));
+        captureException(e, { route: "/cv-analysis", tags: { cv_analysis_source: "manual" } });
+      } else {
+        setError(mapCvAnalysisClientError(""));
+        captureException(new Error(String(e)), { route: "/cv-analysis", tags: { cv_analysis_source: "manual" } });
+      }
     } finally {
       setIsLoading(false);
     }

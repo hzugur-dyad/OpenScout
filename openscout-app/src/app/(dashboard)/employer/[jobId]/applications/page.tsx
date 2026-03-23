@@ -96,7 +96,7 @@ export default async function EmployerApplicationsPage({
             Listing: <span className="font-medium text-gray-700 dark:text-zinc-200">{job.title}</span>
           </p>
           <p className="mt-1 text-sm font-medium text-gray-600 dark:text-zinc-400">
-            Only Scout-vetted candidates — each has completed CV analysis and AI interview.
+            Only Scout-vetted candidates — each has completed CV analysis and a mock interview.
           </p>
         </div>
         <Link href={`/employer/${jobId}/edit`}>
@@ -119,7 +119,7 @@ export default async function EmployerApplicationsPage({
           className="mt-10"
           iconName="inbox"
           title="No applications yet"
-          description="When candidates meet your CV score requirement and complete the AI interview, they will show up here."
+          description="When candidates meet your CV score requirement and complete the mock interview, they will show up here."
         >
           <Link href="/employer">
             <Button variant="primary">Back to dashboard</Button>

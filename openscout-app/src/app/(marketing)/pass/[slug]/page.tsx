@@ -166,7 +166,7 @@ export default function ScoutPassPage() {
         <div className="os-public-card mt-10 p-8 text-center">
           <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">Earn your own Scout Score</h2>
           <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Run one AI mock interview on OpenScout and unlock a pass you can attach to applications—same verified format
+            Run one mock interview on OpenScout and unlock a pass you can attach to applications—same verified format
             as this page.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

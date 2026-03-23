@@ -254,7 +254,7 @@ export default async function CandidateApplicationsPage({
                     <Button variant="primary">Browse jobs</Button>
                   </Link>
                   <Link href="/mock-interview">
-                    <Button variant="outline">Take an interview</Button>
+                    <Button variant="outline">Start mock interview</Button>
                   </Link>
                 </>
               ) : (

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
+import { mapSupabaseAuthError } from "@/lib/user-facing-errors";
 
 export default function EmployerLoginPage() {
   const [email, setEmail] = useState("");
@@ -32,8 +33,8 @@ export default function EmployerLoginPage() {
       router.push("/employer");
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error signing in";
-      setError(String(msg));
+      const raw = err instanceof Error ? err.message : "Error signing in";
+      setError(mapSupabaseAuthError(raw));
     } finally {
       setIsLoading(false);
     }

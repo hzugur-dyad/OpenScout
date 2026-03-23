@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
+import { captureException } from "@/lib/monitoring";
 
 export default function EmployerProfilePage() {
   const supabase = createClient();
@@ -12,6 +13,7 @@ export default function EmployerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [personal, setPersonal] = useState({
     first_name: "",
@@ -64,6 +66,7 @@ export default function EmployerProfilePage() {
 
   async function handleSave() {
     setSaving(true);
+    setSaveError(null);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -89,7 +92,8 @@ export default function EmployerProfilePage() {
       setEditing(false);
       router.refresh();
     } catch (e) {
-      console.error(e);
+      captureException(e instanceof Error ? e : new Error(String(e)), { route: "/employer/profile" });
+      setSaveError("We could not save your changes. Check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -175,6 +179,15 @@ export default function EmployerProfilePage() {
       <Link href="/employer" className="text-sm text-gray-500 hover:underline">← Back to dashboard</Link>
       <h1 className="mt-4 text-2xl font-bold">Edit Employer Profile</h1>
       <p className="mt-1 text-gray-500">Update your personal and company details.</p>
+
+      {saveError && (
+        <div
+          className="mt-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200"
+          role="alert"
+        >
+          {saveError}
+        </div>
+      )}
 
       <div className="mt-8 space-y-8">
         <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">

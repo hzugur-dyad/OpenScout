@@ -13,6 +13,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { FileText, UploadSimple } from "@phosphor-icons/react";
 import { Newsreader } from "next/font/google";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
+import { captureException } from "@/lib/monitoring";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -362,7 +363,7 @@ export default function OnboardingPage() {
       setStep(1);
       router.refresh();
     } catch (e) {
-      console.error(e);
+      captureException(e instanceof Error ? e : new Error(String(e)), { route: "/onboarding" });
       setSaveError("We could not save your profile. Check your connection and try again.");
     } finally {
       setIsLoading(false);

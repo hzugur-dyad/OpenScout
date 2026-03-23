@@ -24,8 +24,8 @@ const faqs = [
     a: "Core features are free for job seekers. Mock interviews and CV analysis are limited. Upgrade to premium for unlimited access.",
   },
   {
-    q: "How does the AI interview work?",
-    a: "Based on your selected job category, the AI asks you questions. You answer verbally, the AI evaluates and provides a detailed report. Get a shareable Scout Score — one credential, many companies.",
+    q: "How does the mock interview work?",
+    a: "Pick a job category, answer Nova’s questions out loud, and receive a scored report plus a shareable Scout Score — one credential, many companies.",
   },
   {
     q: "What is the Scout Score?",
@@ -101,12 +101,12 @@ export default function LandingPage() {
             const steps = !isEmployer
               ? [
                   { step: 1, title: "Build Profile", desc: "Upload your CV and fill in your details. AI evaluates and scores you.", icon: FileText },
-                  { step: 2, title: "Get your Scout Score", desc: "Take one AI interview per role. Get a shareable credential and report.", icon: ChatCircle },
+                  { step: 2, title: "Get your Scout Score", desc: "Take one mock interview per role. Get a shareable credential and report.", icon: ChatCircle },
                   { step: 3, title: "Apply everywhere", desc: "One credential, many companies. Connect with employers who trust Scout.", icon: Briefcase },
                 ]
               : [
                   { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Buildings },
-                  { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and AI interview report.", icon: Users },
+                  { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and mock interview report.", icon: Users },
                   { step: 3, title: "Hire faster", desc: "Skip first-round screening. Compare candidates on the same score and report format.", icon: Briefcase },
                 ];
             return (
@@ -159,7 +159,7 @@ export default function LandingPage() {
                   { title: "Practice with AI", desc: "Test yourself with mock interviews and prepare for the real one." },
                 ]
               : [
-                  { title: "Pre-vetted candidates", desc: "Every applicant has a CV score and AI interview report. No blank resumes." },
+                  { title: "Pre-vetted candidates", desc: "Every applicant has a CV score and mock interview report. No blank resumes." },
                   { title: "Less screening time", desc: "Compare apples to apples. Same score format for every candidate." },
                   { title: "One credential, many roles", desc: "Candidates do the work once. You see their Scout Score when they apply." },
                   { title: "Hire in days", desc: "Cut first-round interviews. Move straight to the candidates who passed the bar." },
@@ -210,7 +210,7 @@ export default function LandingPage() {
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-800 dark:text-zinc-300">
-            Get applicants who are already Scout-vetted. Every candidate has a CV score and AI interview report — cut screening time and hire faster.
+            Get applicants who are already Scout-vetted. Every candidate has a CV score and mock interview report — cut screening time and hire faster.
           </p>
           <div className="mt-10 flex justify-center">
             <Link href="/employer">
@@ -228,7 +228,7 @@ export default function LandingPage() {
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold text-gray-900 dark:text-zinc-100">Ready to get your Scout Score?</h2>
             <p className="mt-2 text-gray-800 dark:text-zinc-300">
-              One credential, many companies. Create your profile and take the AI interview.
+              One credential, many companies. Create your profile and take the mock interview.
             </p>
             <Link href="/register" className="mt-8 inline-block">
               <Button variant="primary" size="lg">

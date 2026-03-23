@@ -8,6 +8,7 @@ import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { Check } from "@phosphor-icons/react";
+import { mapSignupAuthError } from "@/lib/user-facing-errors";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -84,12 +85,7 @@ export default function RegisterPage() {
       }
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
-      const lower = raw.toLowerCase();
-      setError(
-        lower.includes("rate limit") || lower.includes("rate_limit")
-          ? "Too many sign-up attempts. Please wait a few minutes and try again."
-          : raw
-      );
+      setError(mapSignupAuthError(raw));
     } finally {
       setIsLoading(false);
     }

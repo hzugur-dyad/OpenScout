@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { InterviewLocale } from "@/lib/interview-locale";
 import { captureException } from "@/lib/monitoring";
+import { mapTtsUserError } from "@/lib/user-facing-errors";
 
 function formatTtsError(raw: string): string {
   try {
@@ -50,8 +51,8 @@ export function useTTS() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const raw = (data as { error?: string }).error ?? `TTS failed: ${res.status}`;
-        const friendly = formatTtsError(raw);
+        const raw = (data as { error?: string }).error ?? "";
+        const friendly = formatTtsError(raw) || `HTTP ${res.status}`;
         throw new Error(friendly);
       }
 
@@ -72,7 +73,7 @@ export function useTTS() {
         audio.play().catch(reject);
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "TTS failed");
+      setError(mapTtsUserError(e instanceof Error ? e.message : ""));
       captureException(e, {
         route: "client/useTTS",
         aiInterview: { stage: "generation", reason: "tts_error" },

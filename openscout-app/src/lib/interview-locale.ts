@@ -54,8 +54,8 @@ export const interviewCopy = {
 
 export const interviewUi = {
   en: {
-    mockInterviewTitle: "AI Mock Interview",
-    mockInterviewSubtitle: "Select job category and practice with AI.",
+    mockInterviewTitle: "Mock interview",
+    mockInterviewSubtitle: "Pick a job category and practice with Nova.",
     jobCategory: "Job Category",
     whatToExpect: "What to Expect",
     expectBullets: [
@@ -95,7 +95,7 @@ export const interviewUi = {
     interviewProviderError: "Nova could not respond (service busy or offline). Check your connection and try again.",
     resultTitle: "Interview Result",
     resultTooShortLead: "The interview was too short to analyze.",
-    resultReadyLead: "Your AI evaluation is ready.",
+    resultReadyLead: "Your mock interview evaluation is ready.",
     resultTooShortBox:
       "The interview was shorter than 5 minutes, so it could not be analyzed. Please try again with a longer conversation to receive feedback and a score.",
     overallScore: "Overall Score",

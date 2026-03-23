@@ -126,6 +126,14 @@ export default async function DashboardJobsPage() {
                 Run CV analysis
               </Button>
             </Link>
+            <Link href="/onboarding">
+              <Button
+                variant="outline"
+                className="rounded-consistent border-[var(--border-strong)] hover:bg-[#F2F1EF] active:bg-[#eae9e6] dark:border-zinc-700 dark:hover:bg-zinc-800 dark:active:bg-zinc-800/80"
+              >
+                My profile
+              </Button>
+            </Link>
           </EmptyState>
         ) : (
           <DashboardJobsList jobs={rows} />

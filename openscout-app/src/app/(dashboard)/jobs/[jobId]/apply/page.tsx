@@ -12,6 +12,7 @@ import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { CVAnalysisLoadingSkeleton, JobApplyPageSkeleton } from "@/components/ui/Skeleton";
 import { computeCvReadiness, CV_READINESS_COPY_EN, type CvReadiness } from "@/lib/cv-readiness";
+import { messageFromApiErrorBody } from "@/lib/user-facing-errors";
 
 export default function JobApplyPage() {
   const params = useParams();
@@ -119,12 +120,19 @@ export default function JobApplyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId }),
       });
-      const data = await res.json();
+      let data: unknown = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = {};
+      }
       if (!res.ok) {
-        setAnalyzeError(data.error || "Analysis failed");
+        setAnalyzeError(
+          messageFromApiErrorBody(data, "We could not score your CV for this role. Please try again.")
+        );
         return;
       }
-      setCvScore(data.overall_score);
+      setCvScore((data as { overall_score: number }).overall_score);
     } catch {
       setAnalyzeError("Network error. Please try again.");
     } finally {
@@ -288,7 +296,7 @@ export default function JobApplyPage() {
                 )
               }
             >
-              Start AI Interview
+              Start mock interview
             </Button>
           </>
         )}

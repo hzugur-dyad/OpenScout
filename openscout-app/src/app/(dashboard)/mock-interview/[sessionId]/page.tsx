@@ -18,6 +18,7 @@ import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException, captureMessage } from "@/lib/monitoring";
 import { isInterviewContractLine } from "@/lib/mock-interview/flow-hints";
+import { mapMicrophoneError } from "@/lib/user-facing-errors";
 
 type InterviewControl = {
   questionId: string;
@@ -129,7 +130,7 @@ export default function MockInterviewSessionPage() {
         micAnimationRef.current = requestAnimationFrame(updateLevel);
       })
       .catch((err: DOMException | Error) => {
-        setMicError(err.message || copy.micDenied);
+        setMicError(mapMicrophoneError(err, copy.micDenied));
         setMicStream(null);
         if (err instanceof DOMException && err.name === "NotAllowedError") {
           captureMessage("Microphone permission denied (mock interview)", {
@@ -222,6 +223,11 @@ export default function MockInterviewSessionPage() {
           tags: { feature: "ai_interview" },
           level: "warning",
         });
+        const errMsg = ui.interviewProviderError;
+        setProviderError(errMsg);
+        setTranscript((t) => [...t, { role: "assistant", content: errMsg }]);
+        setAiMessage(errMsg);
+        return;
       }
       const visibleText = (data.content ?? "").trim();
       const interviewEnded = Boolean(data.interviewEnded);
@@ -431,6 +437,7 @@ export default function MockInterviewSessionPage() {
         ...(jobId && { jobId }),
       }),
     });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       captureMessage(`Mock interview start: HTTP ${res.status}`, {
         route: "/api/mock-interview",
@@ -439,8 +446,12 @@ export default function MockInterviewSessionPage() {
         tags: { feature: "ai_interview" },
         level: "warning",
       });
+      const errMsg = ui.interviewProviderError;
+      setProviderError(errMsg);
+      setAiMessage(errMsg);
+      setTranscript([{ role: "assistant", content: errMsg }]);
+      return;
     }
-    const data = await res.json();
     const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
     if (data.interviewEnded) {
       controlStateRef.current = null;
@@ -908,7 +919,7 @@ export default function MockInterviewSessionPage() {
               className="mt-1 max-w-md text-center text-sm text-red-700 dark:text-red-400"
               role="alert"
             >
-              {ui.voiceErrorPrefix}: {tts.error}
+              {tts.error}
             </p>
           )}
         </div>

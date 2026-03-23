@@ -8,6 +8,7 @@ import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { Button } from "@/components/ui/Button";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { CustomSelect } from "@/components/ui/CustomSelect";
+import { mapSignupAuthError } from "@/lib/user-facing-errors";
 
 const PENDING_EMPLOYER_KEY = "pending_employer_company";
 const PENDING_EMPLOYER_SECTOR = "pending_employer_sector";
@@ -122,12 +123,7 @@ export default function EmployerRegisterPage() {
       router.refresh();
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err);
-      const lower = raw.toLowerCase();
-      const msg =
-        lower.includes("rate limit") || lower.includes("rate_limit")
-          ? "Too many sign-up attempts. Please wait a few minutes and try again, or try again later."
-          : raw;
-      setError(msg);
+      setError(mapSignupAuthError(raw));
     } finally {
       setIsLoading(false);
     }

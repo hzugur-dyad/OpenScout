@@ -174,7 +174,7 @@ export default async function EmployerHomePage() {
             Company: <EditCompanyName companyId={company.id} initialName={company.name} />
           </div>
           <p className="max-w-[62ch] text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-            Only Scout-vetted candidates — every application includes CV and interview scores plus the report.
+            Only Scout-vetted candidates — every application includes CV score, mock interview score, and the report.
           </p>
         </header>
         <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
@@ -208,7 +208,7 @@ export default async function EmployerHomePage() {
           className="border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-800 dark:bg-zinc-900/40"
           iconName="briefcase"
           title="No job listings yet"
-          description="Create your first listing to start receiving applications from candidates who cleared CV and interview gates."
+          description="Create your first listing to start receiving applications from candidates who cleared CV and mock interview gates."
         >
           <Link href="/employer/new">
             <Button variant="primary">Create listing</Button>
@@ -253,7 +253,7 @@ export default async function EmployerHomePage() {
                           {topCandidate.displayName}
                         </Link>
                         <span className="font-mono text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
-                          Hiring {topCandidate.hiringScore}
+                          Hiring score {topCandidate.hiringScore}
                         </span>
                       </div>
                       <p className="mt-2 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">{topCandidate.summaryLine}</p>

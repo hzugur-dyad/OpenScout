@@ -48,7 +48,7 @@ export function SeoCtaBlock({ jobSlug, pageType, position, headline, buttonLabel
   return (
     <aside
       className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl"
-      aria-label="Practice with AI interview"
+      aria-label="Practice with mock interview"
     >
       <p className="text-base font-medium text-gray-900 dark:text-zinc-100">{headline}</p>
       <TrustRow />

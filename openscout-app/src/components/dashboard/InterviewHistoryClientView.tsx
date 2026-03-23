@@ -152,7 +152,7 @@ export function InterviewHistoryClientView({
                 id="interview-history-heading"
                 className={`min-w-0 flex-1 text-[2rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[#111111] md:text-[2.5rem] lg:pr-8 dark:text-zinc-100 ${newsreader.className}`}
               >
-                Interview History
+                Mock interviews
               </h1>
               <div className="flex w-full shrink-0 flex-col items-end gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:pt-1">
                 <SharePublicProfileButton variant="outline" size="sm" surface="interview_history" />
@@ -190,8 +190,8 @@ export function InterviewHistoryClientView({
             <EmptyState
               className="mt-20 rounded-[10px] border-solid border-[#E6E5E2] bg-[#FAFAF9] py-16 dark:border-zinc-800 dark:bg-[#161514]"
               iconName="messageCircle"
-              title="No interviews yet"
-              description="Run a mock interview once to unlock scores, a trend line, and this list."
+              title="No mock interviews yet"
+              description="Complete one mock interview to unlock scores, a trend line, and this list."
             >
               <Link href="/mock-interview" className="touch-manipulation">
                 <Button variant="primary" size="sm" className={primaryCtaClass}>

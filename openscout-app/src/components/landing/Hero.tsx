@@ -39,7 +39,7 @@ export function Hero() {
               </h1>
 
               <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
-                One credential, many companies. Take one AI interview, get a shareable score
+                One credential, many companies. Take one mock interview, get a shareable score
                 and report — stand out to every employer.
               </p>
 
@@ -82,7 +82,7 @@ export function Hero() {
               </h1>
 
               <p className="mt-6 text-lg text-gray-600 dark:text-zinc-300 sm:text-xl">
-                Every candidate has a CV score and AI interview report. Cut screening time and
+                Every candidate has a CV score and mock interview report. Cut screening time and
                 hire faster — only applicants who passed the bar.
               </p>
 
