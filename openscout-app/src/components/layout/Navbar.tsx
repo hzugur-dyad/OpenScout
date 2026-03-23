@@ -8,8 +8,6 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
-import { useHeroEntranceOptional } from "@/contexts/HeroEntranceContext";
-
 type UserType = "job_seeker" | "employer";
 
 interface NavbarProps {
@@ -26,13 +24,6 @@ export function Navbar({
   const pathname = usePathname();
   const showUserTypeToggle = pathname === "/";
   const [mobileOpen, setMobileOpen] = useState(false);
-  const heroEntrance = useHeroEntranceOptional();
-  const phase = heroEntrance?.phase ?? "content";
-  // Hero entrance only runs on "/"; elsewhere phase stays "centered" forever if we hide the bar globally.
-  const isHomeHeroEntrance = pathname === "/";
-  const isAnimating = isHomeHeroEntrance && phase === "centered";
-  const heroIntroMotion = isHomeHeroEntrance && phase !== "content";
-
   const navLinks = [
     { href: "/jobs", label: "Job Listings" },
     { href: "/blog", label: "Blog" },
@@ -41,33 +32,20 @@ export function Navbar({
   return (
     <>
       {/* ── Navbar ── */}
-      <header
-        className={`sticky top-0 z-50 bg-transparent pt-3 transition-opacity duration-300 ${
-          isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
-        }`}
-      >
+      <header className="sticky top-0 z-50 bg-transparent pt-3">
         <nav className="mx-auto flex h-[4.5rem] w-[min(96%,1100px)] items-center justify-between overflow-visible rounded-2xl border border-black/10 bg-white/55 px-6 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:px-8 dark:border-white/10 dark:bg-black/55 dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 overflow-visible">
-              <motion.div
-                layoutId="hero-logo"
-                className="flex items-center gap-2 overflow-visible"
-                transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
-              >
+              <div className="flex items-center gap-2 overflow-visible">
                 <OpenScoutLogoMark className="h-14 w-14 origin-left scale-[1.1]" />
                 <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white/95">
                   OpenScout
                 </span>
-              </motion.div>
+              </div>
             </Link>
 
-            <motion.div
-              className="hidden items-center gap-5 md:flex"
-              initial={heroIntroMotion ? { opacity: 0 } : false}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
+            <div className="hidden items-center gap-5 md:flex">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
@@ -81,16 +59,11 @@ export function Navbar({
                   {link.label}
                 </Link>
               ))}
-            </motion.div>
+            </div>
           </div>
 
           {/* Right: auth + theme toggle (far-right) */}
-          <motion.div
-            className="flex items-center gap-3"
-            initial={heroIntroMotion ? { opacity: 0 } : false}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
+          <div className="flex items-center gap-3">
             {isAuthenticated ? (
               <Link href="/dashboard">
                 <Button variant="primary" size="sm">Dashboard</Button>
@@ -122,7 +95,7 @@ export function Navbar({
                 <Hamburger className="h-6 w-6" weight="regular" aria-hidden />
               )}
             </button>
-          </motion.div>
+          </div>
         </nav>
 
         {/* Mobile menu */}
@@ -173,13 +146,7 @@ export function Navbar({
 
       {/* ── Find Jobs / I'm Hiring pill — homepage only, floating below navbar (desktop) ── */}
       {showUserTypeToggle && (
-        <motion.div
-          className="relative z-40 hidden justify-center md:flex"
-          style={{ marginTop: -1 }}
-          initial={heroIntroMotion ? { opacity: 0 } : false}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.4 }}
-        >
+        <div className="relative z-40 hidden justify-center md:flex" style={{ marginTop: -1 }}>
           <div className="absolute top-3">
             <div className="relative flex items-center rounded-full border border-[var(--border)] bg-white/75 p-1 shadow-soft backdrop-blur-md dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
               <motion.div
@@ -209,7 +176,7 @@ export function Navbar({
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
     </>
   );

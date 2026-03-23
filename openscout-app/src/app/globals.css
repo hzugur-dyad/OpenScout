@@ -180,3 +180,8 @@ html.dark .landing-framer-dim {
     transparent
   );
 }
+
+.framer-wrapper #__framer-badge-container,
+.framer-wrapper [id*="framer-badge"] {
+  display: none !important;
+}

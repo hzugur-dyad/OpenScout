@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProviderWrapper } from "@/components/theme/ThemeProviderWrapper";
 import { PostHogProvider } from "@/components/analytics/PostHogProvider";
+import { FramerBadgeCleanup } from "@/components/layout/FramerBadgeCleanup";
+import { FramerBackgroundEmbed } from "@/components/layout/FramerBackgroundEmbed";
+import { SupportChatWidget } from "@/components/support/SupportChatWidget";
 import { absoluteUrl, DEFAULT_OG_IMAGE_PATH, getSiteUrl } from "@/lib/seo/site";
 
 const geistSans = Geist({
@@ -79,28 +82,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-transparent text-[var(--foreground)] dark:text-zinc-100`}
       >
-        <iframe
-          src="https://courageous-customer-454833.framer.app/page"
-          title=""
-          aria-hidden
-          scrolling="no"
-          className="pointer-events-none fixed inset-y-0 left-0 z-0 block h-full w-[calc(100%+20px)] border-0 dark:hidden"
-          style={{ marginRight: "-20px" }}
-          loading="eager"
-        />
-        <iframe
-          src="https://courageous-customer-454833.framer.app/"
-          title=""
-          aria-hidden
-          scrolling="no"
-          className="pointer-events-none fixed inset-y-0 left-0 z-0 hidden h-full w-[calc(100%+20px)] border-0 dark:block"
-          style={{ marginRight: "-20px" }}
-          loading="eager"
-        />
+        <FramerBackgroundEmbed />
+        <FramerBadgeCleanup />
         <div className="relative z-[1] min-h-dvh">
           <PostHogProvider>
             <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
           </PostHogProvider>
+          <SupportChatWidget />
         </div>
       </body>
     </html>

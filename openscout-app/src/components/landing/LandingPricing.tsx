@@ -107,7 +107,6 @@ export function LandingPricing() {
             "radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 100%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 50%)",
         }}
       />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-zinc-50/50 dark:bg-transparent" />
 
       <Container>
         <motion.div

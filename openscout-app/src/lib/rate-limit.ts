@@ -156,6 +156,8 @@ export const RATE_LIMITS = {
   tts: { limit: 30, window: "1 h" as Duration },
   cvAnalysis: { limit: 5, window: "1 m" as Duration },
   interviewResult: { limit: 5, window: "1 m" as Duration },
+  /** Public marketing support chat (Groq) — IP- or user-scoped */
+  supportChat: { limit: 40, window: "1 h" as Duration },
 } as const;
 
 export type RateLimitKind = keyof typeof RATE_LIMITS;
