@@ -26,19 +26,19 @@ export function EmptyState({ iconName, title, description, className, children }
   return (
     <div
       className={cn(
-        "flex flex-col items-center rounded-[10px] border border-dashed border-[var(--border)] bg-white/60 px-8 py-12 text-center dark:border-white/[0.12] dark:bg-black/20 dark:backdrop-blur-xl",
+        "flex flex-col items-center rounded-xl border border-dashed border-[var(--border-strong)] bg-white/80 px-8 py-14 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] backdrop-blur-sm dark:border-white/[0.14] dark:bg-zinc-900/50 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
         className
       )}
     >
       <div
-        className="flex h-14 w-14 items-center justify-center rounded-full"
+        className="flex h-16 w-16 items-center justify-center rounded-2xl ring-1 ring-black/[0.04] dark:ring-white/[0.08]"
         style={{ backgroundColor: "var(--primary-muted)" }}
       >
-        <Icon className="h-7 w-7" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
+        <Icon className="h-8 w-8" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
       </div>
-      <h3 className="mt-5 text-lg font-semibold text-gray-900 dark:text-zinc-100">{title}</h3>
+      <h3 className="mt-6 text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{title}</h3>
       {description && (
-        <p className="mt-2 max-w-md text-sm text-gray-500 dark:text-zinc-400">{description}</p>
+        <p className="mt-3 max-w-md text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{description}</p>
       )}
       {children && <div className="mt-6 flex flex-wrap items-center justify-center gap-3">{children}</div>}
     </div>

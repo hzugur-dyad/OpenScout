@@ -654,7 +654,11 @@ export default function OnboardingPage() {
             Upload new CV
           </Link>
           <div className="mt-6">
-            <SharePublicProfileButton />
+            <p className="mb-2 max-w-[65ch] text-sm leading-[1.5] text-black/60 dark:text-zinc-400">
+              When you save your profile, you can share a public page that shows your Scout Score and hiring signal—use
+              it on applications and LinkedIn.
+            </p>
+            <SharePublicProfileButton surface="onboarding" />
           </div>
           <div className="mt-10 hidden md:block">
             <OnboardingStepper currentStep={step} />

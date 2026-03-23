@@ -14,10 +14,16 @@ type Props = {
   score: number;
   jobCategory: string;
   showAnonToggle?: boolean;
+  /** PostHog funnel slice: e.g. interview_result | public_result_page | dashboard_growth */
+  surface?: string;
 };
 
-function trackShare(score: number, job_category: string) {
-  trackClient(ANALYTICS_EVENTS.result_shared, { score, job_category });
+function trackShare(score: number, job_category: string, surface?: string) {
+  trackClient(ANALYTICS_EVENTS.result_shared, {
+    score,
+    job_category,
+    ...(surface ? { surface } : {}),
+  });
 }
 
 export function InterviewResultShareBlock({
@@ -25,6 +31,7 @@ export function InterviewResultShareBlock({
   score,
   jobCategory,
   showAnonToggle = true,
+  surface,
 }: Props) {
   const [hideName, setHideName] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -49,7 +56,7 @@ export function InterviewResultShareBlock({
     try {
       await navigator.clipboard.writeText(fullUrl);
       setCopied(true);
-      trackShare(score, jobCategory);
+      trackShare(score, jobCategory, surface);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* ignore */
@@ -65,7 +72,7 @@ export function InterviewResultShareBlock({
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share(shareData);
-        trackShare(score, jobCategory);
+        trackShare(score, jobCategory, surface);
       }
     } catch (e) {
       if ((e as Error)?.name !== "AbortError") {
@@ -81,11 +88,11 @@ export function InterviewResultShareBlock({
     <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
       <div className="flex items-center gap-2">
         <ShareNetwork className="h-5 w-5 text-gray-600 dark:text-zinc-400" weight="regular" aria-hidden />
-        <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Share your result</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Share this result</h3>
       </div>
       <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">
-        Anyone with the link can see your score and feedback highlights — not your transcript or
-        email.
+        Show interview readiness with a public scorecard—strengths and improvements only. Your
+        transcript and account stay private.
       </p>
       <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-gray-800 dark:bg-black/20 dark:text-zinc-200">
         {viralText}
@@ -115,11 +122,11 @@ export function InterviewResultShareBlock({
           iconPosition="left"
           onClick={() => void copyLink()}
         >
-          {copied ? "Copied!" : "Share your result"}
+          {copied ? "Copied" : "Copy link"}
         </Button>
         {canNativeShare && (
           <Button variant="outline" size="sm" onClick={() => void nativeShare()}>
-            Share…
+            Share sheet…
           </Button>
         )}
       </div>

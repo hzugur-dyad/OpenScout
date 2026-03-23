@@ -155,7 +155,7 @@ export function InterviewHistoryClientView({
                 Interview History
               </h1>
               <div className="flex w-full shrink-0 flex-col items-end gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:pt-1">
-                <SharePublicProfileButton variant="outline" size="sm" />
+                <SharePublicProfileButton variant="outline" size="sm" surface="interview_history" />
                 <Link href="/mock-interview" className="block w-auto touch-manipulation sm:contents">
                   <Button
                     variant="primary"
@@ -172,6 +172,11 @@ export function InterviewHistoryClientView({
             <p className="mt-6 max-w-[65ch] text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
               Mock interviews you have finished, the score trend from your last five runs, and links to each report.
             </p>
+            {bestInterviewScore >= 70 && rows.length > 0 && (
+              <p className="mt-4 max-w-[65ch] text-sm font-medium leading-[1.5] text-[#346538] dark:text-emerald-400/95">
+                Strong scores stand out—copy your public result or profile from the dashboard to share verified signal.
+              </p>
+            )}
             {rows.length > 0 && (
               <p className="mt-5 text-sm tabular-nums text-[#787774] dark:text-zinc-500">
                 {rows.length} session{rows.length === 1 ? "" : "s"} on file

@@ -69,14 +69,14 @@ export default async function PublicInterviewResultPage({ params, searchParams }
   }
   if (fetched.status === "unavailable") {
     return (
-      <div className="py-16">
+      <div className="os-public-canvas py-20">
         <Container>
-          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Temporarily unavailable</h1>
-            <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
+          <div className="os-public-card mx-auto max-w-md p-10 text-center">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Temporarily unavailable</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Shared interview links require configuration. Please try again later.
             </p>
-            <Link href="/" className="mt-6 inline-block">
+            <Link href="/" className="mt-8 inline-block">
               <Button variant="outline">Go to OpenScout</Button>
             </Link>
           </div>
@@ -98,31 +98,36 @@ export default async function PublicInterviewResultPage({ params, searchParams }
     data.score >= 70 ? "#22c55e" : data.score >= 50 ? "#D4A843" : "#ef4444";
 
   return (
-    <div className="py-12">
-      <Container>
+    <div className="os-public-canvas py-16 md:py-20">
+      <Container className="px-5 sm:px-6">
         <div className="mx-auto max-w-xl">
-          <div className="mb-8 text-center">
-            <Link href="/" className="text-sm font-medium" style={{ color: "var(--primary)" }}>
+          <div className="mb-10 text-center">
+            <Link
+              href="/"
+              className="text-sm font-semibold tracking-wide text-primary transition-opacity hover:opacity-80"
+            >
               OpenScout
             </Link>
-            <h1 className="mt-2 text-2xl font-bold text-gray-900 dark:text-zinc-100">Interview result</h1>
-            <p className="mt-1 text-sm text-gray-500 dark:text-zinc-400">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Interview result
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Shared highlights only — no transcript or private account details.
             </p>
             {sharedByFirst && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">Shared by {sharedByFirst}</p>
+              <p className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">Shared by {sharedByFirst}</p>
             )}
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl overflow-hidden">
+          <div className="os-public-card">
             <div
-              className="border-b border-[var(--border)] px-6 py-4"
+              className="border-b border-[var(--border)] px-6 py-5 dark:border-white/[0.08]"
               style={{ backgroundColor: "var(--primary-muted)" }}
             >
               <div className="flex flex-wrap items-center gap-4 sm:justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white tabular-nums"
+                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold text-white shadow-lg tabular-nums ring-2 ring-white/20"
                     style={{ backgroundColor: circleColor }}
                   >
                     {data.score}
@@ -149,18 +154,18 @@ export default async function PublicInterviewResultPage({ params, searchParams }
               </div>
             </div>
 
-            <div className="border-b border-[var(--border)] px-6 py-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
+            <div className="border-b border-[var(--border)] bg-zinc-50/50 px-6 py-5 dark:border-white/[0.08] dark:bg-zinc-950/30">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
                 Overall score
               </p>
-              <p className="mt-1 text-lg font-semibold text-gray-900 dark:text-zinc-100">
+              <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
                 {data.score}/100
               </p>
             </div>
 
             {data.strengths.length > 0 && (
-              <div className="border-t border-[var(--border)] px-6 py-4">
-                <h3 className="font-semibold text-gray-800 dark:text-zinc-100">Strengths</h3>
+              <div className="border-t border-[var(--border)] px-6 py-5 dark:border-white/[0.08]">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Strengths</h3>
                 <ul className="mt-2 space-y-2">
                   {data.strengths.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-zinc-300">
@@ -173,8 +178,8 @@ export default async function PublicInterviewResultPage({ params, searchParams }
             )}
 
             {data.improvements.length > 0 && (
-              <div className="border-t border-[var(--border)] px-6 py-4">
-                <h3 className="font-semibold text-gray-800 dark:text-zinc-100">Areas to improve</h3>
+              <div className="border-t border-[var(--border)] px-6 py-5 dark:border-white/[0.08]">
+                <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Areas to improve</h3>
                 <ul className="mt-2 space-y-2">
                   {data.improvements.map((s, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-gray-700 dark:text-zinc-300">
@@ -193,15 +198,30 @@ export default async function PublicInterviewResultPage({ params, searchParams }
               score={data.score}
               jobCategory={data.job_category}
               showAnonToggle={false}
+              surface="public_result_page"
             />
           </div>
 
-          <p className="mt-6 text-center text-xs text-gray-400 dark:text-zinc-300">
-            Practice with AI interviews on{" "}
-            <Link href="/mock-interview" className="underline">
-              OpenScout
-            </Link>
-            .
+          <div className="os-public-card mt-10 p-8 text-center">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Get your own verified result
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Practice a role-specific AI interview, receive a score and Scout Pass, and share a public
+              scorecard—without exposing your transcript.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/register">
+                <Button variant="primary">Create free account</Button>
+              </Link>
+              <Link href="/mock-interview">
+                <Button variant="outline">Try a mock interview</Button>
+              </Link>
+            </div>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-zinc-500 dark:text-zinc-400">
+            OpenScout — AI mock interviews and candidate profiles employers can trust.
           </p>
         </div>
       </Container>

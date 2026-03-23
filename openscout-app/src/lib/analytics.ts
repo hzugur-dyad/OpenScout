@@ -25,6 +25,8 @@ export const ANALYTICS_EVENTS = {
   seo_cta_clicked: "seo_cta_clicked",
   /** Candidate shared public profile link (role = target/open category, best_score = top Scout score) */
   public_profile_shared: "public_profile_shared",
+  /** Scout Pass link copied or shared (channel = copy_link | native | linkedin | twitter | modal_copy) */
+  scout_pass_shared: "scout_pass_shared",
   /** Candidate copied invite link from dashboard */
   referral_link_copied: "referral_link_copied",
   /** Referred user attributed to a referrer (no PII in properties) */

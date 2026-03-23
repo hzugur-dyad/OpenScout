@@ -144,8 +144,8 @@ export function EmployerJobForm(props: {
   }
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-      <div className="grid gap-5">
+    <div className="os-surface-card p-6 md:p-8">
+      <div className="grid gap-6">
         {/* Title combobox */}
         <div ref={titleRef} className="relative">
           <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Title</label>

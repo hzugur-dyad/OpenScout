@@ -28,9 +28,8 @@ const editorial = Newsreader({
 
 const quietEase = [0.16, 1, 0.3, 1] as const;
 
-/** Surfaces: off-white / zinc stack, edge defined by stroke (no card shadows). */
-const panel =
-  "rounded-[10px] border border-zinc-200/90 bg-[#FAFAFA] dark:border-zinc-800 dark:bg-zinc-950";
+/** Report surfaces — elevated cards aligned with product shell */
+const panel = "os-surface-card";
 
 const ctaClass =
   "rounded-[10px] bg-zinc-900 text-white shadow-none transition-colors duration-200 ease-out hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white";

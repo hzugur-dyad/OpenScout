@@ -171,7 +171,7 @@ export function Sidebar({
                   onClick={onMobileClose}
                   className={`
                     flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-medium transition-colors
-                    ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
+                    ${isActive ? "bg-primary/12 text-primary ring-1 ring-primary/15 dark:bg-primary/15 dark:ring-primary/20" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80"}
                   `}
                 >
                   {IconGlyph}
@@ -186,7 +186,7 @@ export function Sidebar({
               onClick={onMobileClose}
               className={`
                 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors
-                ${isActive ? "bg-primary/10 text-primary" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800"}
+                ${isActive ? "bg-primary/12 text-primary ring-1 ring-primary/15 dark:bg-primary/15 dark:ring-primary/20" : "text-gray-600 hover:bg-gray-100 dark:text-zinc-300 dark:hover:bg-zinc-800/80"}
               `}
             >
               {IconGlyph}

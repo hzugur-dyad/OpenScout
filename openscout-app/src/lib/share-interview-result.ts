@@ -2,7 +2,7 @@
 
 export function interviewResultViralText(score: number, jobCategory: string): string {
   const role = jobCategory?.trim() || "practice";
-  return `I just scored ${score} in a ${role} interview. Try it yourself.`;
+  return `Scored ${score}/100 on an AI ${role} interview with OpenScout — verified feedback, no transcript on the public link. Practice your own run:`;
 }
 
 export function buildPublicInterviewResultPath(id: string, opts?: { anon?: boolean }): string {

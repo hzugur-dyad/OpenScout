@@ -17,6 +17,7 @@ import {
 import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException, captureMessage } from "@/lib/monitoring";
+import { isInterviewContractLine } from "@/lib/mock-interview/flow-hints";
 
 type InterviewControl = {
   questionId: string;
@@ -54,8 +55,11 @@ export default function MockInterviewSessionPage() {
   const micAnalyserRef = useRef<{ analyser: AnalyserNode; ctx: AudioContext } | null>(null);
   const micAnimationRef = useRef<number | null>(null);
   const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const responseWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlStateRef = useRef<InterviewControl | null>(null);
-  const RESPONSE_LIMIT_MS = 30_000;
+  /** First nudge while candidate is still composing (then hard timeout below) */
+  const RESPONSE_WARNING_MS = 18_000;
+  const RESPONSE_LIMIT_MS = 42_000;
   const [providerError, setProviderError] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const endDialogContinueRef = useRef<HTMLButtonElement>(null);
@@ -164,6 +168,14 @@ export default function MockInterviewSessionPage() {
         clearTimeout(responseLimitTimerRef.current);
         responseLimitTimerRef.current = null;
       }
+      if (responseWarningTimerRef.current) {
+        clearTimeout(responseWarningTimerRef.current);
+        responseWarningTimerRef.current = null;
+      }
+
+      if (!isInterviewContractLine(userMessage)) {
+        silenceStrikeRef.current = 0;
+      }
 
       const newMessages = [
         ...transcript.map((t) => ({ role: t.role as "user" | "assistant", content: t.content })),
@@ -216,6 +228,14 @@ export default function MockInterviewSessionPage() {
 
       if (interviewEnded) {
         controlStateRef.current = null;
+        if (responseWarningTimerRef.current) {
+          clearTimeout(responseWarningTimerRef.current);
+          responseWarningTimerRef.current = null;
+        }
+        if (responseLimitTimerRef.current) {
+          clearTimeout(responseLimitTimerRef.current);
+          responseLimitTimerRef.current = null;
+        }
       } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
         controlStateRef.current = {
           questionId: data.questionControl.questionId,
@@ -280,6 +300,11 @@ export default function MockInterviewSessionPage() {
         return;
       }
 
+      responseWarningTimerRef.current = setTimeout(() => {
+        responseWarningTimerRef.current = null;
+        sendToAI(copy.responseDelayWarningCue);
+      }, RESPONSE_WARNING_MS);
+
       responseLimitTimerRef.current = setTimeout(() => {
         responseLimitTimerRef.current = null;
         sendToAI(copy.noResponseCue);
@@ -287,10 +312,24 @@ export default function MockInterviewSessionPage() {
 
       tts.play(visibleText, locale);
     },
-    [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, tts.play, userName, locale, copy.noResponseCue, ui.interviewProviderError]
+    [
+      transcript,
+      jobCategory,
+      sessionId,
+      jobId,
+      cvScoreForApplication,
+      router,
+      tts.play,
+      userName,
+      locale,
+      copy.noResponseCue,
+      copy.responseDelayWarningCue,
+      ui.interviewProviderError,
+    ]
   );
 
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const silenceStrikeRef = useRef(0);
   const finalTranscriptRef = useRef("");
   const endingRef = useRef(false);
 
@@ -335,7 +374,13 @@ export default function MockInterviewSessionPage() {
       const err = (event ?? {}) as { error?: string };
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       if (err.error === "no-speech" || err.error === "audio-capture") {
-        sendToAI(copy.notHeardCue);
+        if (silenceStrikeRef.current >= 1) {
+          silenceStrikeRef.current = 0;
+          sendToAI(copy.silenceEscalateCue);
+        } else {
+          silenceStrikeRef.current = 1;
+          sendToAI(copy.notHeardCue);
+        }
       }
       setIsListening(false);
     }) as (e: unknown) => void;
@@ -347,7 +392,11 @@ export default function MockInterviewSessionPage() {
       finalTranscriptRef.current = "";
       if (text) {
         sendToAI(text);
+      } else if (silenceStrikeRef.current >= 1) {
+        silenceStrikeRef.current = 0;
+        sendToAI(copy.silenceEscalateCue);
       } else {
+        silenceStrikeRef.current = 1;
         sendToAI(copy.notHeardCue);
       }
       setIsListening(false);
@@ -358,7 +407,7 @@ export default function MockInterviewSessionPage() {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
       recognition.abort();
     };
-  }, [step, sendToAI, locale, copy.notHeardCue]);
+  }, [step, sendToAI, locale, copy.notHeardCue, copy.silenceEscalateCue]);
 
   const startInterview = useCallback(async () => {
     endedRef.current = false;
@@ -408,6 +457,11 @@ export default function MockInterviewSessionPage() {
     setAiMessage(content);
     setTranscript([{ role: "assistant", content }]);
 
+    responseWarningTimerRef.current = setTimeout(() => {
+      responseWarningTimerRef.current = null;
+      sendToAI(copy.responseDelayWarningCue);
+    }, RESPONSE_WARNING_MS);
+
     responseLimitTimerRef.current = setTimeout(() => {
       responseLimitTimerRef.current = null;
       sendToAI(copy.noResponseCue);
@@ -426,6 +480,7 @@ export default function MockInterviewSessionPage() {
     copy.readyPhrase,
     copy.fallbackOpening,
     copy.noResponseCue,
+    copy.responseDelayWarningCue,
     ui.interviewProviderError,
   ]);
 
@@ -556,6 +611,10 @@ export default function MockInterviewSessionPage() {
       clearTimeout(responseLimitTimerRef.current);
       responseLimitTimerRef.current = null;
     }
+    if (responseWarningTimerRef.current) {
+      clearTimeout(responseWarningTimerRef.current);
+      responseWarningTimerRef.current = null;
+    }
     setShowEndConfirm(false);
 
     const farewellMessage = copy.farewell;
@@ -574,6 +633,10 @@ export default function MockInterviewSessionPage() {
       if (responseLimitTimerRef.current) {
         clearTimeout(responseLimitTimerRef.current);
         responseLimitTimerRef.current = null;
+      }
+      if (responseWarningTimerRef.current) {
+        clearTimeout(responseWarningTimerRef.current);
+        responseWarningTimerRef.current = null;
       }
     };
   }, [releaseMicrophoneResources]);

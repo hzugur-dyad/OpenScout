@@ -11,9 +11,9 @@ export default function DashboardError({
   reset: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-md rounded-[10px] border border-amber-200 bg-amber-50 p-8 text-center">
-      <h2 className="text-lg font-bold text-amber-900">Something went wrong</h2>
-      <p className="mt-2 text-sm text-amber-800">
+    <div className="os-surface-card mx-auto max-w-md border-amber-200/90 bg-amber-50/95 p-10 text-center ring-1 ring-amber-900/[0.06] dark:border-amber-900/40 dark:bg-amber-950/35 dark:ring-amber-500/10">
+      <h2 className="text-lg font-semibold tracking-tight text-amber-950 dark:text-amber-100">Something went wrong</h2>
+      <p className="mt-3 text-sm leading-relaxed text-amber-900/90 dark:text-amber-200/90">
         An error occurred loading this page. You can try again or return to the dashboard.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">

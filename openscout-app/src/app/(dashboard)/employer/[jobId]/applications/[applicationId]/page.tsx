@@ -10,7 +10,8 @@ import {
   hiringScoreInputsFromInterviewRow,
   HIRING_SCORE_WEIGHT_LABELS,
 } from "@/lib/hiring-score";
-import { computeCandidateRiskFlags, riskFlagLabel } from "@/lib/employer-candidate-signals";
+import { getEmployerIntelligence, employerDecisionRiskFlagLabel } from "@/lib/employer-intelligence";
+import { HiringFitBadge } from "@/components/employer/HiringFitBadge";
 
 export default async function EmployerApplicationDetailPage({
   params,
@@ -123,13 +124,15 @@ export default async function EmployerApplicationDetailPage({
       cv_score: application.cv_score as number | null,
     })
   );
-  const riskFlags = computeCandidateRiskFlags({
-    interviewReport: application.interview_report,
-    interviewScore: application.interview_score as number | null,
-    cvScore: application.cv_score as number | null,
-    minCvScore: minCvJob,
-    durationMs: null,
-  });
+  const intel = getEmployerIntelligence(
+    {
+      cv_score: application.cv_score as number | null,
+      interview_score: application.interview_score as number | null,
+      interview_report: application.interview_report,
+      ai_recommendation_reason: aiReason,
+    },
+    { minCvScore: minCvJob, durationMs: null }
+  );
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -228,28 +231,52 @@ export default async function EmployerApplicationDetailPage({
               <p className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{application.interview_score ?? "—"}</p>
             </div>
           </div>
-          {aiReason?.trim() && (
-            <div className="mt-4 rounded-lg border border-[var(--border)] bg-gray-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
-                AI recommendation summary
-              </h3>
-              <p className="mt-1 text-sm text-gray-800 dark:text-zinc-200">{aiReason.trim()}</p>
-            </div>
-          )}
-          {riskFlags.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-xs font-medium text-amber-800 dark:text-amber-200">Signals to review</h3>
-              <ul className="mt-1 list-inside list-disc text-sm text-amber-900 dark:text-amber-100">
-                {riskFlags.map((f) => (
-                  <li key={f}>{riskFlagLabel(f)}</li>
-                ))}
-              </ul>
-            </div>
-          )}
           {application.created_at && (
             <p className="mt-3 text-sm text-gray-500 dark:text-zinc-500">
               Applied: {new Date(application.created_at).toLocaleString()}
             </p>
+          )}
+        </div>
+
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+          <h2 className="font-semibold text-gray-800 dark:text-zinc-100">AI Hiring Insight</h2>
+          <p className="mt-1 text-xs text-gray-500 dark:text-zinc-500">
+            Rule-based summary from stored scores — not a live model call.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div>
+              <span className="text-xs text-gray-500 dark:text-zinc-500">Hiring score</span>
+              <p className="text-lg font-semibold text-gray-900 dark:text-zinc-100">{intel.hiringScore}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 dark:text-zinc-500">Fit</span>
+              <HiringFitBadge tag={intel.fitLabel} />
+            </div>
+          </div>
+          <p className="mt-3 text-sm text-gray-800 dark:text-zinc-200">{intel.recommendationReason}</p>
+          {intel.strongestDimension && (
+            <p className="mt-2 text-xs text-gray-600 dark:text-zinc-400">
+              <span className="font-medium text-gray-700 dark:text-zinc-300">Strongest:</span>{" "}
+              {intel.strongestDimension.label} ({intel.strongestDimension.score})
+            </p>
+          )}
+          {intel.weakestDimension && (
+            <p className="mt-1 text-xs text-gray-600 dark:text-zinc-400">
+              <span className="font-medium text-gray-700 dark:text-zinc-300">Weakest:</span>{" "}
+              {intel.weakestDimension.label} ({intel.weakestDimension.score})
+            </p>
+          )}
+          {intel.riskFlags.length > 0 ? (
+            <div className="mt-3">
+              <h3 className="text-xs font-medium text-amber-900 dark:text-amber-200">Risk flags</h3>
+              <ul className="mt-1 list-inside list-disc text-sm text-amber-950 dark:text-amber-100">
+                {intel.riskFlags.map((f) => (
+                  <li key={f}>{employerDecisionRiskFlagLabel(f)}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-gray-500 dark:text-zinc-500">No automated risk flags for this profile.</p>
           )}
         </div>
 

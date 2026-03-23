@@ -37,21 +37,21 @@ export function CreateCompanyCard() {
   }
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-      <h2 className="text-lg font-semibold">Create your company</h2>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="os-surface-card p-6 md:p-8">
+      <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Create your company</h2>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
         To post job listings, first create a company profile.
       </p>
 
-      <div className="mt-6">
-        <label className="text-sm font-medium">Company name</label>
+      <div className="mt-8">
+        <label className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Company name</label>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Acme Inc."
-          className="mt-2 w-full rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+          className="mt-2 w-full rounded-xl border border-[var(--border-strong)] bg-zinc-50/80 px-4 py-3 text-sm text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-primary focus:ring-2 focus:ring-primary/25 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
         />
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="mt-4">
           <Button variant="primary" onClick={handleCreate} isLoading={loading}>
             Create company

@@ -12,6 +12,11 @@ import {
   HIRING_SCORE_WEIGHT_LABELS,
 } from "@/lib/hiring-score";
 import { userHasCompanyAccess } from "@/lib/employer-company";
+import {
+  buildTopCandidateSummaryLine,
+  employerDecisionRiskFlagLabel,
+  getEmployerIntelligence,
+} from "@/lib/employer-intelligence";
 
 export default async function EmployerComparePage({
   searchParams,
@@ -24,12 +29,17 @@ export default async function EmployerComparePage({
 
   if (ids.length < 2 || ids.length > 3) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">Compare candidates</h1>
-        <p className="mt-2 text-gray-600 dark:text-zinc-400">
-          Select 2–3 applications from a job listing, then use &quot;Compare selected&quot; on the applications table.
-        </p>
-        <Link href="/employer" className="mt-6 inline-block">
+      <div className="mx-auto w-full max-w-2xl space-y-8">
+        <header className="space-y-3">
+          <p className="os-eyebrow">Compare</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-3xl">
+            Compare candidates
+          </h1>
+          <p className="text-base leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Select 2–3 applications from a job listing, then use &quot;Compare selected&quot; on the applications table.
+          </p>
+        </header>
+        <Link href="/employer" className="inline-block">
           <Button variant="outline">Back to employer</Button>
         </Link>
       </div>
@@ -53,6 +63,7 @@ export default async function EmployerComparePage({
       cv_score,
       interview_report,
       application_status,
+      ai_recommendation_reason,
       profiles(first_name, last_name, email)
     `
     )
@@ -67,6 +78,7 @@ export default async function EmployerComparePage({
     cv_score: number | null;
     interview_report: Record<string, unknown> | null;
     application_status?: string;
+    ai_recommendation_reason?: string | null;
     profiles: { first_name?: string; last_name?: string; email?: string } | null;
   };
   const rows = apps as CompareRow[];
@@ -76,7 +88,7 @@ export default async function EmployerComparePage({
 
   const { data: job } = await supabase
     .from("job_listings")
-    .select("id, title, company_id")
+    .select("id, title, company_id, min_cv_score")
     .eq("id", jobId)
     .maybeSingle();
 
@@ -106,24 +118,45 @@ export default async function EmployerComparePage({
   }
   if (bestHiringScore <= 0) bestRowId = null;
 
+  const minCvScore = (job as { min_cv_score?: number | null }).min_cv_score ?? null;
+  const listCtx = { minCvScore, durationMs: null as number | null };
+  const bestRow = bestRowId ? ordered.find((r) => r.id === bestRowId) : null;
+  const topSummary =
+    bestRow != null ? buildTopCandidateSummaryLine(bestRow, listCtx) : null;
+
   return (
-    <div className="mx-auto max-w-6xl">
-      <Link
-        href={`/employer/${jobId}/applications`}
-        className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300"
-      >
-        ← Back to applications
-      </Link>
-      <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-zinc-100">Compare candidates</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">{(job as { title: string }).title}</p>
-      <p className="mt-3 max-w-2xl text-xs text-gray-500 dark:text-zinc-500">
-        Hiring score blends available signals with fixed weights:{" "}
-        {HIRING_SCORE_WEIGHT_LABELS.map((w) => `${w.label} ${Math.round(w.weight * 100)}%`).join(", ")}. Missing
-        dimensions are renormalized automatically.
-      </p>
+    <div className="mx-auto w-full max-w-6xl space-y-10 pb-8">
+      <div className="border-b border-zinc-200/80 pb-8 dark:border-zinc-800/80">
+        <Link
+          href={`/employer/${jobId}/applications`}
+          className="inline-flex text-sm font-medium text-zinc-500 underline-offset-4 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+        >
+          ← Back to applications
+        </Link>
+        <header className="mt-6 space-y-3">
+          <p className="os-eyebrow">Side-by-side</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-3xl">
+            Compare candidates
+          </h1>
+          <p className="text-lg font-medium text-zinc-700 dark:text-zinc-300">{(job as { title: string }).title}</p>
+        </header>
+        <div className="os-surface-card mt-6 max-w-3xl p-5">
+          <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
+            Hiring score blends available signals with fixed weights:{" "}
+            {HIRING_SCORE_WEIGHT_LABELS.map((w) => `${w.label} ${Math.round(w.weight * 100)}%`).join(", ")}. Missing
+            dimensions are renormalized automatically.
+          </p>
+          {topSummary && (
+            <p className="mt-4 border-t border-zinc-200/80 pt-4 text-sm leading-relaxed text-zinc-800 dark:border-zinc-700 dark:text-zinc-200">
+              <span className="font-semibold text-zinc-900 dark:text-zinc-50">Lead pick: </span>
+              {topSummary}
+            </p>
+          )}
+        </div>
+      </div>
 
       <div
-        className="mt-8 grid gap-4"
+        className="grid gap-5"
         style={{ gridTemplateColumns: `repeat(${ordered.length}, minmax(0, 1fr))` }}
       >
         {ordered.map((row) => {
@@ -144,18 +177,29 @@ export default async function EmployerComparePage({
           const hiringScore = computeHiringScore(hiringScoreInputsFromInterviewRow(row));
           const fitTag = hiringFitTagFromScore(hiringScore);
           const isBest = bestRowId !== null && row.id === bestRowId;
+          const intel = getEmployerIntelligence(
+            {
+              cv_score: row.cv_score,
+              interview_score: row.interview_score,
+              interview_report: row.interview_report,
+              ai_recommendation_reason: row.ai_recommendation_reason,
+            },
+            listCtx
+          );
+          const showRisk = intel.riskFlags.slice(0, 3);
+          const moreRisk = intel.riskFlags.length - showRisk.length;
 
           return (
             <div
               key={row.id}
-              className={`rounded-[10px] border bg-white p-5 shadow-soft dark:bg-zinc-900 ${
+              className={`os-surface-card p-5 lg:p-6 ${
                 isBest
-                  ? "border-[var(--primary)] ring-2 ring-[var(--primary)] ring-offset-2 ring-offset-white dark:border-[var(--primary)] dark:ring-offset-zinc-950"
-                  : "border-[var(--border)] dark:border-white/[0.06]"
+                  ? "border-primary/40 ring-2 ring-primary/25 ring-offset-2 ring-offset-[#f3f2ef] dark:border-primary/50 dark:ring-primary/30 dark:ring-offset-zinc-950"
+                  : ""
               }`}
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold text-gray-900 dark:text-zinc-100">{name}</h2>
+                <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">{name}</h2>
                 <div className="flex flex-wrap items-center gap-2">
                   {isBest && (
                     <span className="rounded bg-[var(--primary)] px-2 py-0.5 text-xs font-semibold text-white">
@@ -195,6 +239,37 @@ export default async function EmployerComparePage({
                   <span className="font-medium text-gray-900 dark:text-zinc-100">{ps ?? "—"}</span>
                 </div>
               </div>
+
+              {intel.strongestDimension && (
+                <p className="mt-3 text-xs text-gray-600 dark:text-zinc-400">
+                  <span className="font-medium text-gray-800 dark:text-zinc-300">Strongest:</span>{" "}
+                  {intel.strongestDimension.label} ({intel.strongestDimension.score})
+                </p>
+              )}
+              {intel.weakestDimension && (
+                <p className="mt-1 text-xs text-gray-600 dark:text-zinc-400">
+                  <span className="font-medium text-gray-800 dark:text-zinc-300">Weakest:</span>{" "}
+                  {intel.weakestDimension.label} ({intel.weakestDimension.score})
+                </p>
+              )}
+              <p className="mt-2 text-xs leading-snug text-gray-700 dark:text-zinc-300">{intel.recommendationReason}</p>
+              {intel.riskFlags.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {showRisk.map((f) => (
+                    <span
+                      key={f}
+                      className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+                    >
+                      {employerDecisionRiskFlagLabel(f)}
+                    </span>
+                  ))}
+                  {moreRisk > 0 && (
+                    <span className="self-center text-[10px] text-gray-500 dark:text-zinc-500">+{moreRisk}</span>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 text-[10px] text-gray-500 dark:text-zinc-500">No automated risk flags.</p>
+              )}
 
               {strengths.length > 0 && (
                 <div className="mt-4">

@@ -105,18 +105,22 @@ export function InviteFriendCard() {
   };
 
   return (
-    <div className="rounded-[12px] border border-zinc-200/90 bg-[#FDFDFC] p-8 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.33,1,0.68,1)] hover:border-zinc-300 hover:bg-[#FAFAF9] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/25">
+    <div
+      id="referral-program"
+      className="rounded-[12px] border border-zinc-200/90 bg-[#FDFDFC] p-8 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.33,1,0.68,1)] hover:border-zinc-300 hover:bg-[#FAFAF9] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600 dark:hover:bg-zinc-800/25"
+    >
       <div className="flex items-start gap-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[10px] bg-[#FDEBEC] text-[#9F2F2D] dark:bg-[#3d2426] dark:text-[#e8a8a6]">
           <UserPlus className="h-6 w-6" weight="bold" aria-hidden />
         </div>
         <div className="min-w-0">
           <h3 className="text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-100">Invite a friend</h3>
-          <p className="mt-2 text-sm font-normal leading-[1.5] text-zinc-900/60 dark:text-zinc-400">
-            When someone uses your link, signs up, finishes profile onboarding, and completes a full mock interview,
-            you both get{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-200">one bonus mock interview</span> credit
-            (on top of your weekly plan limit). Short or abandoned interviews don&apos;t count.
+          <p className="mt-2 inline-block rounded-lg border border-zinc-200/90 bg-[#F5F4F2] px-3 py-2 text-sm font-semibold text-zinc-900 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100">
+            Reward: +1 bonus mock interview for you and your friend when they qualify
+          </p>
+          <p className="mt-3 text-sm font-normal leading-[1.5] text-zinc-900/60 dark:text-zinc-400">
+            Qualifying means they sign up with your link, finish onboarding, and complete a full mock interview (not
+            too short). Credits stack on top of weekly plan limits.
           </p>
         </div>
       </div>
@@ -156,10 +160,11 @@ export function InviteFriendCard() {
       )}
 
       <p className="mt-4 text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
-        Status: <span className="font-medium text-[#111111] dark:text-zinc-300">Attributed</span> → signed up with your
-        link; <span className="font-medium text-[#111111] dark:text-zinc-300">Qualified</span> → met requirements;
-        rewards show as <span className="font-medium text-[#111111] dark:text-zinc-300">Successful</span> here once
-        credits are granted.
+        <span className="font-medium text-[#111111] dark:text-zinc-300">Friends attributed</span> — signed up with your
+        link. <span className="font-medium text-[#111111] dark:text-zinc-300">Successful referrals</span> — completed
+        onboarding + qualifying interview;{" "}
+        <span className="font-medium text-[#111111] dark:text-zinc-300">Bonus credits</span> — total extra interviews
+        you can use now.
       </p>
 
       <div className="mt-6 space-y-2">

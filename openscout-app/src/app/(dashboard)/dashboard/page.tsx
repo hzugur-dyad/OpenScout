@@ -11,6 +11,7 @@ import {
   FileText,
 } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
+import { DashboardGrowthShareSection } from "@/components/dashboard/DashboardGrowthShareSection";
 import { InviteFriendCard } from "@/components/dashboard/InviteFriendCard";
 import { NextStepCard } from "@/components/dashboard/NextStepCard";
 import { SharePublicProfileButton } from "@/components/dashboard/SharePublicProfileButton";
@@ -290,7 +291,7 @@ export default function DashboardPage() {
                 you are ready.
               </p>
               <div className="mt-7">
-                <SharePublicProfileButton />
+                <SharePublicProfileButton surface="dashboard_header" />
               </div>
             </header>
 
@@ -454,6 +455,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </Link>
+        </Reveal>
+
+        <Reveal delay={0.09}>
+          <DashboardGrowthShareSection />
         </Reveal>
 
         <Reveal delay={0.1}>

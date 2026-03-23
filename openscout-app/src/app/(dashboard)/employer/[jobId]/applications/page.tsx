@@ -23,7 +23,7 @@ export default async function EmployerApplicationsPage({
 }) {
   const { jobId } = await params;
   const sp = await searchParams;
-  const { sort, status: statusFilter, minScore } = parseApplicationsListQuery(sp);
+  const { sort, status: statusFilter, minScore, risk } = parseApplicationsListQuery(sp);
 
   const supabase = await createClient();
   const {
@@ -33,11 +33,14 @@ export default async function EmployerApplicationsPage({
 
   const { data: job } = await supabase
     .from("job_listings")
-    .select("id, title, company_id")
+    .select("id, title, company_id, min_cv_score")
     .eq("id", jobId)
     .maybeSingle();
 
   if (!job) notFound();
+
+  const minCvScore = (job as { min_cv_score?: number | null }).min_cv_score ?? null;
+  const listCtx = { minCvScore };
 
   const companyId = (job as { company_id: string }).company_id;
   const hasAccess = await userHasCompanyAccess(supabase, user.id, companyId);
@@ -74,8 +77,8 @@ export default async function EmployerApplicationsPage({
       .eq("job_id", jobId);
 
     rawApplications = (data ?? []) as EmployerApplicationListItem[];
-    const filtered = filterEmployerApplications(rawApplications, statusFilter, minScore);
-    applications = sortEmployerApplications(filtered, sort);
+    const filtered = filterEmployerApplications(rawApplications, statusFilter, minScore, risk, listCtx);
+    applications = sortEmployerApplications(filtered, sort, listCtx);
   }
 
   return (
@@ -130,7 +133,7 @@ export default async function EmployerApplicationsPage({
           className="mt-10"
           iconName="inbox"
           title="No applications match"
-          description="Try changing status or minimum interview score filters."
+          description="Try changing status, minimum interview score, or risk filters."
         >
           <Link href={`/employer/${jobId}/applications`}>
             <Button variant="primary">Clear filters</Button>
@@ -141,7 +144,7 @@ export default async function EmployerApplicationsPage({
           <Suspense fallback={<div className="mb-4 h-10" aria-hidden />}>
             <EmployerApplicationsControls />
           </Suspense>
-          <EmployerApplicationsInteractiveTable jobId={jobId} applications={applications} />
+          <EmployerApplicationsInteractiveTable jobId={jobId} applications={applications} minCvScore={minCvScore} />
         </>
       )}
     </div>

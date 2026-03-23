@@ -57,14 +57,14 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
 
   if (fetched.status === "unavailable") {
     return (
-      <div className="py-16">
+      <div className="os-public-canvas py-20">
         <Container>
-          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Temporarily unavailable</h1>
-            <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
+          <div className="os-public-card mx-auto max-w-md p-10 text-center">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Temporarily unavailable</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               Public profiles require configuration. Please try again later.
             </p>
-            <Link href="/" className="mt-6 inline-block">
+            <Link href="/" className="mt-8 inline-block">
               <Button variant="outline">Go to OpenScout</Button>
             </Link>
           </div>
@@ -81,14 +81,14 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
 
   if (d.hidden) {
     return (
-      <div className="py-16">
+      <div className="os-public-canvas py-20">
         <Container>
-          <div className="mx-auto max-w-xl rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">Profile unavailable</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <div className="os-public-card mx-auto max-w-xl p-10 text-center">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">Profile unavailable</h1>
+            <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
               This member has chosen not to show a public profile.
             </p>
-            <Link href="/" className="mt-6 inline-block text-sm font-medium text-[var(--primary)] hover:underline">
+            <Link href="/" className="mt-8 inline-block text-sm font-semibold text-primary underline-offset-4 hover:underline">
               Back to OpenScout
             </Link>
           </div>
@@ -103,11 +103,15 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
   const evalRole = d.latestEvaluatedRole?.trim() || d.latestInterviewCategory?.trim() || null;
 
   return (
-    <div className="py-12">
-      <Container>
+    <div className="os-public-canvas py-16 md:py-20">
+      <Container className="px-5 sm:px-6">
         <article className="mx-auto max-w-2xl">
-          <p className="text-sm font-medium text-gray-500 dark:text-zinc-400">OpenScout candidate</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-gray-900 dark:text-zinc-100">{displayName}</h1>
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+            OpenScout · AI-evaluated candidate profile
+          </p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-4xl">
+            {displayName}
+          </h1>
           {d.hasCompletedInterview && (
             <p className="mt-2 inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100">
               Verified AI interview (OpenScout)
@@ -120,20 +124,20 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
             <p className="mt-6 text-gray-700 dark:text-zinc-300">{d.summary}</p>
           )}
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            <div className="os-surface-card p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                 Best Scout Score
               </p>
-              <p className="mt-1 text-3xl font-bold tabular-nums text-gray-900 dark:text-zinc-100">
+              <p className="mt-2 font-mono text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
                 {typeof d.bestScoutScore === "number" ? d.bestScoutScore : "—"}
               </p>
             </div>
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
-              <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
+            <div className="os-surface-card p-6">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">
                 Hiring signal
               </p>
-              <p className="mt-1 text-3xl font-bold tabular-nums text-gray-900 dark:text-zinc-100">
+              <p className="mt-2 font-mono text-3xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
                 {typeof d.bestHiringScore === "number" ? d.bestHiringScore : "—"}
               </p>
               {d.hiringFitLabel && (
@@ -162,8 +166,8 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
             </section>
           )}
 
-          <section className="mt-8 rounded-[10px] border border-[var(--border)] bg-gray-50/80 p-5 dark:border-white/[0.12] dark:bg-black/20 dark:backdrop-blur-xl">
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">At a glance</h2>
+          <section className="os-surface-card mt-10 p-6">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">At a glance</h2>
             <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-zinc-300">
               <li className="flex items-start gap-2">
                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--primary)]" aria-hidden />
@@ -218,12 +222,26 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
             </section>
           )}
 
-          <p className="mt-10 text-center text-xs text-gray-500 dark:text-zinc-300">
-            Get your own profile on{" "}
-            <Link href="/register" className="text-[var(--primary)] hover:underline">
-              OpenScout
-            </Link>
-            .
+          <div className="os-surface-card mt-12 p-8 text-center">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
+              Build your own professional signal
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Complete a short profile, run an AI mock interview, and publish a public page with your Scout Score—so
+              recruiters see verified readiness, not just a PDF.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/register">
+                <Button variant="primary">Start on OpenScout</Button>
+              </Link>
+              <Link href="/mock-interview">
+                <Button variant="outline">Practice interview first</Button>
+              </Link>
+            </div>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-gray-500 dark:text-zinc-300">
+            Public profiles are optional and controlled by each member.
           </p>
         </article>
       </Container>

@@ -2,8 +2,29 @@ import {
   computeHiringScore,
   hiringScoreInputsFromInterviewRow,
 } from "@/lib/hiring-score";
+import {
+  computeEmployerDecisionRiskFlags,
+  employerConfidenceSortKey,
+  employerConsistencySortKey,
+  employerProblemSolvingSortKey,
+} from "@/lib/employer-intelligence";
 
-export type ApplicationSortKey = "recent" | "overall" | "technical" | "communication" | "best_fit";
+export type ApplicationSortKey =
+  | "recent"
+  | "overall"
+  | "technical"
+  | "communication"
+  | "problem_solving"
+  | "best_fit"
+  | "low_risk"
+  | "confidence"
+  | "consistency";
+
+export type ApplicationRiskFilter = "any" | "low";
+
+export type EmployerApplicationsListContext = {
+  minCvScore: number | null;
+};
 
 export type ApplicationStatusFilter =
   | "all"
@@ -40,7 +61,9 @@ function reportScores(report: unknown): {
 export function filterEmployerApplications(
   rows: EmployerApplicationListItem[],
   status: ApplicationStatusFilter,
-  minScore: number | null
+  minScore: number | null,
+  risk: ApplicationRiskFilter,
+  ctx: EmployerApplicationsListContext
 ): EmployerApplicationListItem[] {
   let out = rows;
   if (status !== "all") {
@@ -49,14 +72,23 @@ export function filterEmployerApplications(
   if (minScore !== null && !Number.isNaN(minScore)) {
     out = out.filter((r) => typeof r.interview_score === "number" && r.interview_score >= minScore);
   }
+  if (risk === "low") {
+    out = out.filter(
+      (r) =>
+        computeEmployerDecisionRiskFlags(r, { minCvScore: ctx.minCvScore, durationMs: null }).length === 0
+    );
+  }
   return out;
 }
 
 export function sortEmployerApplications(
   rows: EmployerApplicationListItem[],
-  sort: ApplicationSortKey
+  sort: ApplicationSortKey,
+  ctx: EmployerApplicationsListContext
 ): EmployerApplicationListItem[] {
   const copy = [...rows];
+  const listCtx = { minCvScore: ctx.minCvScore, durationMs: null as number | null };
+
   if (sort === "recent") {
     copy.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     return copy;
@@ -80,10 +112,51 @@ export function sortEmployerApplications(
     );
     return copy;
   }
+  if (sort === "problem_solving") {
+    copy.sort((a, b) => {
+      const pb = employerProblemSolvingSortKey(b);
+      const pa = employerProblemSolvingSortKey(a);
+      if (pb !== null && pa !== null) return pb - pa;
+      if (pb !== null) return 1;
+      if (pa !== null) return -1;
+      return (b.interview_score ?? -1) - (a.interview_score ?? -1);
+    });
+    return copy;
+  }
   if (sort === "best_fit") {
     const hs = (r: EmployerApplicationListItem) =>
       computeHiringScore(hiringScoreInputsFromInterviewRow(r));
     copy.sort((a, b) => hs(b) - hs(a));
+    return copy;
+  }
+  if (sort === "low_risk") {
+    const riskN = (r: EmployerApplicationListItem) =>
+      computeEmployerDecisionRiskFlags(r, listCtx).length;
+    const hs = (r: EmployerApplicationListItem) => computeHiringScore(hiringScoreInputsFromInterviewRow(r));
+    copy.sort((a, b) => {
+      const dr = riskN(a) - riskN(b);
+      if (dr !== 0) return dr;
+      return hs(b) - hs(a);
+    });
+    return copy;
+  }
+  if (sort === "confidence") {
+    copy.sort((a, b) => {
+      const db = employerConfidenceSortKey(b, listCtx);
+      const da = employerConfidenceSortKey(a, listCtx);
+      if (db !== da) return db - da;
+      return (b.interview_score ?? -1) - (a.interview_score ?? -1);
+    });
+    return copy;
+  }
+  if (sort === "consistency") {
+    copy.sort((a, b) => {
+      const db = employerConsistencySortKey(b);
+      const da = employerConsistencySortKey(a);
+      if (db !== da) return db - da;
+      return computeHiringScore(hiringScoreInputsFromInterviewRow(b)) -
+        computeHiringScore(hiringScoreInputsFromInterviewRow(a));
+    });
     return copy;
   }
   return copy;
@@ -93,6 +166,7 @@ export function parseApplicationsListQuery(searchParams: Record<string, string |
   sort: ApplicationSortKey;
   status: ApplicationStatusFilter;
   minScore: number | null;
+  risk: ApplicationRiskFilter;
 } {
   const raw = (k: string) => {
     const v = searchParams[k];
@@ -103,8 +177,12 @@ export function parseApplicationsListQuery(searchParams: Record<string, string |
     sortRaw === "overall" ||
     sortRaw === "technical" ||
     sortRaw === "communication" ||
+    sortRaw === "problem_solving" ||
     sortRaw === "recent" ||
-    sortRaw === "best_fit"
+    sortRaw === "best_fit" ||
+    sortRaw === "low_risk" ||
+    sortRaw === "confidence" ||
+    sortRaw === "consistency"
       ? sortRaw
       : "recent";
 
@@ -128,7 +206,10 @@ export function parseApplicationsListQuery(searchParams: Record<string, string |
     if (!Number.isNaN(n)) minScore = Math.min(100, Math.max(0, n));
   }
 
-  return { sort, status, minScore };
+  const riskRaw = raw("risk");
+  const risk: ApplicationRiskFilter = riskRaw === "low" ? "low" : "any";
+
+  return { sort, status, minScore, risk };
 }
 
 export function parseCompareApplicationIds(raw: string | null | undefined): string[] {

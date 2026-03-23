@@ -425,18 +425,21 @@ export function parseMockInterviewAssistantTurn(raw: string): ParsedMockIntervie
   try {
     parsed = JSON.parse(trailing);
   } catch {
-    return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+    const visibleText = stripTrailingJsonSlice(raw, trailing).trim();
+    return { visibleText: visibleText || raw.trim(), interviewEnd: null, questionControl: null };
   }
 
   if (!parsed || typeof parsed !== "object") {
-    return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+    const visibleText = stripTrailingJsonSlice(raw, trailing).trim();
+    return { visibleText: visibleText || raw.trim(), interviewEnd: null, questionControl: null };
   }
 
   const t = (parsed as { type?: unknown }).type;
   if (t === "interview_end") {
     const end = mockInterviewEndSchema.safeParse(parsed);
     if (!end.success) {
-      return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+      const visibleText = stripTrailingJsonSlice(raw, trailing).trim();
+      return { visibleText: visibleText || raw.trim(), interviewEnd: null, questionControl: null };
     }
     const visibleText = stripTrailingJsonSlice(raw, trailing);
     return {
@@ -452,7 +455,8 @@ export function parseMockInterviewAssistantTurn(raw: string): ParsedMockIntervie
   if (t === "question_control") {
     const qc = mockQuestionControlSchema.safeParse(parsed);
     if (!qc.success) {
-      return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+      const visibleText = stripTrailingJsonSlice(raw, trailing).trim();
+      return { visibleText: visibleText || raw.trim(), interviewEnd: null, questionControl: null };
     }
     const visibleText = stripTrailingJsonSlice(raw, trailing);
     const attempt = Number.isFinite(qc.data.attempt) ? Math.round(qc.data.attempt) : 1;
@@ -467,7 +471,8 @@ export function parseMockInterviewAssistantTurn(raw: string): ParsedMockIntervie
     };
   }
 
-  return { visibleText: raw.trim(), interviewEnd: null, questionControl: null };
+  const visibleText = stripTrailingJsonSlice(raw, trailing).trim();
+  return { visibleText: visibleText || raw.trim(), interviewEnd: null, questionControl: null };
 }
 
 /** Neutral scores when the interview is terminated by failsafe rules. */

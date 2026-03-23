@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ShareScoutScoreModal } from "@/components/dashboard/ShareScoutScoreModal";
 import { InterviewResultShareBlock } from "@/components/mock-interview/InterviewResultShareBlock";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -103,6 +104,10 @@ export function MockInterviewResultView({
   const handleCopyPassUrl = () => {
     if (!passUrl) return;
     navigator.clipboard.writeText(passUrl).then(() => {
+      trackClient(ANALYTICS_EVENTS.scout_pass_shared, {
+        channel: "copy_link",
+        surface: "interview_result",
+      });
       setShareCopied(true);
       setTimeout(() => setShareCopied(false), 2000);
     });
@@ -113,8 +118,11 @@ export function MockInterviewResultView({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{ui.resultTitle}</h1>
-      <p className="mt-1 text-gray-500 dark:text-zinc-400">
+      <p className="os-eyebrow">Mock interview</p>
+      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 md:text-3xl">
+        {ui.resultTitle}
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
         {tooShort ? ui.resultTooShortLead : ui.resultReadyLead}
       </p>
 
@@ -128,7 +136,7 @@ export function MockInterviewResultView({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
-            className="mt-8 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900"
+            className="os-surface-card mt-8 p-8 md:p-10"
           >
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
               <motion.div
@@ -164,11 +172,15 @@ export function MockInterviewResultView({
           </motion.div>
 
           {shareResultId?.trim() && (
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
+              <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {ui.shareResultLead}
+              </p>
               <InterviewResultShareBlock
                 resultId={shareResultId.trim()}
                 score={score}
                 jobCategory={category}
+                surface="interview_result"
               />
             </div>
           )}
@@ -178,7 +190,7 @@ export function MockInterviewResultView({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15, ease: "easeOut" }}
-              className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900"
+              className="os-surface-card mt-6 p-6 md:p-8"
             >
               <div
                 className="flex items-start gap-3 rounded-lg px-1"
@@ -204,7 +216,7 @@ export function MockInterviewResultView({
           )}
 
           {passUrl && (
-            <div className="mt-6 rounded-[10px] border-2 border-[var(--primary)] bg-[var(--primary-lighter)]/30 p-6 shadow-card dark:bg-primary-muted/30">
+            <div className="os-surface-card mt-6 border-2 border-primary/35 bg-[var(--primary-lighter)]/25 p-6 dark:border-primary/40 dark:bg-primary-muted/25 md:p-8">
               <div className="flex items-center gap-2">
                 <ShareNetwork className="h-5 w-5" style={{ color: "var(--primary-dark)" }} weight="regular" aria-hidden />
                 <h3 className="font-semibold" style={{ color: "var(--primary-dark)" }}>
@@ -243,8 +255,8 @@ export function MockInterviewResultView({
             </div>
           )}
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.strengths}</h3>
+          <div className="os-surface-card mt-6 p-6 md:p-8">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{ui.strengths}</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {strengths.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">
@@ -255,8 +267,8 @@ export function MockInterviewResultView({
             </ul>
           </div>
 
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
-            <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.improvements}</h3>
+          <div className="os-surface-card mt-6 p-6 md:p-8">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{ui.improvements}</h3>
             <ul className="mt-3 space-y-2 text-gray-700 dark:text-zinc-300">
               {improvements.map((s, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm">

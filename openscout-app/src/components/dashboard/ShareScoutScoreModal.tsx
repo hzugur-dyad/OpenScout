@@ -11,12 +11,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/Dialog";
-
-const LINKEDIN_TEXT = (url: string) =>
-  `I got my Scout Score on OpenScout — one credential, many companies. Stand out to employers with an AI-verified profile. Get yours: ${url}`;
-
-const TWITTER_TEXT = (url: string) =>
-  `Just got my Scout Score on OpenScout. One credential, many companies. Get yours: ${url}`;
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+import { scoutPassTwitterText } from "@/lib/share-scout-pass";
 
 type Props = {
   passUrl: string;
@@ -28,13 +24,16 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
 
   const copy = (text: string, key: "link" | "linkedin" | "twitter") => {
     navigator.clipboard.writeText(text).then(() => {
+      trackClient(ANALYTICS_EVENTS.scout_pass_shared, {
+        channel: key === "link" ? "modal_copy_link" : key === "linkedin" ? "modal_copy_linkedin_text" : "modal_copy_twitter_text",
+      });
       setCopied(key);
       setTimeout(() => setCopied(null), 2000);
     });
   };
 
   const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(passUrl)}`;
-  const twitterText = TWITTER_TEXT(passUrl);
+  const twitterText = scoutPassTwitterText(passUrl);
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}`;
 
   return (
@@ -44,7 +43,8 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
         <DialogContent>
           <DialogTitle>Share your Scout Score</DialogTitle>
           <DialogDescription className="mt-2">
-            One credential, many companies. Share so employers can see your AI-verified score.
+            Recruiters open one link to see AI-evaluated interview signal and highlights—proof of
+            readiness without sharing a full recording.
           </DialogDescription>
 
           <div className="mt-4">
@@ -75,6 +75,12 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
                 href={linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() =>
+                  trackClient(ANALYTICS_EVENTS.scout_pass_shared, {
+                    channel: "linkedin_open",
+                    surface: "scout_score_modal",
+                  })
+                }
                 className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
               >
                 LinkedIn
@@ -83,13 +89,20 @@ export function ShareScoutScoreModal({ passUrl, onClose }: Props) {
                 href={twitterUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() =>
+                  trackClient(ANALYTICS_EVENTS.scout_pass_shared, {
+                    channel: "twitter_open",
+                    surface: "scout_score_modal",
+                  })
+                }
                 className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
               >
                 X (Twitter)
               </a>
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-zinc-500">
-              Suggested text: &ldquo;I got my Scout Score on OpenScout — one credential, many companies. Get yours: [your link]&rdquo;
+              Tip: copy the suggested lines above, or open LinkedIn / X—your pass URL is included when
+              you post from here.
             </p>
           </div>
 

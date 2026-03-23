@@ -48,7 +48,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const effectiveRole = role ?? (isEmployerPath ? "employer" : "candidate");
   const navItems = effectiveRole === "employer" ? employerNavItems : candidateNavItems;
   const dashboardHref = effectiveRole === "employer" ? "/employer" : "/dashboard";
-  const isCandidateDashboardHome = pathname === "/dashboard";
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -56,8 +55,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   }
 
-  const totalSteps = 7;
-  const [completedSteps, setCompletedSteps] = useState<number>(0);
+  const [, setCompletedSteps] = useState<number>(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,13 +135,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [supabase, role]);
 
   return (
-    <div
-      className={
-        isCandidateDashboardHome
-          ? "flex min-h-[100dvh] bg-[#FAFAF9] dark:bg-zinc-950"
-          : "flex min-h-[100dvh] bg-zinc-50/80 dark:bg-zinc-950"
-      }
-    >
+    <div className="os-product-shell flex min-h-[100dvh] bg-transparent">
       <ReferralAttribute />
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
@@ -164,12 +156,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content - offset by sidebar width on desktop (hover expands/collapses) */}
       <div
-        className={`flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
+        className={`relative z-0 flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarExpanded ? "lg:ml-[240px]" : "lg:ml-[72px]"
         }`}
       >
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-zinc-200/80 bg-white/95 px-4 backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-950/90 lg:px-8">
+        <header className="sticky top-0 z-30 flex h-[4.25rem] items-center justify-between gap-4 border-b border-zinc-200/70 bg-white/90 px-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)] lg:px-8">
           <button
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
@@ -181,7 +173,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-5 lg:p-10">{children}</main>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import {
   buildEmployerQuestionsBlockTr,
   buildInterviewerSystemPrompt,
 } from "@/lib/mock-interview-prompt";
+import { buildMockInterviewServerFlowHint, classifyContractStimulus } from "@/lib/mock-interview/flow-hints";
 import { parseJsonBody } from "@/lib/api-validation";
 import { interviewResponseSchema } from "@/types/schemas";
 import {
@@ -93,6 +94,17 @@ function enforceServerQuestionControl(
   }
 
   return { questionId, attempt, isFollowup };
+}
+
+function lockControlForDelayWarning(
+  clientPrev?: { questionId: string; attemptCount: number }
+): NormalizedMockQuestionControl | null {
+  if (!clientPrev) return null;
+  return {
+    questionId: clientPrev.questionId,
+    attempt: clientPrev.attemptCount,
+    isFollowup: false,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -182,12 +194,23 @@ export async function POST(request: NextRequest) {
           }
         : undefined;
 
+    const userMsgs = messages.filter((m) => m.role === "user");
+    const lastUserMessage =
+      userMsgs.length > 0 ? String(userMsgs[userMsgs.length - 1]?.content ?? "").slice(0, 100_000) : "";
+    const stimulus = classifyContractStimulus(lastUserMessage, locale);
+    const serverFlowHint = buildMockInterviewServerFlowHint({
+      locale,
+      lastUserMessage,
+      clientPrev,
+    });
+
     const controlHint = buildControlContextHint(locale, clientPrev);
     const systemPrompt = buildInterviewerSystemPrompt(locale, {
       jobCategory,
       displayName,
       userName: userName && typeof userName === "string" ? userName : "",
       customQuestionsBlock,
+      serverFlowHint,
       controlHint,
     });
 
@@ -256,8 +279,47 @@ export async function POST(request: NextRequest) {
     }
 
     if (parseResult?.questionControl) {
-      const qc = enforceServerQuestionControl(parseResult.questionControl, clientPrev);
+      let qc = enforceServerQuestionControl(parseResult.questionControl, clientPrev);
+      if (stimulus === "timeout_warning") {
+        const locked = lockControlForDelayWarning(clientPrev);
+        if (locked) qc = locked;
+      }
       const visible = parseResult.visibleText.trim() || rawContent;
+      return NextResponse.json({
+        content: visible,
+        interviewEnded: false,
+        questionControl: {
+          questionId: qc.questionId,
+          attempt: qc.attempt,
+          isFollowup: qc.isFollowup,
+        },
+        terminatedBy: null,
+      });
+    }
+
+    if (parseResult && !parseResult.interviewEnd && !parseResult.questionControl && rawContent.trim()) {
+      logWarn("mock-interview: missing structured JSON — forcing controlled progression", { stimulus });
+      let qc: NormalizedMockQuestionControl;
+      if (stimulus === "timeout_warning") {
+        qc = lockControlForDelayWarning(clientPrev) ?? enforceServerQuestionControl(null, clientPrev);
+      } else {
+        qc = enforceServerQuestionControl(null, clientPrev);
+      }
+      let visible = parseResult.visibleText.trim();
+      if (stimulus === "timeout_warning") {
+        visible =
+          visible ||
+          (locale === "tr"
+            ? "Hâlâ buradayım — soruyu kısaca tekrarlıyorum."
+            : "I'm still here — let me restate the question briefly.");
+      } else if (!visible) {
+        visible =
+          locale === "tr" ? "Devam edelim — bir sonraki soruya geçiyorum." : "Let's continue — moving to the next question.";
+      } else if (visible.length < 12) {
+        const filler =
+          locale === "tr" ? "Bir sonraki soruya geçiyorum." : "Moving on to the next question.";
+        visible = `${visible} ${filler}`.trim();
+      }
       return NextResponse.json({
         content: visible,
         interviewEnded: false,

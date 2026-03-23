@@ -15,6 +15,7 @@ import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } fro
 import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
 import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
+import { assessInterviewTranscriptQuality } from "@/lib/mock-interview/transcript-quality";
 import { captureException, captureMessage } from "@/lib/monitoring";
 
 const SESSION_UUID_RE =
@@ -146,6 +147,16 @@ export async function POST(request: NextRequest) {
 
     const evalSystem = buildInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
 
+    const transcriptQuality = assessInterviewTranscriptQuality(transcriptStr);
+    const lowSignalEvalNote =
+      locale === "tr"
+        ? `\n\n[DEĞERLENDİRME_NOTU: Transkriptte çok sayıda sessizlik/zaman aşımı satırı veya aşırı kısa aday yanıtları olabilir. Genel puanı yapay olarak yükseltme; güçlü teknik kanıt yoksa 55 üstüne çıkma. Gerekçede sınırlı sinyali açıkça belirt.]`
+        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Do not inflate the overall score; avoid scores above ~55 unless there is strong technical evidence. Explicitly note limited signal in the justification.]`;
+
+    const evaluationTranscriptPayload = transcriptQuality.isLowSignal
+      ? `${transcriptStr}${lowSignalEvalNote}`
+      : transcriptStr;
+
     const groq = getGroq();
     let completion;
     try {
@@ -160,7 +171,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: "user",
-            content: transcriptStr,
+            content: evaluationTranscriptPayload,
           },
         ],
       });
@@ -204,7 +215,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const overallScore = normalized.overallScore;
+    let overallScore = normalized.overallScore;
+    if (transcriptQuality.scoreCap != null && overallScore > transcriptQuality.scoreCap) {
+      overallScore = transcriptQuality.scoreCap;
+    }
     const technicalScore = normalized.technicalScore;
     const communicationScore = normalized.communicationScore;
     const problemSolvingScore = normalized.problemSolvingScore;
@@ -221,6 +235,8 @@ export async function POST(request: NextRequest) {
       problem_solving_score?: number;
       evaluation_meta: {
         used_fallback: boolean;
+        transcript_signal: "low" | "normal";
+        transcript_score_cap?: number;
         source: string;
         pipeline_version: string;
       };
@@ -229,6 +245,8 @@ export async function POST(request: NextRequest) {
       improvements,
       evaluation_meta: {
         used_fallback: normalized.usedFallback,
+        transcript_signal: transcriptQuality.isLowSignal ? "low" : "normal",
+        ...(transcriptQuality.scoreCap != null ? { transcript_score_cap: transcriptQuality.scoreCap } : {}),
         source: "post_interview_evaluation",
         pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
       },

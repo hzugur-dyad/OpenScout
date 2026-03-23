@@ -1,7 +1,11 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import type { ApplicationSortKey, ApplicationStatusFilter } from "@/lib/employer-applications-list";
+import type {
+  ApplicationRiskFilter,
+  ApplicationSortKey,
+  ApplicationStatusFilter,
+} from "@/lib/employer-applications-list";
 
 export function EmployerApplicationsControls() {
   const router = useRouter();
@@ -21,6 +25,7 @@ export function EmployerApplicationsControls() {
   const sort = (sp.get("sort") as ApplicationSortKey) || "recent";
   const status = (sp.get("status") as ApplicationStatusFilter) || "all";
   const minScore = sp.get("minScore") ?? "";
+  const risk = (sp.get("risk") as ApplicationRiskFilter) || "any";
 
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -32,18 +37,37 @@ export function EmployerApplicationsControls() {
             sort === "overall" ||
             sort === "technical" ||
             sort === "communication" ||
+            sort === "problem_solving" ||
             sort === "recent" ||
-            sort === "best_fit"
+            sort === "best_fit" ||
+            sort === "low_risk" ||
+            sort === "confidence" ||
+            sort === "consistency"
               ? sort
               : "recent"
           }
           onChange={(e) => pushQuery({ sort: e.target.value })}
         >
           <option value="recent">Most recent</option>
-          <option value="best_fit">Best fit</option>
+          <option value="best_fit">Best fit (hiring score)</option>
+          <option value="low_risk">Lowest risk first</option>
+          <option value="confidence">Highest confidence signal</option>
+          <option value="consistency">Strongest consistency</option>
           <option value="overall">Highest interview score</option>
-          <option value="technical">Best technical score</option>
-          <option value="communication">Best communication score</option>
+          <option value="technical">Highest technical</option>
+          <option value="communication">Highest communication</option>
+          <option value="problem_solving">Highest problem solving</option>
+        </select>
+      </label>
+      <label className="text-sm text-gray-600 dark:text-zinc-400">
+        <span className="mb-1 block text-xs font-medium text-gray-500 dark:text-zinc-500">Risk flags</span>
+        <select
+          className="rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+          value={risk === "low" ? "low" : "any"}
+          onChange={(e) => pushQuery({ risk: e.target.value === "any" ? undefined : e.target.value })}
+        >
+          <option value="any">Any</option>
+          <option value="low">No automated flags only</option>
         </select>
       </label>
       <label className="text-sm text-gray-600 dark:text-zinc-400">

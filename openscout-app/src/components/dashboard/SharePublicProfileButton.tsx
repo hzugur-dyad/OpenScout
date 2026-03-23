@@ -9,9 +9,11 @@ import { captureException } from "@/lib/monitoring";
 type Props = {
   variant?: "outline" | "primary";
   size?: "sm" | "md" | "lg";
+  /** PostHog: e.g. dashboard_header | dashboard_growth | onboarding */
+  surface?: string;
 };
 
-export function SharePublicProfileButton({ variant = "outline", size = "sm" }: Props) {
+export function SharePublicProfileButton({ variant = "outline", size = "sm", surface }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -40,13 +42,14 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
       trackClient(ANALYTICS_EVENTS.public_profile_shared, {
         role: j.analytics?.role ?? "unknown",
         best_score: j.analytics?.best_score ?? null,
+        ...(surface ? { surface } : {}),
       });
 
       if (typeof navigator.share === "function") {
         try {
           await navigator.share({
-            title: "My OpenScout profile",
-            text: "View my candidate profile on OpenScout",
+            title: "OpenScout — candidate profile",
+            text: "AI-evaluated profile with Scout Score and hiring signal—open my public page:",
             url: j.profileUrl,
           });
         } catch (shareErr) {
@@ -59,7 +62,7 @@ export function SharePublicProfileButton({ variant = "outline", size = "sm" }: P
         }
       }
 
-      setMsg("Link copied to clipboard");
+      setMsg("Copied — link ready to paste");
     } catch (e) {
       captureException(e, { route: "SharePublicProfileButton" });
       setMsg("Something went wrong.");

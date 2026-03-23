@@ -12,6 +12,10 @@ import {
   hiringFitTagFromScore,
   hiringScoreInputsFromInterviewRow,
 } from "@/lib/hiring-score";
+import {
+  getEmployerIntelligence,
+  employerDecisionRiskFlagLabel,
+} from "@/lib/employer-intelligence";
 
 const PIPELINE_STATUSES = [
   { value: "applied", label: "Applied" },
@@ -28,9 +32,14 @@ type PipelineStatus = (typeof PIPELINE_STATUSES)[number]["value"];
 type Props = {
   jobId: string;
   applications: EmployerApplicationListItem[];
+  minCvScore: number | null;
 };
 
-function downloadApplicationsCsv(jobId: string, applications: EmployerApplicationListItem[]) {
+function downloadApplicationsCsv(
+  jobId: string,
+  applications: EmployerApplicationListItem[],
+  minCvScore: number | null
+) {
   const headers = [
     "ApplicationId",
     "Name",
@@ -40,6 +49,7 @@ function downloadApplicationsCsv(jobId: string, applications: EmployerApplicatio
     "InterviewScore",
     "HiringScore",
     "Recommendation",
+    "RiskFlags",
     "CreatedAt",
   ];
   const lines = [headers.join(",")];
@@ -49,6 +59,8 @@ function downloadApplicationsCsv(jobId: string, applications: EmployerApplicatio
     const email = profile?.email ?? "";
     const hiringScore = computeHiringScore(hiringScoreInputsFromInterviewRow(a));
     const rec = (a.ai_recommendation_reason ?? "").replaceAll('"', '""');
+    const intel = getEmployerIntelligence(a, { minCvScore, durationMs: null });
+    const risks = intel.riskFlags.map(employerDecisionRiskFlagLabel).join("; ").replaceAll('"', '""');
     lines.push(
       [
         a.id,
@@ -59,6 +71,7 @@ function downloadApplicationsCsv(jobId: string, applications: EmployerApplicatio
         a.interview_score ?? "",
         hiringScore,
         `"${rec}"`,
+        `"${risks}"`,
         a.created_at ? new Date(a.created_at).toISOString() : "",
       ].join(",")
     );
@@ -72,7 +85,7 @@ function downloadApplicationsCsv(jobId: string, applications: EmployerApplicatio
   URL.revokeObjectURL(url);
 }
 
-export function EmployerApplicationsInteractiveTable({ jobId, applications }: Props) {
+export function EmployerApplicationsInteractiveTable({ jobId, applications, minCvScore }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -142,7 +155,12 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
         </p>
       )}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => downloadApplicationsCsv(jobId, applications)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => downloadApplicationsCsv(jobId, applications, minCvScore)}
+        >
           Export CSV
         </Button>
         <span className="text-sm text-gray-500 dark:text-zinc-500">
@@ -186,19 +204,34 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
           </Button>
         )}
       </div>
-      <div className="overflow-x-auto rounded-[10px] border border-[var(--border)] bg-white shadow-soft dark:border-zinc-700 dark:bg-zinc-900">
-        <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-[var(--border)] bg-gray-50 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="overflow-x-auto rounded-xl border border-[var(--border)] bg-white shadow-[0_1px_0_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(15,23,42,0.08)] dark:border-zinc-800 dark:bg-zinc-900/80 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_12px_40px_-12px_rgba(0,0,0,0.45)]">
+        <table className="w-full min-w-[960px] text-left text-sm">
+          <thead className="border-b border-[var(--border)] bg-zinc-50/95 dark:border-zinc-800 dark:bg-zinc-950/90">
             <tr>
-              <th className="w-10 px-2 py-3" aria-label="Select row" />
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Candidate</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Status</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">CV</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Interview</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Hiring score</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Fit</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Created</th>
-              <th className="px-4 py-3 font-medium text-gray-600 dark:text-zinc-300">Pipeline</th>
+              <th className="w-10 px-2 py-3.5" aria-label="Select row" />
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Candidate
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Status
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">CV</th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Interview
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Hiring score
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">Fit</th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Signals
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Created
+              </th>
+              <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-zinc-500 dark:text-zinc-400">
+                Pipeline
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -212,8 +245,14 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
               const busy = pendingId === a.id;
               const hiringScore = computeHiringScore(hiringScoreInputsFromInterviewRow(a));
               const fitTag = hiringFitTagFromScore(hiringScore);
+              const intel = getEmployerIntelligence(a, { minCvScore, durationMs: null });
+              const showFlags = intel.riskFlags.slice(0, 2);
+              const moreFlags = intel.riskFlags.length - showFlags.length;
               return (
-                <tr key={a.id} className="border-b border-[var(--border)] last:border-b-0 dark:border-zinc-700">
+                <tr
+                  key={a.id}
+                  className="border-b border-[var(--border)] transition-colors last:border-b-0 hover:bg-zinc-50/80 dark:border-zinc-800 dark:hover:bg-zinc-800/35"
+                >
                   <td className="px-2 py-3 align-middle">
                     <input
                       type="checkbox"
@@ -239,6 +278,25 @@ export function EmployerApplicationsInteractiveTable({ jobId, applications }: Pr
                   <td className="px-4 py-3 font-medium text-gray-800 dark:text-zinc-200">{hiringScore}</td>
                   <td className="px-4 py-3 align-middle">
                     <HiringFitBadge tag={fitTag} />
+                  </td>
+                  <td className="max-w-[200px] px-4 py-3 align-top">
+                    {intel.riskFlags.length === 0 ? (
+                      <span className="text-xs text-gray-500 dark:text-zinc-500">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {showFlags.map((f) => (
+                          <span
+                            key={f}
+                            className="inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-950 dark:bg-amber-950/40 dark:text-amber-100"
+                          >
+                            {employerDecisionRiskFlagLabel(f)}
+                          </span>
+                        ))}
+                        {moreFlags > 0 && (
+                          <span className="text-[10px] text-gray-500 dark:text-zinc-500">+{moreFlags}</span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-500 dark:text-zinc-500">
                     {a.created_at ? new Date(a.created_at).toLocaleString() : "-"}
