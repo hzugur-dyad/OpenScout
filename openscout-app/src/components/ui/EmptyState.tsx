@@ -26,7 +26,7 @@ export function EmptyState({ iconName, title, description, className, children }
   return (
     <div
       className={cn(
-        "flex flex-col items-center rounded-[10px] border border-dashed border-[var(--border)] bg-white/60 px-8 py-12 text-center dark:border-white/[0.08] dark:bg-zinc-900/40",
+        "flex flex-col items-center rounded-[10px] border border-dashed border-[var(--border)] bg-white/60 px-8 py-12 text-center dark:border-white/[0.12] dark:bg-black/20 dark:backdrop-blur-xl",
         className
       )}
     >

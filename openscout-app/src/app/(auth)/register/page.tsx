@@ -38,7 +38,7 @@ export default function RegisterPage() {
   }, []);
 
   const inputClass =
-    "w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500";
+    "w-full rounded-[10px] border border-[var(--border)] bg-white px-4 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100 dark:placeholder-zinc-500";
 
   async function handleSubmit() {
     setError(null);
@@ -103,7 +103,7 @@ export default function RegisterPage() {
             <OpenScoutLogoMark className="h-20 w-20" />
             <span className="text-2xl font-bold text-gray-900 dark:text-zinc-100">OpenScout</span>
           </Link>
-          <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
               <Check className="h-6 w-6 text-green-600" weight="regular" aria-hidden />
             </div>
@@ -128,14 +128,14 @@ export default function RegisterPage() {
 
         {searchParams.get("ref")?.trim() ? (
           <p
-            className="mb-4 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary-muted)]/40 px-4 py-2.5 text-center text-sm text-gray-800 dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-200"
+            className="mb-4 rounded-lg border border-[var(--primary)]/25 bg-[var(--primary-muted)]/40 px-4 py-2.5 text-center text-sm text-gray-800 dark:border-white/[0.18] dark:bg-black/25 dark:text-zinc-200"
             role="status"
           >
             You&apos;re signing up with an invite link.
           </p>
         ) : null}
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
           <h1 className="mb-1 text-xl font-bold text-gray-900 dark:text-zinc-100">Create your account</h1>
           <p className="mb-6 text-sm text-gray-500 dark:text-zinc-400">
             Use email and password only. You&apos;ll add your profile and CV next on the profile setup page.

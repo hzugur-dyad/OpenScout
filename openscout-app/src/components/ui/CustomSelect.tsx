@@ -54,7 +54,7 @@ export function CustomSelect({
         type="button"
         id={id}
         onClick={() => setOpen((o) => !o)}
-        className={`flex w-full items-center justify-between rounded-[10px] border border-[var(--border)] bg-white px-4 py-3 text-left text-sm text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 ${triggerClassName}`}
+        className={`flex w-full items-center justify-between rounded-[10px] border border-[var(--border)] bg-white px-4 py-3 text-left text-sm text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100 ${triggerClassName}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -71,7 +71,7 @@ export function CustomSelect({
       {open && (
         <div
           role="listbox"
-          className="dropdown-list absolute top-full left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.06] dark:bg-zinc-900"
+          className="dropdown-list absolute top-full left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.12] dark:bg-black/30 dark:backdrop-blur-xl"
         >
           {normalized.map((opt) => (
             <button
@@ -86,7 +86,7 @@ export function CustomSelect({
               className={`block w-full px-4 py-2.5 text-left text-sm transition-colors first:rounded-t-[8px] last:rounded-b-[8px] ${
                 value === opt.value
                   ? "bg-[var(--primary-muted)] text-gray-900 dark:bg-primary-muted/30 dark:text-zinc-100"
-                  : "text-gray-700 hover:bg-gray-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  : "text-gray-700 hover:bg-gray-50 dark:text-zinc-200 dark:hover:bg-black/40"
               }`}
             >
               {opt.label}

@@ -54,12 +54,12 @@ export default function ConfirmEmailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft">
-      <h1 className="text-xl font-bold text-gray-900">Confirm your email</h1>
-      <p className="mt-2 text-sm text-gray-600">
+    <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
+      <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Confirm your email</h1>
+      <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">
         We sent a confirmation link to your email. Click the link to activate your account and continue.
       </p>
-      <p className="mt-2 text-sm text-gray-600">
+      <p className="mt-2 text-sm text-gray-600 dark:text-zinc-300">
         Didn’t receive the email? Check your spam folder or resend below.
       </p>
       <div className="mt-6 flex flex-col gap-3">
@@ -76,7 +76,7 @@ export default function ConfirmEmailPage() {
         {message === "error" && (
           <p className="text-sm text-red-600">{errorText || "Could not resend. Try again later."}</p>
         )}
-        <Link href="/login" className="text-center text-sm text-gray-500 hover:underline">
+        <Link href="/login" className="text-center text-sm text-gray-500 hover:underline dark:text-zinc-400">
           Back to sign in
         </Link>
       </div>

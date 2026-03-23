@@ -78,7 +78,7 @@ export function InterviewResultShareBlock({
     typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+    <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
       <div className="flex items-center gap-2">
         <ShareNetwork className="h-5 w-5 text-gray-600 dark:text-zinc-400" weight="regular" aria-hidden />
         <h3 className="font-semibold text-gray-900 dark:text-zinc-100">Share your result</h3>
@@ -87,7 +87,7 @@ export function InterviewResultShareBlock({
         Anyone with the link can see your score and feedback highlights — not your transcript or
         email.
       </p>
-      <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-gray-800 dark:bg-zinc-800/80 dark:text-zinc-200">
+      <p className="mt-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm text-gray-800 dark:bg-black/20 dark:text-zinc-200">
         {viralText}
       </p>
       {showAnonToggle && (
@@ -106,7 +106,7 @@ export function InterviewResultShareBlock({
           type="text"
           readOnly
           value={fullUrl}
-          className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+          className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100"
         />
         <Button
           variant="primary"

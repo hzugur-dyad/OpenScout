@@ -42,11 +42,11 @@ export function Navbar({
     <>
       {/* ── Navbar ── */}
       <header
-        className={`sticky top-0 z-50 border-b border-[var(--border)] bg-white/80 backdrop-blur-md transition-opacity duration-300 dark:border-white/[0.08] dark:bg-transparent dark:backdrop-blur-xl ${
+        className={`sticky top-0 z-50 bg-transparent pt-3 transition-opacity duration-300 ${
           isAnimating ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between overflow-visible px-4 sm:px-6 lg:px-8">
+        <nav className="mx-auto flex h-[4.5rem] w-[min(96%,1100px)] items-center justify-between overflow-visible rounded-2xl border border-white/10 bg-black/55 px-6 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:px-8">
           {/* Left: Logo + nav links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 overflow-visible">
@@ -55,8 +55,8 @@ export function Navbar({
                 className="flex items-center gap-2 overflow-visible"
                 transition={{ layout: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } }}
               >
-                <OpenScoutLogoMark className="h-16 w-16 origin-left scale-[1.22]" />
-                <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-[#E6E6E6]">
+                <OpenScoutLogoMark className="h-14 w-14 origin-left scale-[1.1]" />
+                <span className="text-xl font-semibold tracking-tight text-white/95">
                   OpenScout
                 </span>
               </motion.div>
@@ -72,10 +72,10 @@ export function Navbar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`text-sm font-medium transition-colors ${
+                  className={`text-lg font-medium transition-colors ${
                     pathname === link.href
                       ? "text-primary-dark"
-                      : "text-gray-500 hover:text-gray-900 dark:text-[#A1A1AA] dark:hover:text-[#E6E6E6]"
+                      : "text-white/65 hover:text-white"
                   }`}
                 >
                   {link.label}
@@ -99,7 +99,7 @@ export function Navbar({
               <>
                 <Link
                   href="/login"
-                  className="hidden text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-[#A1A1AA] dark:hover:text-[#E6E6E6] sm:block"
+                  className="hidden text-lg font-medium text-white/65 hover:text-white sm:block"
                 >
                   Log In
                 </Link>
@@ -112,7 +112,7 @@ export function Navbar({
             <ThemeToggle />
 
             <button
-              className="text-gray-700 dark:text-[#E6E6E6] md:hidden"
+              className="text-white/85 md:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
@@ -132,7 +132,7 @@ export function Navbar({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="border-t border-[var(--border)] bg-white backdrop-blur-md dark:border-white/[0.08] dark:bg-black/25 dark:backdrop-blur-xl md:hidden"
+              className="mx-auto mt-2 w-[min(96%,1100px)] rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl md:hidden"
             >
               <div className="space-y-2 px-4 py-4">
                 {showUserTypeToggle && (
@@ -160,7 +160,7 @@ export function Navbar({
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:text-[#A1A1AA] dark:hover:bg-[#161B1D]"
+                    className="block rounded-lg px-4 py-2 text-sm text-white/75 hover:bg-white/5 hover:text-white"
                   >
                     {link.label}
                   </Link>

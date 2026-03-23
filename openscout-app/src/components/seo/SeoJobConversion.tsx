@@ -47,7 +47,7 @@ export function SeoCtaBlock({ jobSlug, pageType, position, headline, buttonLabel
   const href = seoMockInterviewHref(jobSlug);
   return (
     <aside
-      className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900"
+      className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl"
       aria-label="Practice with AI interview"
     >
       <p className="text-base font-medium text-gray-900 dark:text-zinc-100">{headline}</p>
@@ -72,7 +72,7 @@ export function SeoStickyInterviewCta({ jobSlug, pageType }: StickyProps) {
       <Link
         href={href}
         onClick={() => trackSeoCta(jobSlug, pageType, "sticky")}
-        className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-lg transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+        className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-white px-4 py-2.5 text-sm font-medium text-gray-900 shadow-lg transition-colors hover:bg-gray-50 dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100 dark:hover:bg-black/45"
       >
         Try AI Interview
       </Link>

@@ -59,7 +59,7 @@ export default function LandingPage() {
       {/* Stats/Benefits */}
       <section className="landing-framer-dim border-y border-[var(--border)] py-16 dark:border-zinc-800">
         <Container>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
               ? [
                   { value: "AI Evaluation", label: "Fair interview" },
@@ -79,20 +79,18 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center text-center"
+                className="group relative overflow-hidden rounded-xl border border-black/10 bg-white/80 p-6 text-center backdrop-blur-sm transition-colors duration-300 hover:border-[var(--primary)]/40 dark:border-white/[0.12] dark:bg-zinc-950/35 dark:hover:border-[var(--primary)]/45"
               >
-                <div
-                  className="mb-3 flex h-14 w-14 items-center justify-center rounded-full"
-                  style={{ backgroundColor: "var(--primary-muted)" }}
+                <div className="mx-auto mb-4 h-px w-9 bg-[var(--primary)]/55 transition-all duration-300 group-hover:w-12 group-hover:bg-[var(--primary)]/75" />
+                <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-gray-500 dark:text-zinc-400">
+                  {item.label}
+                </p>
+                <p
+                  className="mt-3 text-[1.6rem] font-semibold leading-none tracking-tight sm:text-[1.85rem]"
+                  style={{ color: "var(--primary-dark)" }}
                 >
-                  <span
-                    className="text-xl font-bold"
-                    style={{ color: "var(--primary-dark)" }}
-                  >
-                    {item.value}
-                  </span>
-                </div>
-                <p className="text-sm font-medium text-gray-600 dark:text-zinc-400">{item.label}</p>
+                  {item.value}
+                </p>
               </motion.div>
             ))}
           </div>
@@ -151,7 +149,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why OpenScout - different heading and cards for employer */}
-      <section className="border-t border-[var(--border)] bg-zinc-50/50 py-20 dark:border-zinc-800 dark:bg-transparent">
+      <section className="landing-framer-dim border-t border-[var(--border)] bg-zinc-50/50 py-20 dark:border-zinc-800 dark:bg-transparent">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">
             {!isEmployer ? "Why Candidates Choose OpenScout" : "Why Employers Use OpenScout"}
@@ -212,7 +210,7 @@ export default function LandingPage() {
       </section>
 
       {/* For employers */}
-      <section className="border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-transparent">
+      <section className="landing-framer-dim border-t border-[var(--border)] bg-white py-20 dark:border-zinc-800 dark:bg-transparent">
         <Container>
           <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-zinc-100">For Employers</h2>
           <p className="mx-auto mt-2 max-w-2xl text-center text-gray-600 dark:text-zinc-400">

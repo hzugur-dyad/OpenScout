@@ -59,7 +59,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
     return (
       <div className="py-16">
         <Container>
-          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
             <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Temporarily unavailable</h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
               Public profiles require configuration. Please try again later.
@@ -83,7 +83,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
     return (
       <div className="py-16">
         <Container>
-          <div className="mx-auto max-w-xl rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+          <div className="mx-auto max-w-xl rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
             <h1 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">Profile unavailable</h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
               This member has chosen not to show a public profile.
@@ -121,7 +121,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
           )}
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
                 Best Scout Score
               </p>
@@ -129,7 +129,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
                 {typeof d.bestScoutScore === "number" ? d.bestScoutScore : "—"}
               </p>
             </div>
-            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+            <div className="rounded-[10px] border border-[var(--border)] bg-white p-5 shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
               <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-zinc-400">
                 Hiring signal
               </p>
@@ -162,7 +162,7 @@ export default async function PublicCandidateProfilePage({ params }: PageProps) 
             </section>
           )}
 
-          <section className="mt-8 rounded-[10px] border border-[var(--border)] bg-gray-50/80 p-5 dark:border-white/[0.06] dark:bg-zinc-900/50">
+          <section className="mt-8 rounded-[10px] border border-[var(--border)] bg-gray-50/80 p-5 dark:border-white/[0.12] dark:bg-black/20 dark:backdrop-blur-xl">
             <h2 className="text-sm font-semibold text-gray-900 dark:text-zinc-100">At a glance</h2>
             <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-zinc-300">
               <li className="flex items-start gap-2">

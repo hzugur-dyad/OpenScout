@@ -51,7 +51,7 @@ export default function ScoutPassPage() {
     return (
       <div className="py-16">
         <Container>
-        <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft">
+        <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
           <h1 className="text-xl font-bold">
             {isUnavailable ? "Scout Pass temporarily unavailable" : "Scout Pass not found"}
           </h1>
@@ -87,7 +87,7 @@ export default function ScoutPassPage() {
           </p>
         </div>
 
-        <div className="rounded-[10px] border border-[var(--border)] bg-white shadow-card overflow-hidden">
+        <div className="rounded-[10px] border border-[var(--border)] bg-white shadow-card overflow-hidden dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
           <div
             className="border-b border-[var(--border)] px-6 py-4"
             style={{ backgroundColor: "var(--primary-muted)" }}

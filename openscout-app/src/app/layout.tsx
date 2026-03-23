@@ -83,7 +83,9 @@ export default function RootLayout({
           src="https://courageous-customer-454833.framer.app/"
           title=""
           aria-hidden
-          className="pointer-events-none fixed inset-0 z-0 h-full w-full border-0"
+          scrolling="no"
+          className="pointer-events-none fixed inset-y-0 left-0 z-0 h-full w-[calc(100%+20px)] border-0"
+          style={{ marginRight: "-20px" }}
           loading="eager"
         />
         <div className="relative z-[1] min-h-dvh">

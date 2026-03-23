@@ -32,7 +32,7 @@ export default function BlogPage() {
       <ul className="mt-10 space-y-6">
         {posts.map((p) => (
           <li key={p.slug}>
-            <Link href={`/blog/${p.slug}`} className="block rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.06] dark:bg-zinc-900 dark:hover:shadow-card">
+            <Link href={`/blog/${p.slug}`} className="block rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft transition-shadow hover:shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl dark:hover:shadow-card">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-zinc-100">{p.title}</h2>
               <p className="mt-2 text-gray-600 dark:text-zinc-400">{p.excerpt}</p>
               <span className="mt-3 inline-block text-sm font-medium" style={{ color: "var(--primary)" }}>

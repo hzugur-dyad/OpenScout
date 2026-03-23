@@ -71,7 +71,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
     return (
       <div className="py-16">
         <Container>
-          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.06] dark:bg-zinc-900">
+          <div className="mx-auto max-w-md rounded-[10px] border border-[var(--border)] bg-white p-8 text-center shadow-soft dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
             <h1 className="text-xl font-bold text-gray-900 dark:text-zinc-100">Temporarily unavailable</h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-zinc-400">
               Shared interview links require configuration. Please try again later.
@@ -114,7 +114,7 @@ export default async function PublicInterviewResultPage({ params, searchParams }
             )}
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border)] bg-white shadow-card dark:border-white/[0.06] dark:bg-zinc-900 overflow-hidden">
+          <div className="rounded-[10px] border border-[var(--border)] bg-white shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl overflow-hidden">
             <div
               className="border-b border-[var(--border)] px-6 py-4"
               style={{ backgroundColor: "var(--primary-muted)" }}

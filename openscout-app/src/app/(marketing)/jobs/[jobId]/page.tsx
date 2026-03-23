@@ -44,7 +44,7 @@ export default async function JobDetailPage({
       <Link href="/jobs" className="text-sm text-gray-500 hover:underline dark:text-zinc-400 dark:hover:text-zinc-300">
         ← Back to listings
       </Link>
-      <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.06] dark:bg-zinc-900">
+      <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-white p-8 shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-zinc-100">{jobTitle}</h1>
         <p className="mt-1 text-gray-500 dark:text-zinc-400">
           {job.companies?.name ?? "Company"}
