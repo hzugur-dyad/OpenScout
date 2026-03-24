@@ -134,7 +134,9 @@ export function isRateLimitBypassed(user: { id?: string | null; email?: string |
   const id = user.id?.trim().toLowerCase() ?? "";
   const emailAllow = parseCsvLowerSet(process.env.RATE_LIMIT_BYPASS_EMAILS);
   const idAllow = parseCsvLowerSet(process.env.RATE_LIMIT_BYPASS_USER_IDS);
-  return (email && emailAllow.has(email)) || (id && idAllow.has(id));
+  const emailBypassed = email.length > 0 && emailAllow.has(email);
+  const idBypassed = id.length > 0 && idAllow.has(id);
+  return emailBypassed || idBypassed;
 }
 
 /**
