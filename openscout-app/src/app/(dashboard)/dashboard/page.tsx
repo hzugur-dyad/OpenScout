@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Newsreader } from "next/font/google";
-import { ArrowRight } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 import { CandidateApplicationStatusBadge } from "@/components/candidate/CandidateApplicationStatusBadge";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserPlan, type CandidatePlan } from "@/lib/usage";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
@@ -108,9 +107,11 @@ export default function DashboardPage() {
   const [mockResults, setMockResults] = useState<MockResultRow[]>([]);
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
   const [checkedEmployer, setCheckedEmployer] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       const {
         data: { user },
@@ -123,11 +124,13 @@ export default function DashboardPage() {
       } catch {}
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role, first_name")
+        .select("role, first_name, plan")
         .eq("user_id", user.id)
         .maybeSingle();
       const profileData = profile as { role?: string; first_name?: string | null } | null;
-      setFirstName(profileData?.first_name?.trim() ?? "");
+      if (!cancelled) {
+        setFirstName(profileData?.first_name?.trim() ?? "");
+      }
       const { data: company } = await supabase
         .from("companies")
         .select("id")
@@ -146,37 +149,7 @@ export default function DashboardPage() {
           user.id,
           user.email ?? undefined
         );
-      } catch (_) {}
-      setCheckedEmployer(true);
-    }
-    load();
-  }, [supabase, router]);
-
-  useEffect(() => {
-    if (!checkedEmployer) return;
-    async function loadPlan() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("plan")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      const p = getUserPlan(profile?.plan);
-      setPlan(p);
-    }
-    loadPlan();
-  }, [supabase, checkedEmployer]);
-
-  useEffect(() => {
-    if (!checkedEmployer) return;
-    async function loadResults() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+      } catch {}
 
       const [cvRes, mockRes, appsRes] = await Promise.all([
         supabase
@@ -205,13 +178,18 @@ export default function DashboardPage() {
           .order("created_at", { ascending: false })
           .limit(5),
       ]);
-
+      if (cancelled) return;
+      setPlan(getUserPlan((profile as { plan?: string | null } | null)?.plan));
       setCvResults(((cvRes.data ?? []) as CvResultRow[]).filter((row) => !!row?.id));
       setMockResults(((mockRes.data ?? []) as MockResultRow[]).filter((row) => !!row?.id));
       setApplications(((appsRes.data ?? []) as ApplicationRow[]).filter((row) => !!row?.id));
+      setCheckedEmployer(true);
     }
-    loadResults();
-  }, [supabase, checkedEmployer]);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, router]);
 
   if (!checkedEmployer) {
     return <DashboardLoadingSkeleton />;

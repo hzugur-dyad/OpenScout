@@ -100,6 +100,8 @@ export default function EmployerProfilePage() {
   }
 
   const inputClass = "w-full rounded-[10px] border border-[var(--border)] px-4 py-2.5 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
+  const profileSectionCard =
+    "os-surface-card rounded-[10px] p-6 md:p-7 dark:bg-black/45 dark:border-white/[0.12]";
 
   if (loading) {
     return (
@@ -124,47 +126,51 @@ export default function EmployerProfilePage() {
         </div>
 
         <div className="mt-8 space-y-8">
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Personal Information</h2>
+          <section className={profileSectionCard}>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
+              Personal Information
+            </h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500">First name</dt>
-                <dd className="mt-0.5 text-gray-900">{personal.first_name || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">First name</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{personal.first_name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Last name</dt>
-                <dd className="mt-0.5 text-gray-900">{personal.last_name || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Last name</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{personal.last_name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-0.5 text-gray-900">{personal.email || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Email</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{personal.email || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Position / Title</dt>
-                <dd className="mt-0.5 text-gray-900">{personal.job_title_at_company || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Position / Title</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{personal.job_title_at_company || "—"}</dd>
               </div>
             </dl>
           </section>
 
-          <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-            <h2 className="text-lg font-semibold text-gray-900">Company Information</h2>
+          <section className={profileSectionCard}>
+            <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
+              Company Information
+            </h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Company name</dt>
-                <dd className="mt-0.5 text-gray-900">{company.name || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Company name</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{company.name || "—"}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Sector</dt>
-                <dd className="mt-0.5 text-gray-900">{company.sector || "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Sector</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{company.sector || "—"}</dd>
               </div>
               <div className="sm:col-span-2">
-                <dt className="text-sm font-medium text-gray-500">Website</dt>
-                <dd className="mt-0.5 text-gray-900">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{company.website}</a> : "—"}</dd>
+                <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Website</dt>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{company.website}</a> : "—"}</dd>
               </div>
               {company.description && (
                 <div className="sm:col-span-2">
-                  <dt className="text-sm font-medium text-gray-500">Description</dt>
-                  <dd className="mt-0.5 whitespace-pre-wrap text-gray-900">{company.description}</dd>
+                  <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Description</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-[#111111] dark:text-zinc-100">{company.description}</dd>
                 </div>
               )}
             </dl>
@@ -190,47 +196,51 @@ export default function EmployerProfilePage() {
       )}
 
       <div className="mt-8 space-y-8">
-        <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-          <h2 className="text-lg font-semibold text-gray-900">Personal Information</h2>
+        <section className={profileSectionCard}>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
+            Personal Information
+          </h2>
           <div className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium">First Name</label>
+                <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">First Name</label>
                 <input value={personal.first_name} onChange={(e) => setPersonal((p) => ({ ...p, first_name: e.target.value }))} className={inputClass} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Last Name</label>
+                <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Last Name</label>
                 <input value={personal.last_name} onChange={(e) => setPersonal((p) => ({ ...p, last_name: e.target.value }))} className={inputClass} />
               </div>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Email</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Email</label>
               <input type="email" value={personal.email} onChange={(e) => setPersonal((p) => ({ ...p, email: e.target.value }))} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Position / Title</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Position / Title</label>
               <input value={personal.job_title_at_company} onChange={(e) => setPersonal((p) => ({ ...p, job_title_at_company: e.target.value }))} className={inputClass} placeholder="e.g. Head of Recruiting" />
             </div>
           </div>
         </section>
 
-        <section className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-soft">
-          <h2 className="text-lg font-semibold text-gray-900">Company Information</h2>
+        <section className={profileSectionCard}>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
+            Company Information
+          </h2>
           <div className="mt-4 space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">Company Name</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Company Name</label>
               <input value={company.name} onChange={(e) => setCompany((c) => ({ ...c, name: e.target.value }))} className={inputClass} />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Sector</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Sector</label>
               <input value={company.sector} onChange={(e) => setCompany((c) => ({ ...c, sector: e.target.value }))} className={inputClass} placeholder="e.g. Technology" />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Website</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Website</label>
               <input value={company.website} onChange={(e) => setCompany((c) => ({ ...c, website: e.target.value }))} className={inputClass} placeholder="https://..." />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Description</label>
+              <label className="mb-1 block text-sm font-medium text-black/55 dark:text-zinc-500">Description</label>
               <textarea value={company.description} onChange={(e) => setCompany((c) => ({ ...c, description: e.target.value }))} rows={4} className={inputClass} placeholder="Brief description of your company" />
             </div>
           </div>

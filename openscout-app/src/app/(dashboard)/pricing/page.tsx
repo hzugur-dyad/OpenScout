@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
@@ -124,7 +124,7 @@ function PricingSkeleton() {
 }
 
 export default function CandidatePricingPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const preferReducedMotion = useReducedMotion() === true;
   const [currentPlan, setCurrentPlan] = useState<CandidatePlan>("free");
   const [usage, setUsage] = useState<Record<UsageFeature, number>>({

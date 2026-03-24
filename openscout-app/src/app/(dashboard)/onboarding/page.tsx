@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
   const linkedinRef = useRef<HTMLInputElement>(null);
   const prefersReducedMotion = useReducedMotion();
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const stepMotionProps = prefersReducedMotion
     ? {
@@ -256,6 +256,36 @@ export default function OnboardingPage() {
       return;
     }
     setStep((s) => s + 1);
+  }
+
+  async function handleCvUpload(file: File) {
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".pdf") && !name.endsWith(".txt")) return;
+    if (file.size > 10 * 1024 * 1024) return;
+    setCvUploading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const ext = file.name.split(".").pop() || "pdf";
+      const filePath = `${user.id}/cv.${ext}`;
+      await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
+      await supabase
+        .from("profile_private")
+        .update({ cv_file_url: filePath, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      setCvFileUrl(filePath);
+      try {
+        await fetch("/api/cv-extract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filePath }),
+        });
+      } catch {}
+    } finally {
+      setCvUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -555,27 +585,17 @@ export default function OnboardingPage() {
                 >
                   Download CV
                 </button>
-                <input ref={cvInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const name = file.name.toLowerCase();
-                  if (!name.endsWith(".pdf") && !name.endsWith(".txt")) return;
-                  if (file.size > 10 * 1024 * 1024) return;
-                  setCvUploading(true);
-                  try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) return;
-                    const ext = file.name.split(".").pop() || "pdf";
-                    const filePath = `${user.id}/cv.${ext}`;
-                    await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
-                    await supabase
-                      .from("profile_private")
-                      .update({ cv_file_url: filePath, updated_at: new Date().toISOString() })
-                      .eq("user_id", user.id);
-                    setCvFileUrl(filePath);
-                    try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
-                  } finally { setCvUploading(false); }
-                }} />
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept=".pdf,.txt"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await handleCvUpload(file);
+                  }}
+                />
                 <Button
                   variant="outline"
                   size="sm"
@@ -588,27 +608,17 @@ export default function OnboardingPage() {
               </div>
             ) : (
               <div className="mt-4">
-                <input ref={cvInputRef} type="file" accept=".pdf,.txt" className="hidden" onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  const name = file.name.toLowerCase();
-                  if (!name.endsWith(".pdf") && !name.endsWith(".txt")) return;
-                  if (file.size > 10 * 1024 * 1024) return;
-                  setCvUploading(true);
-                  try {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (!user) return;
-                    const ext = file.name.split(".").pop() || "pdf";
-                    const filePath = `${user.id}/cv.${ext}`;
-                    await supabase.storage.from("cvs").upload(filePath, file, { upsert: true });
-                    await supabase
-                      .from("profile_private")
-                      .update({ cv_file_url: filePath, updated_at: new Date().toISOString() })
-                      .eq("user_id", user.id);
-                    setCvFileUrl(filePath);
-                    try { await fetch("/api/cv-extract", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filePath }) }); } catch {}
-                  } finally { setCvUploading(false); }
-                }} />
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept=".pdf,.txt"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    await handleCvUpload(file);
+                  }}
+                />
                 <button
                   type="button"
                   onClick={() => cvInputRef.current?.click()}

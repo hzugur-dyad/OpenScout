@@ -14,7 +14,7 @@ import {
 import { ReferralAttribute } from "./ReferralAttribute";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sidebar, type NavItem } from "@/components/layout/Sidebar";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -41,7 +41,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   /** Desktop: true when sidebar is expanded on hover (for main content margin) */
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const pathname = usePathname();
   const { role } = useUserRole();
   const isEmployerPath = pathname.startsWith("/employer");

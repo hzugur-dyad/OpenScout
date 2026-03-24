@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { PLAN_LIMITS, getUserPlan, type CandidatePlan, type UsageFeature } from "@/lib/usage";
@@ -19,7 +19,7 @@ export function UsageBanner({ feature }: UsageBannerProps) {
   const [used, setUsed] = useState(0);
   const [bonusMockCredits, setBonusMockCredits] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {
