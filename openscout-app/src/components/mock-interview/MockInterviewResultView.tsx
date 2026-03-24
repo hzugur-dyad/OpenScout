@@ -13,6 +13,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ShareScoutScoreModal } from "@/components/dashboard/ShareScoutScoreModal";
 import { InterviewResultShareBlock } from "@/components/mock-interview/InterviewResultShareBlock";
+import { SocialCardSharePanel } from "@/components/share/SocialCardSharePanel";
+import { InterviewResultCard } from "@/components/share/SocialCards";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
@@ -34,6 +36,7 @@ type Props = {
   shareResultId?: string;
   /** Set when redirect follows a successful job application submit from the interview flow. */
   applicationSubmitted?: boolean;
+  firstName?: string;
 };
 
 function DimensionMeter({ label, value }: { label: string; value: number }) {
@@ -71,6 +74,7 @@ export function MockInterviewResultView({
   problemSolvingScore,
   shareResultId,
   applicationSubmitted = false,
+  firstName,
 }: Props) {
   const locale: InterviewLocale = localeProp ?? "en";
   const ui = interviewUi[locale];
@@ -115,6 +119,8 @@ export function MockInterviewResultView({
 
   const circleColor =
     score >= 70 ? "#22c55e" : score >= 50 ? "var(--primary)" : "#ef4444";
+  const interviewEvaluationLine =
+    score >= 80 ? "Strong interview signal" : score >= 60 ? "Solid readiness signal" : "Room to improve";
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -184,6 +190,21 @@ export function MockInterviewResultView({
               />
             </div>
           )}
+
+          <div className="mt-6">
+            <SocialCardSharePanel
+              title="Share card"
+              fileName={`openscout-interview-${shareResultId?.trim() || "result"}`}
+              shareText={`My OpenScout interview score: ${score}/100`}
+            >
+              <InterviewResultCard
+                role={category?.trim() || "General"}
+                score={score}
+                evaluationLine={interviewEvaluationLine}
+                firstName={firstName}
+              />
+            </SocialCardSharePanel>
+          </div>
 
           {justification?.trim() && (
             <motion.div

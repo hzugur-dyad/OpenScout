@@ -23,6 +23,8 @@ export default async function EmployerPricingPage() {
 
   const checkClass =
     "mt-0.5 h-4 w-4 shrink-0 text-[var(--primary-dark)] dark:text-[var(--primary-light)]";
+  const employerPlanLabel = currentPlan === "scale" ? "Scale" : currentPlan === "growth" ? "Growth" : "Free trial";
+  const employerPriceLine = currentPlan === "scale" ? "$149 / month" : currentPlan === "growth" ? "$99 / month" : "$0 / 7 days";
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -57,6 +59,39 @@ export default async function EmployerPricingPage() {
         <div className="mt-8 rounded-[1.25rem] border border-red-200/90 bg-red-50/90 p-4 text-sm text-red-900 ring-1 ring-inset ring-red-900/[0.06] dark:border-red-900/40 dark:bg-red-950/35 dark:text-red-200">
           <p className="font-medium">Your trial has ended. Subscribe to keep posting and reviewing applicants.</p>
         </div>
+      )}
+      {isSubscribed && (
+        <section
+          aria-label="Current subscription summary"
+          className="mt-8 rounded-[12px] border border-[#EAEAEA] bg-white p-5 dark:border-white/[0.1] dark:bg-zinc-950/40"
+        >
+          <dl className="grid gap-3 text-sm">
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Plan</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">{employerPlanLabel}</dd>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Price</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">{employerPriceLine}</dd>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Renewal</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">Renews on next billing date</dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href="#employer-pricing-plan-comparison">
+              <Button variant="secondary" size="sm">
+                Change Plan
+              </Button>
+            </a>
+            <a href="/api/billing/portal?scope=employer">
+              <Button variant="outline" size="sm">
+                Cancel Plan
+              </Button>
+            </a>
+          </div>
+        </section>
       )}
 
       <section aria-labelledby="employer-pricing-plan-comparison">

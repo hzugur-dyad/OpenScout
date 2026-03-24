@@ -49,6 +49,13 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
     return <MockInterviewResultFallback locale={resultLocale} variant="unauthenticated" />;
   }
 
+  const firstNameFromMeta =
+    typeof user.user_metadata?.first_name === "string"
+      ? user.user_metadata.first_name
+      : typeof user.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name.split(/\s+/)[0]
+        : undefined;
+
   if (!sessionId) {
     return <MockInterviewResultFallback locale={resultLocale} variant="not_found" />;
   }
@@ -127,6 +134,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       problemSolvingScore={problemSolvingScore}
       shareResultId={sessionId}
       applicationSubmitted={applicationSubmitted}
+      firstName={firstNameFromMeta}
     />
   );
 }

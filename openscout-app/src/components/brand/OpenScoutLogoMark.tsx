@@ -1,7 +1,5 @@
 "use client";
 
-import { useId } from "react";
-
 type OpenScoutLogoMarkProps = {
   className?: string;
   /** Empty when paired with visible "OpenScout" text (decorative). */
@@ -12,9 +10,8 @@ export function OpenScoutLogoMark({
   className = "h-14 w-14",
   alt = "",
 }: OpenScoutLogoMarkProps) {
-  const uid = useId().replace(/:/g, "");
-  const gradId = `os-logo-grad-${uid}`;
-  const maskId = `os-logo-mask-${uid}`;
+  const gradId = "os-logo-grad-static";
+  const maskId = "os-logo-mask-static";
 
   return (
     <svg

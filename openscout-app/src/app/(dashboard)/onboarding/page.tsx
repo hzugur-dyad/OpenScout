@@ -14,6 +14,8 @@ import { FileText, UploadSimple } from "@phosphor-icons/react";
 import { Newsreader } from "next/font/google";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
 import { captureException } from "@/lib/monitoring";
+import { SocialCardSharePanel } from "@/components/share/SocialCardSharePanel";
+import { CvAnalysisCard, InterviewResultCard, ProfileCard } from "@/components/share/SocialCards";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -41,7 +43,7 @@ const minimalOutlineBtn = `rounded-lg border-[#E5E5E3] bg-transparent transition
 /** Match dashboard page: full-bleed bone canvas, same radial wash, max-w-5xl content */
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative -mx-4 min-h-full min-h-dvh overflow-x-clip bg-transparent px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-transparent">
+    <div className="relative -mx-4 min-h-full min-h-dvh bg-transparent px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-transparent">
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 bg-transparent [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.08),transparent_58%)] dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.03),transparent_55%)]"
@@ -69,6 +71,18 @@ const bentoInnerCard = `space-y-3 rounded-lg border border-[#E5E5E3] bg-[#F2F1EE
 const readonlySectionCard =
   "os-surface-card rounded-[10px] p-6 md:p-7 dark:bg-black/45 dark:border-white/[0.12]";
 
+type CvLatestRow = {
+  created_at: string;
+  job_category: string | null;
+  overall_score: number | null;
+};
+
+type InterviewLatestRow = {
+  created_at: string;
+  job_category: string | null;
+  score: number | null;
+};
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [editing, setEditing] = useState(false);
@@ -79,6 +93,9 @@ export default function OnboardingPage() {
   const [cvFileUrl, setCvFileUrl] = useState<string | null>(null);
   const [cvUploading, setCvUploading] = useState(false);
   const [onboardingCompletedAt, setOnboardingCompletedAt] = useState<string | null>(null);
+  const [bestInterviewScore, setBestInterviewScore] = useState<number>(0);
+  const [latestCv, setLatestCv] = useState<CvLatestRow | null>(null);
+  const [latestInterview, setLatestInterview] = useState<InterviewLatestRow | null>(null);
   const cvInputRef = useRef<HTMLInputElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
   const lastNameRef = useRef<HTMLInputElement>(null);
@@ -102,6 +119,15 @@ export default function OnboardingPage() {
         exit: { opacity: 0, y: -8 },
         transition: stepEase,
       };
+
+  const latestResult = useMemo(() => {
+    if (!latestCv && !latestInterview) return null;
+    if (!latestCv) return { type: "interview" as const, row: latestInterview! };
+    if (!latestInterview) return { type: "cv" as const, row: latestCv };
+    return new Date(latestCv.created_at).getTime() >= new Date(latestInterview.created_at).getTime()
+      ? { type: "cv" as const, row: latestCv }
+      : { type: "interview" as const, row: latestInterview };
+  }, [latestCv, latestInterview]);
 
   const [form, setForm] = useState({
     first_name: "",
@@ -159,6 +185,9 @@ export default function OnboardingPage() {
         { data: eduList },
         { data: prefs },
         { data: links },
+        { data: bestInterview },
+        { data: latestCvRow },
+        { data: latestInterviewRow },
       ] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("profile_private").select("cv_file_url").eq("user_id", user.id).maybeSingle(),
@@ -166,6 +195,21 @@ export default function OnboardingPage() {
         supabase.from("educations").select("*").eq("user_id", user.id).order("sort_order"),
         supabase.from("job_preferences").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("professional_links").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("mock_interviews").select("score").eq("user_id", user.id).order("score", { ascending: false }).limit(1).maybeSingle(),
+        supabase
+          .from("cv_analyses")
+          .select("created_at, job_category, overall_score")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("mock_interviews")
+          .select("created_at, job_category, score")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
       setForm((f) => ({
         ...f,
@@ -214,6 +258,12 @@ export default function OnboardingPage() {
       }));
       const completedAt = (profile as { onboarding_completed_at?: string | null } | null)?.onboarding_completed_at ?? null;
       setOnboardingCompletedAt(completedAt);
+      const topScore = typeof (bestInterview as { score?: unknown } | null)?.score === "number"
+        ? ((bestInterview as { score: number }).score ?? 0)
+        : 0;
+      setBestInterviewScore(topScore);
+      setLatestCv((latestCvRow as CvLatestRow | null) ?? null);
+      setLatestInterview((latestInterviewRow as InterviewLatestRow | null) ?? null);
       setEditing(completedAt == null);
       setProfileLoading(false);
     }
@@ -455,18 +505,50 @@ export default function OnboardingPage() {
   if (!editing) {
     return (
       <OnboardingShell>
-        <div className="max-w-2xl">
-          <p className="text-xs font-medium uppercase tracking-[0.05em] text-black/55 dark:text-zinc-500">
-            Candidate profile
-          </p>
-          <h1 className={`mt-4 ${pageTitleClass}`}>My Profile</h1>
-          <p className="mt-3 max-w-[65ch] text-base leading-[1.5] text-black/70 dark:text-zinc-400">
-            Read-only summary for employers. Edit when something changes.
-          </p>
-        </div>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,430px)] lg:items-start lg:gap-10">
+          <aside className="order-1 lg:order-2 lg:justify-self-end lg:mr-[-8px] xl:mr-[-12px]">
+            <div className="w-full lg:fixed lg:top-[104px] lg:right-20 xl:right-48 lg:z-30 lg:ml-auto lg:max-w-[360px]">
+              {latestResult && (
+                <SocialCardSharePanel
+                  title="Your latest score"
+                  fileName="openscout-latest-result"
+                  shareText="Latest OpenScout result from my profile"
+                  centerActions
+                  noWrapActions
+                >
+                  {latestResult.type === "cv" ? (
+                    <CvAnalysisCard
+                      role={latestResult.row.job_category?.trim() || "General"}
+                      score={typeof latestResult.row.overall_score === "number" ? latestResult.row.overall_score : 0}
+                      insightLine="CV readiness snapshot"
+                      firstName={form.first_name}
+                    />
+                  ) : (
+                    <InterviewResultCard
+                      role={latestResult.row.job_category?.trim() || "General"}
+                      score={typeof latestResult.row.score === "number" ? latestResult.row.score : 0}
+                      evaluationLine="Interview readiness snapshot"
+                      firstName={form.first_name}
+                    />
+                  )}
+                </SocialCardSharePanel>
+              )}
+            </div>
+          </aside>
 
-        <div className="mt-14 max-w-3xl space-y-6">
-          <section className={readonlySectionCard}>
+          <div className="order-2 lg:order-1">
+            <div className="max-w-3xl">
+              <p className="text-xs font-medium uppercase tracking-[0.05em] text-black/55 dark:text-zinc-500">
+                Candidate profile
+              </p>
+              <h1 className={`mt-4 ${pageTitleClass}`}>My Profile</h1>
+              <p className="mt-3 max-w-[65ch] text-base leading-[1.5] text-black/70 dark:text-zinc-400">
+                Read-only summary for employers. Edit when something changes.
+              </p>
+            </div>
+
+            <div className="mt-14 max-w-3xl space-y-6">
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
               About
             </h2>
@@ -494,9 +576,9 @@ export default function OnboardingPage() {
                 </div>
               )}
             </dl>
-          </section>
+              </section>
 
-          <section className={readonlySectionCard}>
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Work experience</h2>
             {form.work_experiences.length === 0 ? (
               <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No roles listed yet.</p>
@@ -513,9 +595,9 @@ export default function OnboardingPage() {
                 ))}
               </ul>
             )}
-          </section>
+              </section>
 
-          <section className={readonlySectionCard}>
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Education</h2>
             {form.educations.length === 0 ? (
               <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No education listed yet.</p>
@@ -532,9 +614,9 @@ export default function OnboardingPage() {
                 ))}
               </ul>
             )}
-          </section>
+              </section>
 
-          <section className={readonlySectionCard}>
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Job preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
@@ -550,9 +632,9 @@ export default function OnboardingPage() {
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.domain ?? "—"}</dd>
               </div>
             </dl>
-          </section>
+              </section>
 
-          <section className={readonlySectionCard}>
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
@@ -568,9 +650,9 @@ export default function OnboardingPage() {
                 <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : "—"}</dd>
               </div>
             </dl>
-          </section>
+              </section>
 
-          <section className={readonlySectionCard}>
+              <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">
@@ -632,20 +714,22 @@ export default function OnboardingPage() {
                 </button>
               </div>
             )}
-          </section>
-        </div>
+              </section>
+            </div>
 
-        <div className="mt-10">
-          <Button
-            variant="primary"
-            className={minimalPrimaryBtn}
-            onClick={() => {
-              setSaveError(null);
-              setEditing(true);
-            }}
-          >
-            Edit profile
-          </Button>
+            <div className="mt-10">
+              <Button
+                variant="primary"
+                className={minimalPrimaryBtn}
+                onClick={() => {
+                  setSaveError(null);
+                  setEditing(true);
+                }}
+              >
+                Edit profile
+              </Button>
+            </div>
+          </div>
         </div>
       </OnboardingShell>
     );

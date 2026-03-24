@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { CvAnalysisShareCardSection } from "@/components/share/CvAnalysisShareCardSection";
 
 type PageProps = {
   params: Promise<{ analysisId: string }>;
@@ -52,6 +53,14 @@ export default async function CvAnalysisDetailPage({ params }: PageProps) {
   const scores = scoreEntries(row.category_scores);
   const strengths = stringList(row.strengths);
   const improvements = stringList(row.improvements);
+  const shortInsight = strengths[0] || improvements[0] || "CV readiness snapshot";
+  const safeScore = typeof row.overall_score === "number" ? row.overall_score : 0;
+  const firstNameFromMeta =
+    typeof user.user_metadata?.first_name === "string"
+      ? user.user_metadata.first_name
+      : typeof user.user_metadata?.full_name === "string"
+        ? user.user_metadata.full_name.split(/\s+/)[0]
+        : undefined;
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -76,6 +85,15 @@ export default async function CvAnalysisDetailPage({ params }: PageProps) {
           {typeof row.overall_score === "number" ? row.overall_score : "—"}
         </p>
       </section>
+
+      <div className="mt-6">
+        <CvAnalysisShareCardSection
+          role={row.job_category?.trim() || "General"}
+          score={safeScore}
+          insight={shortInsight}
+          firstName={firstNameFromMeta}
+        />
+      </div>
 
       <section className="os-surface-card mt-6 p-6">
         <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Category scores</h2>

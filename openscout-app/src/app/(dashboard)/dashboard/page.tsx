@@ -6,6 +6,17 @@ import { Newsreader } from "next/font/google";
 import { motion } from "framer-motion";
 import { CandidateApplicationStatusBadge } from "@/components/candidate/CandidateApplicationStatusBadge";
 import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/Button";
+import {
+  AnimatedDialog,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogTitle,
+} from "@/components/ui/Dialog";
+import { SocialCardSharePanel } from "@/components/share/SocialCardSharePanel";
+import { CvAnalysisCard, InterviewResultCard } from "@/components/share/SocialCards";
 import { createClient } from "@/lib/supabase/client";
 import { getUserPlan, type CandidatePlan } from "@/lib/usage";
 import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registration-profile";
@@ -71,6 +82,20 @@ type ApplicationRow = {
   job_listings: { title?: string | null } | { title?: string | null }[] | null;
 };
 
+type ScoutCardPreview =
+  | {
+      type: "cv";
+      role: string;
+      score: number;
+      insight: string;
+    }
+  | {
+      type: "interview";
+      role: string;
+      score: number;
+      insight: string;
+    };
+
 function DashboardLoadingSkeleton() {
   return (
     <div className="-mx-4 min-h-full bg-transparent px-4 py-16 lg:-mx-8 lg:px-8 dark:bg-transparent">
@@ -106,6 +131,7 @@ export default function DashboardPage() {
   const [cvResults, setCvResults] = useState<CvResultRow[]>([]);
   const [mockResults, setMockResults] = useState<MockResultRow[]>([]);
   const [applications, setApplications] = useState<ApplicationRow[]>([]);
+  const [scoutCardPreview, setScoutCardPreview] = useState<ScoutCardPreview | null>(null);
   const [checkedEmployer, setCheckedEmployer] = useState(false);
   const supabase = useMemo(() => createClient(), []);
 
@@ -211,7 +237,7 @@ export default function DashboardPage() {
               >
                 Welcome, {firstName || "there"}
                 {plan !== "free" && (
-                  <span className="ml-3 inline-flex items-center rounded-full border border-zinc-200/90 bg-[#F5F4F2] px-2.5 py-0.5 align-middle text-xs font-semibold uppercase tracking-[0.05em] text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                  <span className="ml-3 inline-flex items-center rounded-full border border-zinc-400/70 bg-gradient-to-b from-[#D4D7DE] via-[#AEB3BC] to-[#8C919A] px-2.5 py-0.5 align-middle text-xs font-semibold uppercase tracking-[0.05em] text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:border-zinc-500 dark:from-[#A3A8B0] dark:via-[#7E838C] dark:to-[#656A72] dark:text-zinc-100">
                     Pro
                   </span>
                 )}
@@ -300,24 +326,40 @@ export default function DashboardPage() {
                         const shortSummary = strengths[0] || improvements[0] || "Analysis available.";
                         return (
                           <li key={row.id}>
-                            <Link
-                              href={`/dashboard/cv-analysis/${row.id}`}
-                              className="group block cursor-pointer rounded-[10px] border border-zinc-200/80 bg-[#FDFDFC] px-4 py-3 transition-colors duration-200 hover:bg-[#FAFAF8] dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:bg-zinc-900"
-                            >
+                            <div className="group rounded-[10px] border border-zinc-200/80 bg-[#FDFDFC] px-4 py-3 transition-colors duration-200 hover:bg-[#FAFAF8] dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:bg-zinc-900">
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {row.job_category?.trim() || "General"}
-                                  </p>
-                                  <p className="mt-1 line-clamp-1 text-sm text-zinc-900/72 dark:text-zinc-400">
-                                    {shortSummary}
-                                  </p>
+                                  <Link href={`/dashboard/cv-analysis/${row.id}`} className="block min-w-0">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                      {row.job_category?.trim() || "General"}
+                                    </p>
+                                    <p className="mt-1 line-clamp-1 text-sm text-zinc-900/72 dark:text-zinc-400">
+                                      {shortSummary}
+                                    </p>
+                                  </Link>
                                 </div>
-                                <p className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                                  {typeof row.overall_score === "number" ? row.overall_score : "—"}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                    {typeof row.overall_score === "number" ? row.overall_score : "—"}
+                                  </p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 rounded-[8px] border-zinc-500/80 bg-gradient-to-b from-[#D6DAE1] via-[#B2B7C0] to-[#8D929B] px-2.5 text-xs font-semibold text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] hover:from-[#E0E3E9] hover:via-[#BCC1CA] hover:to-[#979CA5] dark:border-zinc-400 dark:from-[#A0A6AF] dark:via-[#7C828B] dark:to-[#616871] dark:text-zinc-100 dark:hover:from-[#AAB0B8] dark:hover:via-[#878D95] dark:hover:to-[#6B717A]"
+                                    onClick={() =>
+                                      setScoutCardPreview({
+                                        type: "cv",
+                                        role: row.job_category?.trim() || "General",
+                                        score: typeof row.overall_score === "number" ? row.overall_score : 0,
+                                        insight: shortSummary,
+                                      })
+                                    }
+                                  >
+                                    Scout Card
+                                  </Button>
+                                </div>
                               </div>
-                            </Link>
+                            </div>
                           </li>
                         );
                       })}
@@ -345,24 +387,40 @@ export default function DashboardPage() {
                         const qs = new URLSearchParams({ lang: locale }).toString();
                         return (
                           <li key={row.id}>
-                            <Link
-                              href={`/mock-interview/${row.id}/result?${qs}`}
-                              className="group block cursor-pointer rounded-[10px] border border-zinc-200/80 bg-[#FDFDFC] px-4 py-3 transition-colors duration-200 hover:bg-[#FAFAF8] dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:bg-zinc-900"
-                            >
+                            <div className="group rounded-[10px] border border-zinc-200/80 bg-[#FDFDFC] px-4 py-3 transition-colors duration-200 hover:bg-[#FAFAF8] dark:border-zinc-800 dark:bg-zinc-900/80 dark:hover:bg-zinc-900">
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                                    {row.job_category?.trim() || "General"}
-                                  </p>
-                                  <p className="mt-1 text-sm text-zinc-900/72 dark:text-zinc-400">
-                                    {row.created_at ? new Date(row.created_at).toLocaleDateString() : "Recent"}
-                                  </p>
+                                  <Link href={`/mock-interview/${row.id}/result?${qs}`} className="block min-w-0">
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                                      {row.job_category?.trim() || "General"}
+                                    </p>
+                                    <p className="mt-1 text-sm text-zinc-900/72 dark:text-zinc-400">
+                                      {row.created_at ? new Date(row.created_at).toLocaleDateString() : "Recent"}
+                                    </p>
+                                  </Link>
                                 </div>
-                                <p className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-                                  {typeof row.score === "number" ? row.score : "—"}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-mono text-sm font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                                    {typeof row.score === "number" ? row.score : "—"}
+                                  </p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 rounded-[8px] border-zinc-500/80 bg-gradient-to-b from-[#D6DAE1] via-[#B2B7C0] to-[#8D929B] px-2.5 text-xs font-semibold text-zinc-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] hover:from-[#E0E3E9] hover:via-[#BCC1CA] hover:to-[#979CA5] dark:border-zinc-400 dark:from-[#A0A6AF] dark:via-[#7C828B] dark:to-[#616871] dark:text-zinc-100 dark:hover:from-[#AAB0B8] dark:hover:via-[#878D95] dark:hover:to-[#6B717A]"
+                                    onClick={() =>
+                                      setScoutCardPreview({
+                                        type: "interview",
+                                        role: row.job_category?.trim() || "General",
+                                        score: typeof row.score === "number" ? row.score : 0,
+                                        insight: "Interview readiness snapshot",
+                                      })
+                                    }
+                                  >
+                                    Scout Card
+                                  </Button>
+                                </div>
                               </div>
-                            </Link>
+                            </div>
                           </li>
                         );
                       })}
@@ -419,6 +477,50 @@ export default function DashboardPage() {
         </Reveal>
 
       </div>
+
+      <AnimatedDialog open={scoutCardPreview != null} onOpenChange={(open) => !open && setScoutCardPreview(null)}>
+        <DialogPortal forceMount>
+          <DialogOverlay className="bg-transparent backdrop-blur-[2px]" />
+          <DialogContent className="w-[min(92vw,470px)] max-w-none border-white/25 bg-white/22 px-2.5 py-3 shadow-[0_28px_80px_-44px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/[0.16] dark:bg-zinc-950/24 md:px-3 md:py-4">
+            <DialogTitle className="text-center">Scout Card</DialogTitle>
+            {scoutCardPreview && (
+              <div className="mt-2">
+                <SocialCardSharePanel
+                  title="Share card"
+                  fileName={
+                    scoutCardPreview.type === "cv" ? "openscout-cv-analysis" : "openscout-interview-result"
+                  }
+                  shareText={
+                    scoutCardPreview.type === "cv"
+                      ? `My OpenScout CV score: ${scoutCardPreview.score}/100`
+                      : `My OpenScout interview score: ${scoutCardPreview.score}/100`
+                  }
+                  frameless
+                  compactPreview
+                  hideHeader
+                  centerActions
+                >
+                  {scoutCardPreview.type === "cv" ? (
+                    <CvAnalysisCard
+                      role={scoutCardPreview.role}
+                      score={scoutCardPreview.score}
+                      insightLine={scoutCardPreview.insight}
+                      firstName={firstName}
+                    />
+                  ) : (
+                    <InterviewResultCard
+                      role={scoutCardPreview.role}
+                      score={scoutCardPreview.score}
+                      evaluationLine={scoutCardPreview.insight}
+                      firstName={firstName}
+                    />
+                  )}
+                </SocialCardSharePanel>
+              </div>
+            )}
+          </DialogContent>
+        </DialogPortal>
+      </AnimatedDialog>
     </div>
   );
 }

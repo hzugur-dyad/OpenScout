@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
-import { PLAN_LIMITS, type CandidatePlan, type UsageFeature, getUserPlan } from "@/lib/usage";
+import { type CandidatePlan, getUserPlan } from "@/lib/usage";
 import { Check } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
@@ -107,6 +107,18 @@ const btnOutlineMinimal =
 const btnSecondaryMinimal =
   "bg-primary-lighter text-primary-dark hover:bg-primary-muted dark:bg-primary-muted dark:text-primary-dark dark:hover:bg-primary-lighter";
 
+const candidatePlanMeta: Record<CandidatePlan, { label: string; priceLine: string }> = {
+  free: { label: "Free", priceLine: "$0 forever" },
+  plus: { label: "Plus", priceLine: "$9.99 / month" },
+  pro: { label: "Pro", priceLine: "$19.99 / month" },
+};
+
+const planPriority: Record<CandidatePlan, number> = {
+  free: 0,
+  plus: 1,
+  pro: 2,
+};
+
 function PricingSkeleton() {
   return (
     <div className="relative mx-auto max-w-5xl" aria-busy="true" aria-label="Loading plans">
@@ -127,10 +139,6 @@ export default function CandidatePricingPage() {
   const supabase = useMemo(() => createClient(), []);
   const preferReducedMotion = useReducedMotion() === true;
   const [currentPlan, setCurrentPlan] = useState<CandidatePlan>("free");
-  const [usage, setUsage] = useState<Record<UsageFeature, number>>({
-    cv_analysis: 0,
-    mock_interview: 0,
-  });
   const [loading, setLoading] = useState<string | null>(null);
   const [pageReady, setPageReady] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
@@ -148,22 +156,6 @@ export default function CandidatePricingPage() {
           .eq("user_id", user.id)
           .maybeSingle();
         setCurrentPlan(getUserPlan(profile?.plan));
-
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const { count: cvCount } = await supabase
-          .from("usage_logs")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("feature", "cv_analysis")
-          .gte("created_at", weekAgo.toISOString());
-        const { count: mockCount } = await supabase
-          .from("usage_logs")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("feature", "mock_interview")
-          .gte("created_at", weekAgo.toISOString());
-        setUsage({ cv_analysis: cvCount ?? 0, mock_interview: mockCount ?? 0 });
       } finally {
         setPageReady(true);
       }
@@ -194,16 +186,18 @@ export default function CandidatePricingPage() {
     }
   }
 
-  const cvLimit = PLAN_LIMITS[currentPlan].cv_analysis;
-  const mockLimit = PLAN_LIMITS[currentPlan].mock_interview;
   const listParent = listParentVariants(preferReducedMotion);
   const listItem = listItemVariants(preferReducedMotion);
   const enterTransition = preferReducedMotion
     ? { duration: 0 }
     : { duration: 0.4, ease: motionEase };
+  const hasPaidSubscription = currentPlan !== "free";
+  const summaryPlan = candidatePlanMeta[currentPlan];
 
   function PlanCard({ plan, className }: { plan: PlanDef; className?: string }) {
     const isCurrent = plan.id === currentPlan;
+    const isDowngrade = planPriority[plan.id] < planPriority[currentPlan];
+    const actionLabel = isDowngrade ? "Downgrade to" : "Upgrade to";
     const headingId = `plan-title-${plan.id}`;
     return (
       <motion.article
@@ -270,7 +264,7 @@ export default function CandidatePricingPage() {
               isLoading={loading === plan.id}
               onClick={() => void handleUpgrade(plan.id)}
             >
-              Upgrade to {plan.name}
+              {actionLabel} {plan.name}
             </Button>
           )}
         </div>
@@ -291,38 +285,13 @@ export default function CandidatePricingPage() {
         transition={enterTransition}
         className="max-w-3xl"
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500">
-          Upgrade
-        </p>
-        <h1 className="mt-3 font-serif text-[1.75rem] font-normal leading-[1.15] tracking-[-0.02em] text-[#111111] dark:text-zinc-50 sm:text-[2rem]">
+        <h1 className="font-serif text-[1.75rem] font-normal leading-[1.15] tracking-[-0.02em] text-[#111111] dark:text-zinc-50 sm:text-[2rem]">
           Upgrade
         </h1>
         <p className="mt-4 max-w-[65ch] text-[15px] leading-[1.6] text-[#787774] dark:text-zinc-400">
           Higher tiers add weekly CV reviews and mock interviews. Stay on Free for as long as it fits your pace.
         </p>
       </motion.header>
-
-      <motion.div
-        initial={preferReducedMotion ? false : { opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ ...enterTransition, delay: preferReducedMotion ? 0 : 0.04 }}
-        className="mt-8 flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#EAEAEA] pb-4 text-[13px] text-[#787774] dark:border-zinc-800 dark:text-zinc-500"
-      >
-        <span className="sr-only">Your subscription and this week&apos;s usage:</span>
-        <span className="font-medium capitalize text-[#111111] dark:text-zinc-200">{currentPlan}</span>
-        <span className="text-[#EAEAEA] dark:text-zinc-600" aria-hidden>
-          ·
-        </span>
-        <span className="font-mono tabular-nums text-[#2F3437] dark:text-zinc-300">
-          CV {usage.cv_analysis}/{cvLimit === Infinity ? "∞" : cvLimit}/wk
-        </span>
-        <span className="text-[#EAEAEA] dark:text-zinc-600" aria-hidden>
-          ·
-        </span>
-        <span className="font-mono tabular-nums text-[#2F3437] dark:text-zinc-300">
-          Mock {usage.mock_interview}/{mockLimit === Infinity ? "∞" : mockLimit}/wk
-        </span>
-      </motion.div>
 
       {checkoutError && (
         <div
@@ -343,10 +312,44 @@ export default function CandidatePricingPage() {
         </div>
       )}
 
+      {hasPaidSubscription && (
+        <section
+          aria-label="Current subscription summary"
+          className="mt-6 rounded-[12px] border border-[#EAEAEA] bg-white p-5 dark:border-white/[0.1] dark:bg-zinc-950/40"
+        >
+          <dl className="grid gap-3 text-sm">
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Plan</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">{summaryPlan.label}</dd>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Price</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">{summaryPlan.priceLine}</dd>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-start gap-3">
+              <dt className="text-[#787774] dark:text-zinc-500">Renewal</dt>
+              <dd className="font-medium text-zinc-900 dark:text-zinc-100">Renews on next billing date</dd>
+            </div>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <a href="#pricing-plan-comparison">
+              <Button variant="secondary" size="sm">
+                Change Plan
+              </Button>
+            </a>
+            <a href="/api/billing/portal?scope=candidate">
+              <Button variant="outline" size="sm">
+                Cancel Plan
+              </Button>
+            </a>
+          </div>
+        </section>
+      )}
+
       <section aria-labelledby="pricing-plan-comparison">
         <h2
           id="pricing-plan-comparison"
-          className="mt-10 text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500"
+          className="mt-10 text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500"
         >
           Compare plans
         </h2>
