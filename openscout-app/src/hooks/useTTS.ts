@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import type { InterviewLocale } from "@/lib/interview-locale";
-import { captureException } from "@/lib/monitoring";
+import { captureException, captureMessage } from "@/lib/monitoring";
 import { mapTtsUserError } from "@/lib/user-facing-errors";
 
 function formatTtsError(raw: string): string {
@@ -20,6 +20,9 @@ export function useTTS() {
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
+  const activeRequestIdRef = useRef(0);
+  const lastCallAtRef = useRef(0);
+  const lastUtteranceRef = useRef<string>("");
 
   const stop = useCallback(() => {
     if (audioRef.current) {
@@ -35,7 +38,18 @@ export function useTTS() {
   }, []);
 
   const play = useCallback(async (text: string, locale: InterviewLocale = "en") => {
-    if (!text.trim()) return;
+    const trimmedText = text.trim();
+    if (!trimmedText) return;
+
+    const utteranceKey = `${locale}:${trimmedText}`;
+    const now = Date.now();
+    // Prevent accidental rapid-fire requests (common during transition states).
+    if (now - lastCallAtRef.current < 900) return;
+    // Prevent replaying the exact same text immediately.
+    if (utteranceKey === lastUtteranceRef.current && now - lastCallAtRef.current < 3500) return;
+    lastCallAtRef.current = now;
+    lastUtteranceRef.current = utteranceKey;
+    const requestId = ++activeRequestIdRef.current;
 
     stop();
 
@@ -46,17 +60,30 @@ export function useTTS() {
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: text.trim(), locale }),
+        body: JSON.stringify({ text: trimmedText, locale }),
       });
+
+      // A newer request took over while this one was in flight.
+      if (requestId !== activeRequestIdRef.current) return;
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const raw = (data as { error?: string }).error ?? "";
         const friendly = formatTtsError(raw) || `HTTP ${res.status}`;
+        if (res.status === 429 || /too many requests/i.test(friendly)) {
+          // Rate limit is an expected transient condition; don't report as exception.
+          captureMessage("TTS rate-limited on client", {
+            route: "client/useTTS",
+            aiInterview: { stage: "generation", reason: "tts_error" },
+            level: "warning",
+          });
+          return;
+        }
         throw new Error(friendly);
       }
 
       const blob = await res.blob();
+      if (requestId !== activeRequestIdRef.current) return;
       const url = URL.createObjectURL(blob);
       objectUrlRef.current = url;
 
@@ -79,7 +106,9 @@ export function useTTS() {
         aiInterview: { stage: "generation", reason: "tts_error" },
       });
     } finally {
-      stop();
+      if (requestId === activeRequestIdRef.current) {
+        stop();
+      }
     }
   }, [stop]);
 

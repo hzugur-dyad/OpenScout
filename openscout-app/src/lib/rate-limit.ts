@@ -112,6 +112,31 @@ export type RateLimitOk = {
 
 export type RateLimitResult = RateLimitOk | RateLimitDenied;
 
+function parseCsvLowerSet(raw: string | undefined): Set<string> {
+  return new Set(
+    (raw ?? "")
+      .split(",")
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+/**
+ * Allowlist for bypassing rate limits in controlled environments.
+ *
+ * Env vars:
+ * - RATE_LIMIT_BYPASS_EMAILS: comma-separated emails
+ * - RATE_LIMIT_BYPASS_USER_IDS: comma-separated auth user ids
+ */
+export function isRateLimitBypassed(user: { id?: string | null; email?: string | null } | null | undefined): boolean {
+  if (!user) return false;
+  const email = user.email?.trim().toLowerCase() ?? "";
+  const id = user.id?.trim().toLowerCase() ?? "";
+  const emailAllow = parseCsvLowerSet(process.env.RATE_LIMIT_BYPASS_EMAILS);
+  const idAllow = parseCsvLowerSet(process.env.RATE_LIMIT_BYPASS_USER_IDS);
+  return (email && emailAllow.has(email)) || (id && idAllow.has(id));
+}
+
 /**
  * Distributed sliding-window limit (Upstash REST — safe for Vercel serverless / multiple instances).
  * If Redis is not configured, returns `{ success: true, redisConfigured: false }` (no blocking).
@@ -152,7 +177,8 @@ export async function rateLimit(identifier: string, config: RateLimitConfig): Pr
 export const RATE_LIMITS = {
   referralAttribute: { limit: 10, window: "1 h" as Duration },
   jobApplications: { limit: 5, window: "1 h" as Duration },
-  mockInterview: { limit: 60, window: "1 h" as Duration },
+  mockInterviewStart: { limit: 20, window: "10 m" as Duration },
+  mockInterviewTurn: { limit: 120, window: "10 m" as Duration },
   tts: { limit: 30, window: "1 h" as Duration },
   cvAnalysis: { limit: 5, window: "1 m" as Duration },
   interviewResult: { limit: 5, window: "1 m" as Duration },

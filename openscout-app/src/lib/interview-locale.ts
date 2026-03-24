@@ -64,6 +64,15 @@ export const interviewUi = {
       "Role-specific technical questions",
       "Session is recorded and a report is generated",
     ],
+    interviewTipsTitle: "Interview Guide",
+    interviewTipsBullets: [
+      "Keep answers structured: context -> action -> result.",
+      "You can think briefly before answering, but avoid long pauses in the middle of a sentence.",
+      "If you stay silent for about 18 seconds, Nova sends a nudge; around 42 seconds triggers a timeout prompt.",
+      "While speaking, long pauses (~2.5s) can make Nova think your sentence is finished.",
+      "Do not interrupt repeatedly; wait for Nova to finish speaking.",
+      "Be concise, honest, and role-focused with concrete examples.",
+    ],
     startInterview: "Start Interview",
     profileRequiredTitle: "Profile and CV required",
     profileRequiredBody:
@@ -93,6 +102,7 @@ export const interviewUi = {
     continueMicTestAria: "Continue to the interview",
     voiceErrorPrefix: "Voice error",
     interviewProviderError: "Nova could not respond (service busy or offline). Check your connection and try again.",
+    interviewRateLimitError: "Too many interview requests in a short time. Please wait about a minute and try again.",
     resultTitle: "Interview Result",
     resultTooShortLead: "The interview was too short to analyze.",
     resultReadyLead: "Your mock interview evaluation is ready.",
@@ -155,6 +165,15 @@ export const interviewUi = {
       "Pozisyona özel teknik sorular",
       "Oturum kaydedilir ve bir rapor oluşturulur",
     ],
+    interviewTipsTitle: "Mülakat Rehberi",
+    interviewTipsBullets: [
+      "Yanıtlarını yapılandır: durum -> aksiyon -> sonuç.",
+      "Cevap vermeden önce kısa düşünebilirsin; ama cümle içinde uzun duraksamalardan kaçın.",
+      "Yaklaşık 18 saniye sessiz kalırsan Nova hatırlatma yapar; yaklaşık 42 saniye sessizlikte zaman aşımı tetiklenir.",
+      "Konuşurken ~2.5 saniyeyi aşan duraksama olursa Nova cümlenin bittiğini düşünebilir.",
+      "Sık sık söz kesme; Nova konuşmasını bitirsin.",
+      "Kısa, net ve role uygun somut örnekler ver.",
+    ],
     startInterview: "Mülakatı başlat",
     profileRequiredTitle: "Profil ve özgeçmiş analizi gerekli",
     profileRequiredBody:
@@ -185,6 +204,8 @@ export const interviewUi = {
     voiceErrorPrefix: "Ses hatası",
     interviewProviderError:
       "Nova şu anda yanıt veremedi (servis meşgul veya çevrimdışı). Bağlantınızı kontrol edip tekrar deneyin.",
+    interviewRateLimitError:
+      "Kısa sürede çok fazla mülakat isteği gönderildi. Lütfen yaklaşık 1 dakika bekleyip tekrar deneyin.",
     resultTitle: "Mülakat sonucu",
     resultTooShortLead: "Mülakat analiz için çok kısaydı.",
     resultReadyLead: "Yapay zeka değerlendirmeniz hazır.",

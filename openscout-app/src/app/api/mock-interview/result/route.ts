@@ -11,7 +11,12 @@ import {
   REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS,
   tryCompleteReferralRewardForUser,
 } from "@/lib/referral-rewards";
-import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
+import {
+  getRateLimitIdentifier,
+  isRateLimitBypassed,
+  rateLimitForKind,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
 import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
@@ -41,9 +46,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rlId = getRateLimitIdentifier(request, user.id);
-    const limited = await rateLimitForKind("interviewResult", rlId);
-    if (!limited.success) return tooManyRequestsResponse(limited);
+    if (!isRateLimitBypassed(user)) {
+      const rlId = getRateLimitIdentifier(request, user.id);
+      const limited = await rateLimitForKind("interviewResult", rlId);
+      if (!limited.success) return tooManyRequestsResponse(limited);
+    }
 
     const guard = await checkProfileAndCv(supabase, user.id);
     if (!guard.canApplyOrInterview) {

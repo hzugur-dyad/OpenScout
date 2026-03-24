@@ -115,7 +115,7 @@ export function Sidebar({
       {/* Header: logo only (no toggle - hover expands) */}
       <div
         className={`
-          flex h-[4.5rem] shrink-0 items-center border-b border-[var(--border)] dark:border-zinc-800
+          flex h-[4.5rem] shrink-0 items-center
           ${collapsed ? "lg:justify-center lg:px-0" : "px-4"}
         `}
       >
@@ -147,7 +147,7 @@ export function Sidebar({
       <nav
         className={`
           min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4
-          ${collapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2 lg:px-0 lg:py-4" : "space-y-1"}
+          ${collapsed ? "lg:flex lg:flex-col lg:items-center lg:gap-2 lg:px-0 lg:py-4" : "space-y-2"}
         `}
       >
         {navItems.map((item, index) => {

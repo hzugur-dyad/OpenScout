@@ -24,10 +24,10 @@ const candidateNavItems: NavItem[] = [
   { href: "/onboarding", label: "My Profile", icon: FileText },
   { href: "/cv-analysis", label: "CV Analysis", icon: FileText },
   { href: "/mock-interview", label: "Mock Interview", icon: ChatCircle },
-  { href: "/dashboard/interviews", label: "Mock interviews", icon: ClockCounterClockwise },
+  { href: "/dashboard/interviews", label: "Interview History", icon: ClockCounterClockwise },
   { href: "/dashboard/applications", label: "Applications", icon: ClipboardText },
   { href: "/dashboard/jobs", label: "Job Listings", icon: Briefcase },
-  { href: "/pricing", label: "Upgrade Plan", icon: CreditCard },
+  { href: "/pricing", label: "Upgrade", icon: CreditCard },
 ];
 
 const employerNavItems: NavItem[] = [

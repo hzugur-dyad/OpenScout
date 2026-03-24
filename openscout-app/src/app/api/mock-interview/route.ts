@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGroq } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
-import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
+import {
+  getRateLimitIdentifier,
+  isRateLimitBypassed,
+  rateLimitForKind,
+  tooManyRequestsResponse,
+} from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { checkProfileAndCv } from "@/lib/profile-guard";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
@@ -23,6 +28,68 @@ import { captureException, captureMessage } from "@/lib/monitoring";
 
 /** Max user-side messages (each POST adds one user line) before hard stop. */
 const MAX_INTERVIEW_USER_MESSAGES = 40;
+
+function extractGroqRetryAfterSeconds(message: string): number | null {
+  // Example: "Please try again in 13m53.76s."
+  const match = message.match(/Please try again in\s+(\d+)m([0-9]+(?:\.[0-9]+)?)s/i);
+  if (!match) return null;
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2]);
+  if (!Number.isFinite(minutes) || !Number.isFinite(seconds)) return null;
+  const total = Math.max(1, Math.ceil(minutes * 60 + seconds));
+  return total;
+}
+
+function classifyGroqError(err: unknown): {
+  status: number;
+  retryAfterSeconds?: number;
+  code?: string;
+  message: string;
+} {
+  const fallback = {
+    status: 503,
+    code: "interview_provider_error",
+    message: err instanceof Error ? err.message : "Interview error",
+  };
+
+  if (!err || typeof err !== "object") return fallback;
+
+  const maybeErr = err as {
+    status?: unknown;
+    message?: unknown;
+    error?: { code?: unknown; message?: unknown; type?: unknown };
+  };
+
+  const status = typeof maybeErr.status === "number" ? maybeErr.status : undefined;
+  const code =
+    typeof maybeErr.error?.code === "string"
+      ? maybeErr.error.code
+      : typeof maybeErr.error?.type === "string"
+        ? maybeErr.error.type
+        : undefined;
+  const message =
+    typeof maybeErr.error?.message === "string"
+      ? maybeErr.error.message
+      : typeof maybeErr.message === "string"
+        ? maybeErr.message
+        : fallback.message;
+
+  if (status === 429 || code === "rate_limit_exceeded" || /rate limit/i.test(message)) {
+    const retryAfterSeconds = extractGroqRetryAfterSeconds(message) ?? 60;
+    return {
+      status: 429,
+      retryAfterSeconds,
+      code: "interview_provider_rate_limited",
+      message,
+    };
+  }
+
+  return {
+    status: 503,
+    code: "interview_provider_error",
+    message,
+  };
+}
 
 function buildControlContextHint(
   locale: InterviewLocale,
@@ -134,16 +201,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const rlId = getRateLimitIdentifier(request, user.id);
-    const limited = await rateLimitForKind("mockInterview", rlId);
-    if (!limited.success) return tooManyRequestsResponse(limited);
-
     const parsed = await parseJsonBody(request, interviewResponseSchema);
     if (!parsed.ok) {
       logWarn("mock-interview validation failed", { reason: "body schema" });
       return parsed.response;
     }
     const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } = parsed.data;
+
+    if (!isRateLimitBypassed(user)) {
+      const rlId = getRateLimitIdentifier(request, user.id);
+      const isStartRequest = messages.length === 1 && messages[0]?.role === "user";
+      const limited = await rateLimitForKind(isStartRequest ? "mockInterviewStart" : "mockInterviewTurn", rlId);
+      if (!limited.success) return tooManyRequestsResponse(limited);
+    }
+
     const locale: InterviewLocale = parseInterviewLocale(interviewLanguage);
 
     const userTurnCount = messages.filter((m) => m.role === "user").length;
@@ -243,13 +314,20 @@ export async function POST(request: NextRequest) {
           ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
           aiInterview: { stage: "generation", reason: "groq_error" },
         });
+        const classified = classifyGroqError(groqError);
         return NextResponse.json(
           {
-            error: groqError instanceof Error ? groqError.message : "Interview error",
-            retryable: true,
-            code: "interview_provider_error",
+            error: classified.message,
+            retryable: classified.status >= 500,
+            code: classified.code,
           },
-          { status: 503 }
+          {
+            status: classified.status,
+            headers:
+              classified.status === 429 && classified.retryAfterSeconds
+                ? { "Retry-After": String(classified.retryAfterSeconds) }
+                : undefined,
+          }
         );
       }
 

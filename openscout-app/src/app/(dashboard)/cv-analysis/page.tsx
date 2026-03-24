@@ -343,7 +343,7 @@ function CVAnalysisContent() {
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-[#111111] dark:text-zinc-100">Overall score</p>
-                <p className="mt-0.5 font-mono text-xs text-[#787774] dark:text-zinc-500">/ 100</p>
+                <p className="mt-0.5 font-mono text-xs text-[#5f5e5a] dark:text-zinc-500">/ 100</p>
               </div>
             </div>
           </header>
@@ -355,37 +355,37 @@ function CVAnalysisContent() {
                 result.cv_holder.current_role ||
                 result.cv_holder.summary_line) ? (
                 <section className={cn(panel, "p-6 md:p-8")}>
-                  <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                  <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#5f5e5a] dark:text-zinc-500">
                     Parsed profile
                   </h2>
                   <dl className="mt-6 grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
                     {result.cv_holder.full_name ? (
                       <>
-                        <dt className="font-medium text-[#787774] dark:text-zinc-500">Name</dt>
+                        <dt className="font-medium text-[#5f5e5a] dark:text-zinc-500">Name</dt>
                         <dd className="text-[#2F3437] dark:text-zinc-200">{result.cv_holder.full_name}</dd>
                       </>
                     ) : null}
                     {result.cv_holder.current_role ? (
                       <>
-                        <dt className="font-medium text-[#787774] dark:text-zinc-500">Current role</dt>
+                        <dt className="font-medium text-[#5f5e5a] dark:text-zinc-500">Current role</dt>
                         <dd className="text-[#2F3437] dark:text-zinc-200">{result.cv_holder.current_role}</dd>
                       </>
                     ) : null}
                     {result.cv_holder.department_or_field ? (
                       <>
-                        <dt className="font-medium text-[#787774] dark:text-zinc-500">Field</dt>
+                        <dt className="font-medium text-[#5f5e5a] dark:text-zinc-500">Field</dt>
                         <dd className="text-[#2F3437] dark:text-zinc-200">{result.cv_holder.department_or_field}</dd>
                       </>
                     ) : null}
                     {result.cv_holder.location ? (
                       <>
-                        <dt className="font-medium text-[#787774] dark:text-zinc-500">Location</dt>
+                        <dt className="font-medium text-[#5f5e5a] dark:text-zinc-500">Location</dt>
                         <dd className="text-[#2F3437] dark:text-zinc-200">{result.cv_holder.location}</dd>
                       </>
                     ) : null}
                     {result.cv_holder.email ? (
                       <>
-                        <dt className="font-medium text-[#787774] dark:text-zinc-500">Email</dt>
+                        <dt className="font-medium text-[#5f5e5a] dark:text-zinc-500">Email</dt>
                         <dd className="break-all font-mono text-[13px] text-[#2F3437] dark:text-zinc-200">
                           {result.cv_holder.email}
                         </dd>
@@ -402,7 +402,7 @@ function CVAnalysisContent() {
 
               {result.detailed_report ? (
                 <section className={cn(panel, "border-l-[3px] border-l-[#EAEAEA] bg-[#FBFBFA] p-6 dark:border-l-zinc-700 dark:bg-zinc-950/80 md:p-8")}>
-                  <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+                  <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#5f5e5a] dark:text-zinc-500">
                     Expert read
                   </h2>
                   <p className="mt-5 whitespace-pre-line text-sm leading-[1.6] text-[#2F3437] dark:text-zinc-300">
@@ -413,7 +413,7 @@ function CVAnalysisContent() {
             </div>
 
             <section className={cn(panel, "p-6 md:p-8")}>
-              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#5f5e5a] dark:text-zinc-500">
                 Category breakdown
               </h2>
               <ul className="mt-6">
@@ -427,7 +427,7 @@ function CVAnalysisContent() {
                         </span>
                         <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-[#111111] dark:text-zinc-100">
                           {score}
-                          <span className="font-sans font-normal text-[#787774] dark:text-zinc-500"> /100</span>
+                          <span className="font-sans font-normal text-[#5f5e5a] dark:text-zinc-500"> /100</span>
                         </span>
                       </div>
                       <div className="relative mt-2 h-1 overflow-hidden rounded-sm bg-[#EAEAEA] dark:bg-zinc-800">
@@ -437,7 +437,7 @@ function CVAnalysisContent() {
                         />
                       </div>
                       {result.category_feedback?.[key] ? (
-                        <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                        <p className="mt-3 text-sm leading-[1.6] text-[#5f5e5a] dark:text-zinc-400">
                           {result.category_feedback[key]}
                         </p>
                       ) : null}
@@ -450,7 +450,7 @@ function CVAnalysisContent() {
 
           <div className="grid gap-10 md:grid-cols-2">
             <section className={cn(panel, "p-6 md:p-8")}>
-              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#787774] dark:text-zinc-500">
+              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-[#5f5e5a] dark:text-zinc-500">
                 Strengths
               </h2>
               <ul className="mt-6 space-y-4">

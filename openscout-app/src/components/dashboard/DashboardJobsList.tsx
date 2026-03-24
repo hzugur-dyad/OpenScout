@@ -59,16 +59,13 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
 
   return (
     <motion.div
-      className={cn(
-        "border-t border-[var(--border-strong)] bg-[#FCFCFB]",
-        "dark:border-zinc-800 dark:bg-zinc-900/35"
-      )}
+      className="mt-2"
       variants={containerVariants}
       initial="hidden"
       animate="show"
     >
       <ul
-        className="divide-y divide-[#eaeaea] dark:divide-zinc-800"
+        className="space-y-3"
         aria-labelledby="dashboard-jobs-title"
       >
         {jobs.map((job) => {
@@ -78,8 +75,8 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
               <Link
                 href={`/dashboard/jobs/${job.id}`}
                 className={cn(
-                  "group block touch-manipulation px-6 py-8 transition-[background-color,transform] duration-200 ease-out sm:px-8",
-                  "hover:bg-[#F5F4F2] active:bg-[#EFEEEB] dark:hover:bg-zinc-800/60 dark:active:bg-zinc-800",
+                  "group block touch-manipulation rounded-[10px] border border-white/75 bg-white/60 px-6 py-8 backdrop-blur-xl ring-1 ring-black/[0.04] transition-[background-color,transform,border-color] duration-200 ease-out sm:px-8",
+                  "hover:border-white/85 hover:bg-white/66 active:bg-white/62 dark:border-white/[0.12] dark:bg-black/45 dark:backdrop-blur-xl dark:ring-white/[0.03] dark:hover:border-white/[0.18] dark:hover:bg-black/55 dark:active:bg-black/60",
                   "motion-reduce:active:scale-100 active:scale-[0.99]",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-inset dark:focus-visible:ring-zinc-500"
                 )}
@@ -97,7 +94,7 @@ export function DashboardJobsList({ jobs }: { jobs: DashboardJobRow[] }) {
                         {job.description}
                       </p>
                     ) : null}
-                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 pt-1 font-mono text-xs text-[#111111]/55 dark:text-zinc-500">
+                    <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1 pt-1 font-mono text-xs text-[#111111]/72 dark:text-zinc-500">
                       {posted ? (
                         <span>
                           Posted{" "}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Newsreader } from "next/font/google";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   CalendarBlank,
@@ -39,14 +39,13 @@ function Reveal({
   className?: string;
   delay?: number;
 }) {
-  const reduceMotion = useReducedMotion();
   return (
     <motion.div
       className={className}
-      initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 12 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-48px" }}
-      transition={reduceMotion ? { duration: 0 } : revealTransition(delay)}
+      transition={revealTransition(delay)}
     >
       {children}
     </motion.div>
@@ -59,9 +58,9 @@ const linkFocusRing =
 const primaryCtaClass =
   "!rounded-[10px] !bg-[#111111] !text-white hover:!bg-[#2a2a2a] active:!bg-[#0a0a0a] dark:!bg-zinc-100 dark:!text-[#111111]   dark:hover:!bg-white dark:active:!bg-zinc-200";
 
-/** Raised surfaces: off-white + hairline stroke; light hover = border/tint shift, not drop shadow. */
+/** Match mock interview card surface style. */
 const surfaceCard =
-  "rounded-[10px] border border-[#E6E5E2] bg-[#FAFAF9] transition-colors duration-200 ease-out hover:border-[#D9D8D4] hover:bg-[#F7F6F4] dark:border-zinc-800 dark:bg-[#161514] dark:hover:border-zinc-700 dark:hover:bg-[#1c1b1a] dark:hover:shadow-[0_1px_3px_rgba(0,0,0,0.18)]";
+  "rounded-[10px] border border-white/75 bg-white/60 backdrop-blur-xl ring-1 ring-black/[0.04] transition-colors duration-200 hover:border-white/85 hover:bg-white/66 dark:border-white/[0.12] dark:bg-black/45 dark:backdrop-blur-xl dark:ring-white/[0.03] dark:hover:border-white/[0.18] dark:hover:bg-black/55";
 
 export type InterviewHistoryRow = {
   id: string;
@@ -111,7 +110,7 @@ function trendPresentation(trend: InterviewScoreTrend): {
   }
   return {
     chipClass: "border-[#E6E5E2] bg-[#F3F2EF] dark:border-zinc-800 dark:bg-zinc-900/60",
-    iconClass: "text-[#111111]/55 dark:text-zinc-400",
+    iconClass: "text-[#111111]/72 dark:text-zinc-400",
   };
 }
 
@@ -132,19 +131,17 @@ export function InterviewHistoryClientView({
         ? "text-[#9F2F2D] dark:text-red-400"
         : "text-[#111111]/80 dark:text-zinc-200";
 
-  const reduceMotion = useReducedMotion();
-
   return (
-    <div className="relative -mx-4 min-h-full overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+    <div className="relative -mx-4 min-h-full overflow-x-clip bg-transparent px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-transparent">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.2),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.04),transparent_55%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-transparent [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.04),transparent_58%)] dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.03),transparent_55%)]"
       />
 
       <main id="main-content" className="relative mx-auto w-full max-w-5xl">
         <Reveal>
           <header>
-            <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+            <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#5f5e5a] dark:text-zinc-500">
               Practice log
             </p>
             <div className="mt-4 flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
@@ -152,7 +149,7 @@ export function InterviewHistoryClientView({
                 id="interview-history-heading"
                 className={`min-w-0 flex-1 text-[2rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[#111111] md:text-[2.5rem] lg:pr-8 dark:text-zinc-100 ${newsreader.className}`}
               >
-                Mock interviews
+                Interview History
               </h1>
               <div className="flex w-full shrink-0 flex-col items-end gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:pt-1">
                 <SharePublicProfileButton variant="outline" size="sm" surface="interview_history" />
@@ -169,7 +166,7 @@ export function InterviewHistoryClientView({
                 </Link>
               </div>
             </div>
-            <p className="mt-6 max-w-[65ch] text-base leading-[1.6] text-[#787774] dark:text-zinc-400">
+            <p className="mt-6 max-w-[65ch] text-base leading-[1.6] text-[#5f5e5a] dark:text-zinc-400">
               Mock interviews you have finished, the score trend from your last five runs, and links to each report.
             </p>
             {bestInterviewScore >= 70 && rows.length > 0 && (
@@ -178,7 +175,7 @@ export function InterviewHistoryClientView({
               </p>
             )}
             {rows.length > 0 && (
-              <p className="mt-5 text-sm tabular-nums text-[#787774] dark:text-zinc-500">
+              <p className="mt-5 text-sm tabular-nums text-[#5f5e5a] dark:text-zinc-500">
                 {rows.length} session{rows.length === 1 ? "" : "s"} on file
               </p>
             )}
@@ -188,7 +185,7 @@ export function InterviewHistoryClientView({
         {rows.length === 0 ? (
             <Reveal delay={0.08}>
             <EmptyState
-              className="mt-20 rounded-[10px] border-solid border-[#E6E5E2] bg-[#FAFAF9] py-16 dark:border-zinc-800 dark:bg-[#161514]"
+              className="mt-20 rounded-[10px] border-solid border-white/75 bg-white/60 py-16 backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.12] dark:bg-black/45 dark:backdrop-blur-xl dark:ring-white/[0.03]"
               iconName="messageCircle"
               title="No mock interviews yet"
               description="Complete one mock interview to unlock scores, a trend line, and this list."
@@ -213,13 +210,13 @@ export function InterviewHistoryClientView({
           <div className="mt-14 space-y-12">
             <Reveal delay={0.06}>
               <section
-                className="overflow-hidden rounded-xl border border-[#EAEAEA] dark:border-zinc-800"
+                className="overflow-hidden rounded-xl border border-white/75 bg-white/60 backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.12] dark:bg-black/45 dark:backdrop-blur-xl dark:ring-white/[0.03]"
                 aria-labelledby="performance-snapshot-heading"
               >
-                <div className="grid gap-px bg-[#EAEAEA] dark:bg-zinc-800 lg:grid-cols-5">
-                  <div className="bg-white p-8 dark:bg-[#141312] lg:col-span-3 lg:p-10">
+                <div className="grid gap-px bg-white/45 dark:bg-white/[0.08] lg:grid-cols-5">
+                  <div className="bg-white/52 p-8 backdrop-blur-xl dark:bg-black/35 lg:col-span-3 lg:p-10">
                     <div className="flex flex-wrap items-center gap-2">
-                      <ChartLineUp className="h-5 w-5 text-[#787774] dark:text-zinc-500" weight="bold" aria-hidden />
+                      <ChartLineUp className="h-5 w-5 text-[#5f5e5a] dark:text-zinc-500" weight="bold" aria-hidden />
                       <h2
                         id="performance-snapshot-heading"
                         className="text-sm font-semibold tracking-tight text-[#111111] dark:text-zinc-100"
@@ -227,7 +224,7 @@ export function InterviewHistoryClientView({
                         Performance snapshot
                       </h2>
                     </div>
-                    <p className="mt-3 text-sm leading-[1.6] text-[#787774] dark:text-zinc-400">
+                    <p className="mt-3 text-sm leading-[1.6] text-[#5f5e5a] dark:text-zinc-400">
                       Overall scores from up to five attempts, oldest to newest. With two or more scores, the trend compares
                       the first and last in that window.
                     </p>
@@ -239,14 +236,10 @@ export function InterviewHistoryClientView({
                       {trendScores.map((s, i) => (
                         <motion.span
                           key={`${s}-${i}`}
-                          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+                          initial={{ opacity: 0, y: 8 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true }}
-                          transition={
-                            reduceMotion
-                              ? { duration: 0 }
-                              : { ...revealTransition(i * 0.08), duration: 0.45 }
-                          }
+                          transition={{ ...revealTransition(i * 0.08), duration: 0.45 }}
                           className="inline-flex min-h-9 min-w-[2.75rem] items-center justify-center rounded-[10px] border border-[#E6E5E2] bg-[#F3F2EF] px-3 font-mono text-sm tabular-nums text-[#111111] dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
                         >
                           {s}
@@ -259,7 +252,7 @@ export function InterviewHistoryClientView({
                     >
                       <TrendIcon className={`h-5 w-5 shrink-0 ${trendIconClass}`} weight="bold" aria-hidden />
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                        <p className="text-xs font-medium uppercase tracking-[0.05em] text-[#5f5e5a] dark:text-zinc-500">
                           Trend
                         </p>
                         <p className={`text-sm font-semibold tabular-nums ${trendLabelClass}`}>
@@ -270,26 +263,26 @@ export function InterviewHistoryClientView({
                     </div>
                   </div>
 
-                  <div className="flex flex-col divide-y divide-[#E6E5E2] bg-[#FAFAF9] dark:divide-zinc-800 dark:bg-[#161514] lg:col-span-2">
+                  <div className="flex flex-col divide-y divide-white/45 bg-white/50 backdrop-blur-xl dark:divide-white/[0.08] dark:bg-black/35 lg:col-span-2">
                     <div className="flex flex-1 flex-col justify-center p-8 lg:p-10">
-                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
+                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500">
                         Best interview score
                       </p>
                       <p className="mt-2 font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-100">
                         {bestInterviewScore}
                       </p>
-                      <p className="mt-2 text-xs font-normal leading-relaxed text-[#111111]/50 dark:text-zinc-500">
+                      <p className="mt-2 text-xs font-normal leading-relaxed text-[#111111]/68 dark:text-zinc-500">
                         Peak overall across all runs
                       </p>
                     </div>
                     <div className="flex flex-1 flex-col justify-center p-8 lg:p-10">
-                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
+                      <p className="text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500">
                         Best hiring score
                       </p>
                       <p className="mt-2 font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-100">
                         {bestHiringScore}
                       </p>
-                      <p className="mt-2 text-xs leading-relaxed text-[#787774] dark:text-zinc-500">
+                      <p className="mt-2 text-xs leading-relaxed text-[#5f5e5a] dark:text-zinc-500">
                         Strongest composite from report data
                       </p>
                     </div>
@@ -307,7 +300,7 @@ export function InterviewHistoryClientView({
                   >
                     All sessions
                   </h2>
-                  <p className="text-xs font-normal text-[#111111]/50 dark:text-zinc-500">Sorted newest first</p>
+                  <p className="text-xs font-normal text-[#111111]/68 dark:text-zinc-500">Sorted newest first</p>
                 </div>
 
                 <div className={`overflow-x-auto ${surfaceCard}`}>
@@ -317,50 +310,50 @@ export function InterviewHistoryClientView({
                         Mock interview sessions, newest first. Columns: role or category, date and time, overall score,
                         hiring score, and link to full result.
                       </caption>
-                      <thead className="border-b border-[#E6E5E2] bg-[#F3F2EF] dark:border-zinc-800 dark:bg-zinc-900/80">
+                      <thead className="border-b border-white/45 bg-white/50 dark:border-white/[0.08] dark:bg-black/35">
                         <tr>
                           <th
                             scope="col"
-                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500"
                           >
                             Role / category
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500"
                           >
                             Date
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500"
                           >
                             Overall
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500"
                           >
                             Hiring score
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500"
+                            className="px-6 py-4 text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500"
                           >
                             Result
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#E6E5E2] dark:divide-zinc-800">
+                      <tbody className="divide-y divide-white/45 dark:divide-white/[0.08]">
                         {rows.map((r) => {
                           const overall = typeof r.score === "number" ? r.score : "—";
                           return (
                             <tr
                               key={r.id}
-                              className="transition-colors duration-200 ease-out hover:bg-[#F3F2EF] dark:hover:bg-zinc-900/55"
+                              className="transition-colors duration-200 ease-out hover:bg-white/40 dark:hover:bg-white/[0.04]"
                             >
                               <td className="px-6 py-4 font-medium text-[#111111] dark:text-zinc-100">{r.job_category}</td>
-                              <td className="px-6 py-4 tabular-nums text-[#111111]/55 dark:text-zinc-400">
+                              <td className="px-6 py-4 tabular-nums text-[#111111]/72 dark:text-zinc-400">
                                 {formatInterviewDate(r.created_at)}
                               </td>
                               <td className="px-6 py-4 font-mono tabular-nums text-[#111111] dark:text-zinc-100">{overall}</td>
@@ -387,17 +380,17 @@ export function InterviewHistoryClientView({
                     </table>
                   </div>
 
-                  <ul className="divide-y divide-[#E6E5E2] md:hidden dark:divide-zinc-800">
+                  <ul className="divide-y divide-white/45 md:hidden dark:divide-white/[0.08]">
                     {rows.map((r, idx) => {
                       const overall = typeof r.score === "number" ? r.score : "—";
                       return (
                         <motion.li
                           key={r.id}
-                          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+                          initial={{ opacity: 0, y: 10 }}
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true, margin: "-24px" }}
-                          transition={reduceMotion ? { duration: 0 } : revealTransition(idx * 0.05)}
-                          className="p-6 transition-colors active:bg-[#FBFBFA] dark:active:bg-zinc-900/40"
+                          transition={revealTransition(idx * 0.05)}
+                          className="p-6 transition-colors active:bg-white/40 dark:active:bg-white/[0.04]"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
@@ -405,19 +398,19 @@ export function InterviewHistoryClientView({
                                 <Tag className="h-4 w-4 shrink-0 text-[#111111]/45 dark:text-zinc-500" weight="bold" aria-hidden />
                                 <span className="truncate font-medium">{r.job_category}</span>
                               </div>
-                              <div className="mt-2 flex items-center gap-1.5 text-xs tabular-nums text-[#787774] dark:text-zinc-500">
+                              <div className="mt-2 flex items-center gap-1.5 text-xs tabular-nums text-[#5f5e5a] dark:text-zinc-500">
                                 <CalendarBlank className="h-3.5 w-3.5 shrink-0" weight="bold" aria-hidden />
                                 {formatInterviewDate(r.created_at)}
                               </div>
                               <div className="mt-4 flex gap-8 font-mono text-sm tabular-nums">
                                 <div>
-                                  <span className="block text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/50 dark:text-zinc-500">
+                                  <span className="block text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/68 dark:text-zinc-500">
                                     Overall
                                   </span>
                                   <span className="font-semibold text-[#111111] dark:text-zinc-100">{overall}</span>
                                 </div>
                                 <div>
-                                  <span className="block text-xs font-medium uppercase tracking-[0.05em] text-[#787774] dark:text-zinc-500">
+                                  <span className="block text-xs font-medium uppercase tracking-[0.05em] text-[#5f5e5a] dark:text-zinc-500">
                                     Hiring
                                   </span>
                                   <span className="font-semibold text-[#111111] dark:text-zinc-100">{r.hiringScore}</span>
@@ -426,7 +419,7 @@ export function InterviewHistoryClientView({
                             </div>
                             <Link
                               href={r.resultHref}
-                              className={`inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-[#E6E5E2] bg-[#FAFAF9] text-[#111111] transition-colors duration-200 ease-out hover:border-[#D9D8D4] hover:bg-[#F3F2EF] active:bg-[#EBEAE6] touch-manipulation dark:border-zinc-700 dark:bg-[#161514] dark:text-zinc-100 dark:hover:border-zinc-600 dark:hover:bg-[#1c1b1a] dark:active:bg-zinc-900 ${linkFocusRing} ${reduceMotion ? "" : "active:scale-[0.98]"}`}
+                              className={`inline-flex size-11 shrink-0 items-center justify-center rounded-[10px] border border-white/75 bg-white/60 text-[#111111] backdrop-blur-xl ring-1 ring-black/[0.04] transition-colors duration-200 ease-out hover:border-white/85 hover:bg-white/66 active:bg-white/62 touch-manipulation dark:border-white/[0.12] dark:bg-black/45 dark:text-zinc-100 dark:backdrop-blur-xl dark:ring-white/[0.03] dark:hover:border-white/[0.18] dark:hover:bg-black/55 dark:active:bg-black/60 ${linkFocusRing} active:scale-[0.98]`}
                               aria-label={`View result for ${r.job_category}`}
                             >
                               <ArrowRight className="h-5 w-5" weight="bold" aria-hidden />

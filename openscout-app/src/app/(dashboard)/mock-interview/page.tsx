@@ -41,7 +41,7 @@ const PROFILE_FIELD_LABEL: Record<InterviewLocale, Record<string, string>> = {
 
 /** Off-white surface, hairline stroke, no drop shadow (border defines edges on light UI). */
 const surfaceCard =
-  "rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] transition-colors duration-200 hover:border-[#D6D6D3] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700";
+  "rounded-[10px] border border-zinc-200/90 bg-[#F4F4F3] transition-colors duration-200 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900/50 dark:hover:border-zinc-700";
 
 const selectTriggerMinimal =
   "rounded-[10px] border border-[#E8E8E6] bg-[#FAFAF9] py-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-900";
@@ -135,15 +135,15 @@ function MockInterviewContent() {
     "rounded-[10px] border border-[#DDE4EA] bg-[#EEF2F5] dark:border-zinc-800 dark:bg-zinc-900";
 
   return (
-    <div className="relative min-h-[100dvh] bg-[#FBFBFA] dark:bg-zinc-950">
+    <div className="relative min-h-[100dvh] bg-transparent dark:bg-transparent">
       <div
         className="pointer-events-none fixed inset-0 z-0"
         aria-hidden
         style={{
-          background: "radial-gradient(ellipse 90% 50% at 50% -15%, rgba(0,0,0,0.018), transparent 55%)",
+          background: "radial-gradient(ellipse 90% 50% at 50% -15%, rgba(0,0,0,0.01), transparent 55%)",
         }}
       />
-      <main id="mock-interview-main" className="relative z-10 mx-auto max-w-4xl px-4 py-4 md:py-5">
+      <main id="mock-interview-main" className="relative z-10 mx-auto max-w-5xl px-4 py-2 md:py-3">
         <motion.div
           initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -161,16 +161,16 @@ function MockInterviewContent() {
             >
               {ui.mockInterviewTitle}
             </h1>
-            <p className="mx-auto mt-1.5 max-w-[52ch] text-sm leading-snug text-[#787774] dark:text-zinc-400">
+            <p className="mx-auto mt-1.5 max-w-[52ch] text-sm leading-snug text-[#5f5e5a] dark:text-zinc-400">
               {ui.mockInterviewSubtitle}
             </p>
           </header>
 
-          <div className="mt-3 w-full">
+          <div className="mt-2 w-full">
             <UsageBanner feature="mock_interview" />
           </div>
 
-          <div className="mt-3 w-full">
+          <div className="mt-2 w-full">
             {guardLoading ? (
               <div className={cn(surfaceCard, "p-4 md:p-5")}>
                 <CVAnalysisPageSkeleton />
@@ -297,7 +297,7 @@ function MockInterviewContent() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
                   <div className="flex flex-col gap-2">
                     <label
-                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/55 dark:text-zinc-500"
+                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/72 dark:text-zinc-500"
                       htmlFor="mock-interview-lang"
                     >
                       {ui.interviewLanguage}
@@ -316,7 +316,7 @@ function MockInterviewContent() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <label
-                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/55 dark:text-zinc-500"
+                      className="text-xs font-normal uppercase tracking-[0.06em] text-[#111111]/72 dark:text-zinc-500"
                       htmlFor="mock-interview-job"
                     >
                       {ui.jobCategory}
@@ -327,32 +327,56 @@ function MockInterviewContent() {
                       options={JOB_TITLES}
                       value={jobCategory}
                       onChange={setJobCategory}
+                      searchable
+                      searchPlaceholder={interviewLang === "tr" ? "Kategori ara..." : "Search category..."}
+                      noResultsText={interviewLang === "tr" ? "Sonuc bulunamadi" : "No results found"}
                       aria-label={ui.jobCategory}
                     />
                   </div>
                 </div>
 
-                <div className="mt-8">
-                  <h3 className="text-center text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/55 dark:text-zinc-500">
-                    {ui.whatToExpect}
-                  </h3>
-                  <ul className="mx-auto mt-4 max-w-[48ch] space-y-3" role="list">
-                    {ui.expectBullets.map((line) => (
-                      <li key={line} className="flex gap-3">
-                        <CheckCircle
-                          className="mt-0.5 h-4 w-4 shrink-0 text-[#3d5c40] opacity-90 dark:text-emerald-500/90"
-                          weight="regular"
-                          aria-hidden
-                        />
-                        <span className="text-sm font-normal leading-[1.5] text-[#111111]/70 dark:text-zinc-400">
-                          {line}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+                  <section>
+                    <h3 className="text-left text-xs font-normal uppercase tracking-[0.08em] text-[#111111]/72 dark:text-zinc-500">
+                      {ui.whatToExpect}
+                    </h3>
+                    <ul className="mt-3 space-y-2.5" role="list">
+                      {ui.expectBullets.map((line) => (
+                        <li key={line} className="flex gap-3">
+                          <CheckCircle
+                            className="mt-0.5 h-4 w-4 shrink-0 text-[#3d5c40] opacity-90 dark:text-emerald-500/90"
+                            weight="regular"
+                            aria-hidden
+                          />
+                          <span className="text-sm font-normal leading-[1.45] text-[#111111]/70 dark:text-zinc-400">
+                            {line}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section>
+                    <h3 className="text-left text-xs font-semibold uppercase tracking-[0.08em] text-red-700 dark:text-red-300">
+                      {ui.interviewTipsTitle}
+                    </h3>
+                    <ul className="mt-3 space-y-2.5" role="list">
+                      {ui.interviewTipsBullets.map((line) => (
+                        <li key={line} className="flex gap-3">
+                          <WarningCircle
+                            className="mt-0.5 h-4 w-4 shrink-0 text-red-600 dark:text-red-400"
+                            weight="fill"
+                            aria-hidden
+                          />
+                          <span className="text-sm font-normal leading-[1.45] text-[#111111]/70 dark:text-zinc-400">
+                            {line}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
                 </div>
 
-                <div className="mt-8 flex justify-center">
+                <div className="mt-6 flex justify-center">
                   <button
                     type="button"
                     onClick={handleStart}

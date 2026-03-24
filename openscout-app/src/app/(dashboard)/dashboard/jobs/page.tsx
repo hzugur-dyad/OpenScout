@@ -63,8 +63,7 @@ export default async function DashboardJobsPage() {
   const count = rows.length;
 
   return (
-    <div className="relative mx-auto w-full max-w-5xl">
-      <div className="overflow-hidden rounded-consistent border border-[var(--border-strong)] bg-[#FAFAF9] px-6 py-10 dark:border-zinc-800 dark:bg-zinc-950 sm:px-8 sm:py-12 md:px-10 md:py-14">
+    <div className="relative mx-auto w-full max-w-5xl px-6 py-10 sm:px-8 sm:py-12 md:px-10 md:py-14">
         <header className="mb-10 flex flex-col gap-8 md:mb-12 md:flex-row md:items-end md:justify-between md:gap-12">
           <div className="min-w-0 max-w-3xl">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-6">
@@ -105,7 +104,7 @@ export default async function DashboardJobsPage() {
 
         {!listings || listings.length === 0 ? (
           <EmptyState
-            className="mt-0 rounded-consistent border border-dashed border-[var(--border-strong)] bg-[#FCFCFB] px-8 py-14 dark:border-zinc-700 dark:bg-zinc-900/40"
+            className="mt-0 rounded-[10px] border border-dashed border-[var(--border-strong)] bg-[#FCFCFB]/85 px-8 py-14 dark:border-zinc-700 dark:bg-zinc-900/55"
             iconName="briefcase"
             title="No open roles yet"
             description="Nothing is live at the moment. Keep your profile and CV current so you can move quickly when listings return."
@@ -138,7 +137,6 @@ export default async function DashboardJobsPage() {
         ) : (
           <DashboardJobsList jobs={rows} />
         )}
-      </div>
     </div>
   );
 }

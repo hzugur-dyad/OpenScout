@@ -97,16 +97,15 @@ function listItemVariants(reduceMotion: boolean) {
 }
 
 const btnMinimal =
-  "rounded-md shadow-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 dark:focus:ring-zinc-500 dark:focus:ring-offset-zinc-950";
+  "h-12 rounded-xl shadow-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-transparent";
 
-const btnPrimaryMinimal =
-  "bg-zinc-950 text-white hover:bg-zinc-800 active:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:active:bg-zinc-200";
+const btnPrimaryMinimal = "bg-primary text-white hover:bg-primary-dark active:bg-primary-dark";
 
 const btnOutlineMinimal =
-  "rounded-md border-[#EAEAEA] bg-transparent shadow-none hover:bg-[#F7F6F3] dark:border-zinc-700 dark:hover:bg-zinc-800/80";
+  "border border-[var(--border-strong)] bg-transparent text-zinc-900 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-800";
 
 const btnSecondaryMinimal =
-  "rounded-md border border-[#EAEAEA] bg-[#F7F6F3] text-[#111111] shadow-none hover:bg-[#EFEEE9] dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700";
+  "bg-primary-lighter text-primary-dark hover:bg-primary-muted dark:bg-primary-muted dark:text-primary-dark dark:hover:bg-primary-lighter";
 
 function PricingSkeleton() {
   return (
@@ -211,48 +210,47 @@ export default function CandidatePricingPage() {
         variants={listItem}
         aria-labelledby={headingId}
         className={cn(
-          "group relative flex h-full flex-col rounded-xl border border-[#EAEAEA] bg-[#FFFFFF] p-6 transition-shadow duration-200 motion-reduce:transition-none dark:border-zinc-800 dark:bg-zinc-950",
-          "hover:shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
-          plan.featured && "border-l-[3px] border-l-[#FBF3DB] dark:border-l-[#3f3a2e]",
+          "group relative flex h-full flex-col px-6 py-9 transition-colors duration-200 motion-reduce:transition-none sm:px-8 sm:py-10",
+          plan.featured &&
+            "bg-gradient-to-b from-[var(--primary-muted)]/50 via-transparent to-transparent dark:from-primary/10 dark:via-transparent",
           className
         )}
       >
         {plan.featured && (
-          <span className="absolute right-5 top-5 rounded-full bg-[#FBF3DB] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.05em] text-[#956400] dark:bg-[#2a2619] dark:text-[#d4a84b]">
+          <div
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[var(--primary)] to-transparent opacity-90"
+            aria-hidden
+          />
+        )}
+        {plan.featured && (
+          <span className="absolute right-6 top-5 rounded-full bg-[var(--primary-muted)] px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.05em] text-[var(--primary-dark)]">
             Most chosen
           </span>
         )}
         <div className={cn(plan.featured && "pr-[5.5rem]")}>
           <h3
             id={headingId}
-            className="text-[15px] font-semibold tracking-tight text-[#111111] dark:text-zinc-50"
+            className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50"
           >
             {plan.name}
           </h3>
-          <p className="mt-1 text-[13px] leading-[1.6] text-[#787774] dark:text-zinc-400">{plan.blurb}</p>
+          <p className="mt-1 text-xs leading-[1.6] text-zinc-700 dark:text-zinc-300">{plan.blurb}</p>
         </div>
-        <div className="mt-5 flex flex-wrap items-baseline gap-x-1.5">
-          <span className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-[#111111] dark:text-zinc-50">
+        <div className="mt-8 flex flex-wrap items-baseline gap-x-1.5">
+          <span className="font-mono text-4xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
             {plan.price}
           </span>
-          <span className="text-[13px] font-medium text-[#787774] dark:text-zinc-500">{plan.period}</span>
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{plan.period}</span>
         </div>
-        <ul className="mt-5 flex flex-1 flex-col gap-2.5 border-t border-[#EAEAEA] pt-5 dark:border-zinc-800">
+        <ul className="mt-8 flex flex-1 flex-col gap-2.5 border-t border-[var(--border)] pt-8 dark:border-white/[0.06]">
           {plan.features.map((f) => (
-            <li
-              key={f}
-              className="flex items-start gap-2 text-[13px] leading-[1.6] text-[#2F3437] dark:text-zinc-300"
-            >
-              <Check
-                className="mt-0.5 h-4 w-4 shrink-0 text-[#346538] dark:text-[#8fb88f]"
-                weight="bold"
-                aria-hidden
-              />
+            <li key={f} className="text-sm leading-snug text-zinc-800 dark:text-zinc-200">
+              <Check className="mr-2 inline-block h-3.5 w-3.5 text-[var(--primary)] align-middle opacity-85" weight="bold" aria-hidden />
               {f}
             </li>
           ))}
         </ul>
-        <div className="mt-6">
+        <div className="mt-10 flex flex-1 flex-col justify-end">
           {isCurrent ? (
             <Button variant="outline" className={cn("w-full", btnMinimal, btnOutlineMinimal)} disabled>
               Current plan
@@ -285,16 +283,7 @@ export default function CandidatePricingPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-5xl">
-      <div
-        className="pointer-events-none absolute inset-0 -z-10 opacity-100 dark:opacity-60"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 45% at 0% 0%, rgba(251, 243, 219, 0.35), transparent 55%), radial-gradient(ellipse 55% 40% at 100% 10%, rgba(0,0,0,0.03), transparent 50%)",
-        }}
-      />
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-[#FBFBFA]/80 dark:bg-zinc-950/90" aria-hidden />
+    <div className="mx-auto max-w-5xl">
 
       <motion.header
         initial={preferReducedMotion ? false : { opacity: 0, y: 12 }}
@@ -303,10 +292,10 @@ export default function CandidatePricingPage() {
         className="max-w-3xl"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#787774] dark:text-zinc-500">
-          Plans
+          Upgrade
         </p>
         <h1 className="mt-3 font-serif text-[1.75rem] font-normal leading-[1.15] tracking-[-0.02em] text-[#111111] dark:text-zinc-50 sm:text-[2rem]">
-          Upgrade when you need more reps
+          Upgrade
         </h1>
         <p className="mt-4 max-w-[65ch] text-[15px] leading-[1.6] text-[#787774] dark:text-zinc-400">
           Higher tiers add weekly CV reviews and mock interviews. Stay on Free for as long as it fits your pace.
@@ -362,16 +351,18 @@ export default function CandidatePricingPage() {
           Compare plans
         </h2>
 
-        <motion.div
-          variants={listParent}
-          initial="hidden"
-          animate="show"
-          className="mt-4 grid grid-cols-1 items-stretch gap-5 md:grid-cols-3"
-        >
-          {plans.map((plan) => (
-            <PlanCard key={plan.id} plan={plan} />
-          ))}
-        </motion.div>
+        <div className="mt-4 overflow-hidden rounded-[1.25rem] border border-white/75 bg-white/60 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl ring-1 ring-black/[0.04] dark:border-white/[0.08] dark:bg-black/45 dark:backdrop-blur-xl dark:ring-white/[0.03]">
+          <motion.div
+            variants={listParent}
+            initial="hidden"
+            animate="show"
+            className="grid divide-y divide-[var(--border)] dark:divide-white/[0.08] md:grid-cols-3 md:divide-x md:divide-y-0"
+          >
+            {plans.map((plan) => (
+              <PlanCard key={plan.id} plan={plan} />
+            ))}
+          </motion.div>
+        </div>
       </section>
 
       <motion.p

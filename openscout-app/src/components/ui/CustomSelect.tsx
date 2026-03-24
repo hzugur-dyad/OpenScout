@@ -16,6 +16,9 @@ type CustomSelectProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  noResultsText?: string;
   id?: string;
   className?: string;
   triggerClassName?: string;
@@ -27,12 +30,16 @@ export function CustomSelect({
   value,
   onChange,
   placeholder,
+  searchable = false,
+  searchPlaceholder = "Search...",
+  noResultsText = "No results found",
   id,
   className = "",
   triggerClassName = "",
   "aria-label": ariaLabel,
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const normalized = normalizeOptions(options);
 
@@ -40,6 +47,7 @@ export function CustomSelect({
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
+        setSearchQuery("");
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -47,13 +55,24 @@ export function CustomSelect({
   }, []);
 
   const selectedLabel = normalized.find((o) => o.value === value)?.label ?? value;
+  const filteredOptions =
+    searchable && searchQuery.trim().length > 0
+      ? normalized.filter((opt) =>
+          opt.label.toLocaleLowerCase().includes(searchQuery.trim().toLocaleLowerCase())
+        )
+      : normalized;
 
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button
         type="button"
         id={id}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() =>
+          setOpen((o) => {
+            if (o) setSearchQuery("");
+            return !o;
+          })
+        }
         className={`flex w-full items-center justify-between rounded-[10px] border border-[var(--border)] bg-white px-4 py-3 text-left text-sm text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100 ${triggerClassName}`}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -73,7 +92,18 @@ export function CustomSelect({
           role="listbox"
           className="dropdown-list absolute top-full left-0 right-0 z-20 mt-1.5 max-h-60 overflow-y-auto rounded-[10px] border border-[var(--border)] bg-white py-1 shadow-card dark:border-white/[0.12] dark:bg-black/30 dark:backdrop-blur-xl"
         >
-          {normalized.map((opt) => (
+          {searchable && (
+            <div className="px-2 pb-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full rounded-[8px] border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 dark:border-white/[0.18] dark:bg-black/30 dark:text-zinc-100"
+              />
+            </div>
+          )}
+          {filteredOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -82,6 +112,7 @@ export function CustomSelect({
               onClick={() => {
                 onChange(opt.value);
                 setOpen(false);
+                setSearchQuery("");
               }}
               className={`block w-full px-4 py-2.5 text-left text-sm transition-colors first:rounded-t-[8px] last:rounded-b-[8px] ${
                 value === opt.value
@@ -92,6 +123,9 @@ export function CustomSelect({
               {opt.label}
             </button>
           ))}
+          {filteredOptions.length === 0 && (
+            <p className="px-4 py-2 text-sm text-gray-500 dark:text-zinc-400">{noResultsText}</p>
+          )}
         </div>
       )}
     </div>

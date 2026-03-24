@@ -58,6 +58,10 @@ export default function MockInterviewSessionPage() {
   const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlStateRef = useRef<InterviewControl | null>(null);
+  const sendInFlightRef = useRef(false);
+  const lastSendAtRef = useRef(0);
+  const lastUserMessageSentRef = useRef("");
+  const retryAfterUntilRef = useRef(0);
   /** First nudge while candidate is still composing (then hard timeout below) */
   const RESPONSE_WARNING_MS = 18_000;
   const RESPONSE_LIMIT_MS = 42_000;
@@ -70,6 +74,18 @@ export default function MockInterviewSessionPage() {
   micStreamRef.current = micStream;
   const isAiSpeaking = tts.loading;
   const supabase = useMemo(() => createClient(), []);
+  const getInterviewErrorMessage = useCallback(
+    (status: number) => (status === 429 ? ui.interviewRateLimitError : ui.interviewProviderError),
+    [ui.interviewProviderError, ui.interviewRateLimitError]
+  );
+  const parseRetryAfterMs = useCallback((value: string | null): number => {
+    if (!value) return 0;
+    const sec = Number(value);
+    if (Number.isFinite(sec) && sec > 0) return Math.max(0, Math.floor(sec * 1000));
+    const dateMs = Date.parse(value);
+    if (Number.isFinite(dateMs)) return Math.max(0, dateMs - Date.now());
+    return 0;
+  }, []);
 
   // Orb agentState: microphone → listening, waiting for AI → thinking, TTS → talking, default → null
   const agentState: AgentState = (() => {
@@ -165,6 +181,19 @@ export default function MockInterviewSessionPage() {
 
   const sendToAI = useCallback(
     async (userMessage: string) => {
+      const trimmedMessage = userMessage.trim();
+      if (!trimmedMessage) return;
+
+      const now = Date.now();
+      if (now < retryAfterUntilRef.current) return;
+      if (sendInFlightRef.current) return;
+      if (now - lastSendAtRef.current < 1200) return;
+      if (lastUserMessageSentRef.current === trimmedMessage && now - lastSendAtRef.current < 5000) return;
+
+      sendInFlightRef.current = true;
+      lastSendAtRef.current = now;
+      lastUserMessageSentRef.current = trimmedMessage;
+
       if (responseLimitTimerRef.current) {
         clearTimeout(responseLimitTimerRef.current);
         responseLimitTimerRef.current = null;
@@ -174,63 +203,70 @@ export default function MockInterviewSessionPage() {
         responseWarningTimerRef.current = null;
       }
 
-      if (!isInterviewContractLine(userMessage)) {
+      if (!isInterviewContractLine(trimmedMessage)) {
         silenceStrikeRef.current = 0;
       }
 
       const newMessages = [
         ...transcript.map((t) => ({ role: t.role as "user" | "assistant", content: t.content })),
-        { role: "user" as const, content: userMessage },
+        { role: "user" as const, content: trimmedMessage },
       ];
-      setTranscript((t) => [...t, { role: "user", content: userMessage }]);
+      setTranscript((t) => [...t, { role: "user", content: trimmedMessage }]);
 
-      const res = await fetch("/api/mock-interview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages,
-          jobCategory,
-          userName,
-          interviewLanguage: locale,
-          interviewControl: controlStateRef.current
-            ? {
-                questionId: controlStateRef.current.questionId,
-                attemptCount: controlStateRef.current.attempt,
-              }
-            : undefined,
-          ...(jobId && { jobId }),
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as {
-        content?: string;
-        interviewEnded?: boolean;
-        questionControl?: { questionId?: string; attempt?: number; isFollowup?: boolean };
-        retryable?: boolean;
-      };
-      if (res.status === 503 && data.retryable) {
-        setTranscript((t) =>
-          t.length > 0 && t[t.length - 1]?.role === "user" ? t.slice(0, -1) : t
-        );
-        setProviderError(ui.interviewProviderError);
-        return;
-      }
-      setProviderError(null);
-      if (!res.ok) {
-        captureMessage(`Mock interview turn: HTTP ${res.status}`, {
-          route: "/api/mock-interview",
-          session_id: sessionId,
-          ...(jobId ? { job_id: jobId } : {}),
-          tags: { feature: "ai_interview" },
-          level: "warning",
+      try {
+        const res = await fetch("/api/mock-interview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: newMessages,
+            jobCategory,
+            userName,
+            interviewLanguage: locale,
+            interviewControl: controlStateRef.current
+              ? {
+                  questionId: controlStateRef.current.questionId,
+                  attemptCount: controlStateRef.current.attempt,
+                }
+              : undefined,
+            ...(jobId && { jobId }),
+          }),
         });
-        const errMsg = ui.interviewProviderError;
-        setProviderError(errMsg);
-        setTranscript((t) => [...t, { role: "assistant", content: errMsg }]);
-        setAiMessage(errMsg);
-        return;
-      }
-      const visibleText = (data.content ?? "").trim();
-      const interviewEnded = Boolean(data.interviewEnded);
+        const data = (await res.json().catch(() => ({}))) as {
+          content?: string;
+          interviewEnded?: boolean;
+          questionControl?: { questionId?: string; attempt?: number; isFollowup?: boolean };
+          retryable?: boolean;
+        };
+        if (res.status === 503 && data.retryable) {
+          setTranscript((t) =>
+            t.length > 0 && t[t.length - 1]?.role === "user" ? t.slice(0, -1) : t
+          );
+          setProviderError(ui.interviewProviderError);
+          return;
+        }
+        if (res.status === 429) {
+          const retryAfterMs = parseRetryAfterMs(res.headers.get("Retry-After"));
+          retryAfterUntilRef.current = Date.now() + (retryAfterMs > 0 ? retryAfterMs : 60_000);
+        } else {
+          retryAfterUntilRef.current = 0;
+        }
+        setProviderError(null);
+        if (!res.ok) {
+          captureMessage(`Mock interview turn: HTTP ${res.status}`, {
+            route: "/api/mock-interview",
+            session_id: sessionId,
+            ...(jobId ? { job_id: jobId } : {}),
+            tags: { feature: "ai_interview" },
+            level: "warning",
+          });
+          const errMsg = getInterviewErrorMessage(res.status);
+          setProviderError(errMsg);
+          setTranscript((t) => [...t, { role: "assistant", content: errMsg }]);
+          setAiMessage(errMsg);
+          return;
+        }
+        const visibleText = (data.content ?? "").trim();
+        const interviewEnded = Boolean(data.interviewEnded);
 
       if (interviewEnded) {
         controlStateRef.current = null;
@@ -255,68 +291,71 @@ export default function MockInterviewSessionPage() {
       setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
       setAiMessage(visibleText);
 
-      if (interviewEnded) {
-        setStep("processing");
-        const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
-        const minMs = 5 * 60 * 1000;
-        if (durationMs < minMs) {
-          trackClient(ANALYTICS_EVENTS.interview_too_short, {
-            job_category: jobCategory,
-            session_id: sessionId,
-            duration_ms: durationMs,
-            ...(jobId ? { job_id: jobId } : {}),
+        if (interviewEnded) {
+          setStep("processing");
+          const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
+          const minMs = 5 * 60 * 1000;
+          if (durationMs < minMs) {
+            trackClient(ANALYTICS_EVENTS.interview_too_short, {
+              job_category: jobCategory,
+              session_id: sessionId,
+              duration_ms: durationMs,
+              ...(jobId ? { job_id: jobId } : {}),
+            });
+            const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory, lang: locale });
+            if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
+            router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
+            return;
+          }
+          const transcriptText = [...transcript, { role: "user", content: trimmedMessage }]
+            .concat([{ role: "assistant", content: visibleText }])
+            .map((m) => `${m.role}: ${m.content}`)
+            .join("\n");
+          const resultRes = await fetch("/api/mock-interview/result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId,
+              transcript: transcriptText,
+              jobCategory,
+              interviewLanguage: locale,
+              durationMs,
+              ...(jobId && { jobId }),
+            }),
           });
-          const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory, lang: locale });
-          if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
+          if (!resultRes.ok) {
+            router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
+            return;
+          }
+          let applicationSaved = false;
+          if (jobId) {
+            const appRes = await fetch("/api/job-applications", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ jobId }),
+            });
+            applicationSaved = appRes.ok;
+          }
+          const q = new URLSearchParams({ lang: locale });
+          if (applicationSaved) q.set("applicationSaved", "1");
           router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
           return;
         }
-        const transcriptText = [...transcript, { role: "user", content: userMessage }]
-          .concat([{ role: "assistant", content: visibleText }])
-          .map((m) => `${m.role}: ${m.content}`)
-          .join("\n");
-        const resultRes = await fetch("/api/mock-interview/result", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            transcript: transcriptText,
-            jobCategory,
-            interviewLanguage: locale,
-            durationMs,
-            ...(jobId && { jobId }),
-          }),
-        });
-        if (!resultRes.ok) {
-          router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
-          return;
-        }
-        let applicationSaved = false;
-        if (jobId) {
-          const appRes = await fetch("/api/job-applications", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ jobId }),
-          });
-          applicationSaved = appRes.ok;
-        }
-        const q = new URLSearchParams({ lang: locale });
-        if (applicationSaved) q.set("applicationSaved", "1");
-        router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
-        return;
+
+        responseWarningTimerRef.current = setTimeout(() => {
+          responseWarningTimerRef.current = null;
+          sendToAI(copy.responseDelayWarningCue);
+        }, RESPONSE_WARNING_MS);
+
+        responseLimitTimerRef.current = setTimeout(() => {
+          responseLimitTimerRef.current = null;
+          sendToAI(copy.noResponseCue);
+        }, RESPONSE_LIMIT_MS);
+
+        tts.play(visibleText, locale);
+      } finally {
+        sendInFlightRef.current = false;
       }
-
-      responseWarningTimerRef.current = setTimeout(() => {
-        responseWarningTimerRef.current = null;
-        sendToAI(copy.responseDelayWarningCue);
-      }, RESPONSE_WARNING_MS);
-
-      responseLimitTimerRef.current = setTimeout(() => {
-        responseLimitTimerRef.current = null;
-        sendToAI(copy.noResponseCue);
-      }, RESPONSE_LIMIT_MS);
-
-      tts.play(visibleText, locale);
     },
     [
       transcript,
@@ -330,7 +369,8 @@ export default function MockInterviewSessionPage() {
       locale,
       copy.noResponseCue,
       copy.responseDelayWarningCue,
-      ui.interviewProviderError,
+      getInterviewErrorMessage,
+      parseRetryAfterMs,
     ]
   );
 
@@ -416,6 +456,14 @@ export default function MockInterviewSessionPage() {
   }, [step, sendToAI, locale, copy.notHeardCue, copy.silenceEscalateCue]);
 
   const startInterview = useCallback(async () => {
+    const now = Date.now();
+    if (sendInFlightRef.current) return;
+    if (now < retryAfterUntilRef.current) {
+      setProviderError(ui.interviewRateLimitError);
+      return;
+    }
+    sendInFlightRef.current = true;
+
     endedRef.current = false;
     interviewStartTimeRef.current = Date.now();
     trackClient(ANALYTICS_EVENTS.interview_started, {
@@ -425,60 +473,71 @@ export default function MockInterviewSessionPage() {
     });
     setStep("interview");
     setAiMessage(copy.preparing);
-    const res = await fetch("/api/mock-interview", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: copy.readyPhrase }],
-        jobCategory,
-        userName,
-        interviewLanguage: locale,
-        interviewControl: undefined,
-        ...(jobId && { jobId }),
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      captureMessage(`Mock interview start: HTTP ${res.status}`, {
-        route: "/api/mock-interview",
-        session_id: sessionId,
-        ...(jobId ? { job_id: jobId } : {}),
-        tags: { feature: "ai_interview" },
-        level: "warning",
+    try {
+      const res = await fetch("/api/mock-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: copy.readyPhrase }],
+          jobCategory,
+          userName,
+          interviewLanguage: locale,
+          interviewControl: undefined,
+          ...(jobId && { jobId }),
+        }),
       });
-      const errMsg = ui.interviewProviderError;
-      setProviderError(errMsg);
-      setAiMessage(errMsg);
-      setTranscript([{ role: "assistant", content: errMsg }]);
-      return;
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 429) {
+        const retryAfterMs = parseRetryAfterMs(res.headers.get("Retry-After"));
+        retryAfterUntilRef.current = Date.now() + (retryAfterMs > 0 ? retryAfterMs : 60_000);
+      } else {
+        retryAfterUntilRef.current = 0;
+      }
+      if (!res.ok) {
+        captureMessage(`Mock interview start: HTTP ${res.status}`, {
+          route: "/api/mock-interview",
+          session_id: sessionId,
+          ...(jobId ? { job_id: jobId } : {}),
+          tags: { feature: "ai_interview" },
+          level: "warning",
+        });
+        const errMsg = getInterviewErrorMessage(res.status);
+        setProviderError(errMsg);
+        setAiMessage(errMsg);
+        setTranscript([{ role: "assistant", content: errMsg }]);
+        return;
+      }
+      const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
+      if (data.interviewEnded) {
+        controlStateRef.current = null;
+      } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
+        controlStateRef.current = {
+          questionId: data.questionControl.questionId,
+          attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
+          isFollowup: Boolean(data.questionControl.isFollowup),
+        };
+      } else {
+        controlStateRef.current = null;
+      }
+      const content = visibleText;
+      setProviderError(null);
+      setAiMessage(content);
+      setTranscript([{ role: "assistant", content }]);
+
+      responseWarningTimerRef.current = setTimeout(() => {
+        responseWarningTimerRef.current = null;
+        sendToAI(copy.responseDelayWarningCue);
+      }, RESPONSE_WARNING_MS);
+
+      responseLimitTimerRef.current = setTimeout(() => {
+        responseLimitTimerRef.current = null;
+        sendToAI(copy.noResponseCue);
+      }, RESPONSE_LIMIT_MS);
+
+      tts.play(content, locale);
+    } finally {
+      sendInFlightRef.current = false;
     }
-    const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
-    if (data.interviewEnded) {
-      controlStateRef.current = null;
-    } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
-      controlStateRef.current = {
-        questionId: data.questionControl.questionId,
-        attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
-        isFollowup: Boolean(data.questionControl.isFollowup),
-      };
-    } else {
-      controlStateRef.current = null;
-    }
-    const content = visibleText;
-    setAiMessage(content);
-    setTranscript([{ role: "assistant", content }]);
-
-    responseWarningTimerRef.current = setTimeout(() => {
-      responseWarningTimerRef.current = null;
-      sendToAI(copy.responseDelayWarningCue);
-    }, RESPONSE_WARNING_MS);
-
-    responseLimitTimerRef.current = setTimeout(() => {
-      responseLimitTimerRef.current = null;
-      sendToAI(copy.noResponseCue);
-    }, RESPONSE_LIMIT_MS);
-
-    tts.play(content, locale);
   }, [
     jobCategory,
     jobId,
@@ -492,7 +551,9 @@ export default function MockInterviewSessionPage() {
     copy.fallbackOpening,
     copy.noResponseCue,
     copy.responseDelayWarningCue,
-    ui.interviewProviderError,
+    getInterviewErrorMessage,
+    parseRetryAfterMs,
+    ui.interviewRateLimitError,
   ]);
 
   const toggleListen = () => {
@@ -753,7 +814,7 @@ export default function MockInterviewSessionPage() {
   return (
     <main
       id="mock-interview-session-live"
-      className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-4 py-2"
+      className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col overflow-hidden px-4 py-0.5"
     >
       {showEndConfirm && (
         <div
@@ -806,7 +867,7 @@ export default function MockInterviewSessionPage() {
         </div>
       )}
 
-      <div className="mb-1 flex shrink-0 items-center justify-between gap-3">
+      <div className="mb-0.5 flex shrink-0 items-center justify-between gap-3">
         <h2 className="min-w-0 truncate text-base font-semibold leading-snug text-[#111111] sm:text-lg dark:text-zinc-100">
           {`${jobCategory} ${ui.interviewSuffix}`}
         </h2>
@@ -823,16 +884,15 @@ export default function MockInterviewSessionPage() {
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col rounded-[10px] border border-[var(--border)] bg-[#FAFAF9] p-3 dark:border-white/[0.08] dark:bg-zinc-900 sm:p-4">
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 sm:gap-2">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-start gap-0.5 pt-0.5">
           {/* Orb — tek ekrana sığacak (vmin ile sınırlı) */}
           <motion.div
             className="relative flex shrink-0 items-center justify-center"
             style={{
-              clipPath: "circle(50% at 50% 50%)",
-              overflow: "hidden",
-              width: "min(380px, 48vmin)",
-              height: "min(380px, 48vmin)",
+              width: "clamp(340px, 46vh, 560px)",
+              height: "clamp(340px, 46vh, 560px)",
+              marginTop: "-44px",
             }}
             animate={orbAnimate}
             transition={orbTransition}
@@ -847,18 +907,24 @@ export default function MockInterviewSessionPage() {
             transition={
               reduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.16, 1, 0.3, 1] }
             }
-            className="w-full max-w-[600px] shrink-0"
+            className="w-full max-w-[560px] shrink-0 -mt-12 min-h-[88px]"
           >
             <p
-              className="rounded-2xl border border-[var(--border)] bg-gray-50/60 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-gray-800 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100"
+              className="rounded-2xl border border-black/10 bg-white/40 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/30 dark:text-zinc-100"
+              style={{
+                backgroundImage:
+                  "linear-gradient(135deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0.34) 52%, rgba(255,255,255,0.22) 100%)",
+              }}
               aria-live="polite"
               aria-atomic="true"
             >
               {aiMessage}
             </p>
           </motion.div>
+        </div>
 
-          <div className="relative mt-1 flex h-12 w-12 shrink-0 items-center justify-center sm:h-14 sm:w-14">
+        <div className="shrink-0 flex flex-col items-center">
+          <div className="relative mt-0 flex h-11 w-11 shrink-0 items-center justify-center sm:h-12 sm:w-12">
             {step !== "goodbye" && isListening && !reduceMotion && (
               <>
                 <motion.div
@@ -883,7 +949,7 @@ export default function MockInterviewSessionPage() {
               disabled={isAiSpeaking || step === "goodbye"}
               aria-pressed={isListening}
               aria-label={micAriaLabel}
-              className={`relative flex h-12 w-12 touch-manipulation items-center justify-center rounded-full transition-colors duration-200 motion-reduce:transition-none sm:h-14 sm:w-14 ${
+              className={`relative flex h-11 w-11 touch-manipulation items-center justify-center rounded-full transition-colors duration-200 motion-reduce:transition-none sm:h-12 sm:w-12 ${
                 isListening
                   ? "bg-red-600 text-white ring-2 ring-red-500/25 dark:ring-red-400/20"
                   : "text-white"
@@ -891,9 +957,9 @@ export default function MockInterviewSessionPage() {
               style={!isListening ? { backgroundColor: "var(--primary)" } : {}}
             >
               {isListening ? (
-                <MicrophoneSlash className="h-6 w-6 sm:h-7 sm:w-7" weight="regular" aria-hidden />
+                <MicrophoneSlash className="h-5 w-5 sm:h-6 sm:w-6" weight="regular" aria-hidden />
               ) : (
-                <Microphone className="h-6 w-6 sm:h-7 sm:w-7" weight="regular" aria-hidden />
+                <Microphone className="h-5 w-5 sm:h-6 sm:w-6" weight="regular" aria-hidden />
               )}
             </button>
           </div>

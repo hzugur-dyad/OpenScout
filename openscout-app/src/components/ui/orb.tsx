@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useTexture } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -44,10 +43,7 @@ export function Orb({
         style={{
           position: "absolute",
           inset: 0,
-          borderRadius: "50%",
-          overflow: "hidden",
-          clipPath: "circle(50% at 50% 50%)",
-          WebkitClipPath: "circle(50% at 50% 50%)",
+          background: "transparent",
         }}
       >
         <Canvas
@@ -108,9 +104,7 @@ function Scene({
   const targetColor1Ref = useRef(new THREE.Color(colors[0]));
   const targetColor2Ref = useRef(new THREE.Color(colors[1]));
   const animSpeedRef = useRef(0.1);
-  const perlinNoiseTexture = useTexture(
-    "https://storage.googleapis.com/eleven-public-cdn/images/perlin-noise.png"
-  );
+  const perlinNoiseTexture = useMemo(() => createNoiseTexture(), []);
 
   const agentRef = useRef<AgentState>(agentState);
   const modeRef = useRef<"auto" | "manual">(volumeMode);
@@ -275,6 +269,31 @@ function Scene({
   );
 }
 
+function createNoiseTexture(size = 128): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const idx = (y * size + x) * 4;
+      // Cheap layered noise to mimic organic turbulence.
+      const n1 = Math.random();
+      const n2 = Math.random() * 0.5;
+      const n3 = Math.random() * 0.25;
+      const v = Math.max(0, Math.min(255, Math.floor((n1 + n2 + n3) / 1.75 * 255)));
+      data[idx] = v;
+      data[idx + 1] = v;
+      data[idx + 2] = v;
+      data[idx + 3] = 255;
+    }
+  }
+
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.needsUpdate = true;
+  texture.generateMipmaps = true;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
 function splitmix32(a: number) {
   return function () {
     a |= 0;
@@ -405,9 +424,9 @@ float flow(vec3 decomposed, float time) {
 
 void main() {
   vec2 uv = vUv * 2.0 - 1.0;
-  if (length(uv) > 1.0) discard;
-
   float radius = length(uv);
+  if (radius > 1.35) discard;
+
   float theta = atan(uv.y, uv.x);
   if (theta < 0.0) theta += 2.0 * PI;
 
@@ -420,7 +439,8 @@ void main() {
   float noise = flow(decomposed, radius * 0.03 - uAnimation * 0.2) - 0.5;
   theta += noise * mix(0.08, 0.25, uOutputVolume);
 
-  vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+  // Transparent base prevents a flat circular backing disk.
+  vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
 
   float originalCenters[7] = float[7](0.0, 0.5 * PI, 1.0 * PI, 1.5 * PI, 2.0 * PI, 2.5 * PI, 3.0 * PI);
 
@@ -466,7 +486,7 @@ void main() {
   float ringAlpha1 = (inputRadius2 >= ringRadius1) ? opacity1 : 0.0;
   float ringAlpha2 = smoothstep(ringRadius2 - 0.05, ringRadius2 + 0.05, inputRadius1) * opacity2;
   
-  float totalRingAlpha = max(ringAlpha1, ringAlpha2);
+  float totalRingAlpha = max(ringAlpha1, ringAlpha2) * 0.0;
   
   vec3 ringColor = vec3(1.0);
   color.rgb = 1.0 - (1.0 - color.rgb) * (1.0 - ringColor * totalRingAlpha);
@@ -474,11 +494,22 @@ void main() {
   vec3 color1 = vec3(0.0, 0.0, 0.0);
   vec3 color2 = uColor1;
   vec3 color3 = uColor2;
-  vec3 color4 = vec3(1.0, 1.0, 1.0);
+  // Avoid flat white disk by keeping the highlight in a warm-gold range.
+  vec3 color4 = vec3(0.95, 0.84, 0.50);
 
   float luminance = mix(color.r, 1.0 - color.r, uInverted);
   color.rgb = colorRamp(luminance, color1, color2, color3, color4);
 
+  // Let the page background bleed through the brightest zones a bit.
+  float highlight = smoothstep(0.76, 0.98, luminance);
+  color.a *= mix(1.0, 0.72, highlight);
+
+  // Soft core mask + atmospheric aura, no hard circular cutoff.
+  float coreMask = 1.0 - smoothstep(0.72, 1.02, radius);
+  float auraMask = smoothstep(1.28, 0.62, radius);
+  float softMask = max(coreMask, auraMask * 0.30);
+
+  color.a *= softMask;
   color.a *= uOpacity;
 
   gl_FragColor = color;

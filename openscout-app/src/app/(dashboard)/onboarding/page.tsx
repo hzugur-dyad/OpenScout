@@ -41,10 +41,10 @@ const minimalOutlineBtn = `rounded-lg border-[#E5E5E3] bg-transparent transition
 /** Match dashboard page: full-bleed bone canvas, same radial wash, max-w-5xl content */
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative -mx-4 min-h-full min-h-dvh overflow-x-clip bg-[#F7F6F3] px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-zinc-950">
+    <div className="relative -mx-4 min-h-full min-h-dvh overflow-x-clip bg-transparent px-4 pb-24 pt-10 lg:-mx-8 lg:px-8 dark:bg-transparent">
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 bg-[#F7F6F3] [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.22),transparent_58%)] dark:bg-zinc-950 dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.07),transparent_55%)]"
+        className="pointer-events-none fixed inset-0 -z-10 bg-transparent [background-image:radial-gradient(ellipse_90%_60%_at_50%_-30%,rgba(251,243,219,0.08),transparent_58%)] dark:[background-image:radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(253,235,236,0.03),transparent_55%)]"
       />
       <div className="relative mx-auto w-full max-w-5xl">{children}</div>
     </div>
@@ -65,6 +65,9 @@ const requiredMark = "text-[#9F2F2D] dark:text-red-300/90";
 const mainFormCard = `mt-8 rounded-xl border border-[#E5E5E3] bg-[#FAFAF9] p-8 transition-[border-color,background-color] duration-200 ${easeOut} md:mt-12 md:p-10 hover:border-[#C8C8C4] hover:bg-[#F9F9F7] dark:border-zinc-800 dark:bg-[#141414] dark:hover:border-zinc-700 dark:hover:bg-[#161616]`;
 
 const bentoInnerCard = `space-y-3 rounded-lg border border-[#E5E5E3] bg-[#F2F1EE] p-5 transition-[border-color,background-color] duration-200 ${easeOut} hover:border-[#C8C8C4] dark:border-zinc-800 dark:bg-[#1a1a18] dark:hover:border-zinc-700`;
+
+const readonlySectionCard =
+  "os-surface-card rounded-[10px] p-6 md:p-7 dark:bg-black/45 dark:border-white/[0.12]";
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
@@ -417,8 +420,8 @@ export default function OnboardingPage() {
           </p>
         </div>
 
-        <div className="mt-14 max-w-3xl space-y-12">
-          <section>
+        <div className="mt-14 max-w-3xl space-y-6">
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">
               About
             </h2>
@@ -448,7 +451,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section>
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Work experience</h2>
             {form.work_experiences.length === 0 ? (
               <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No roles listed yet.</p>
@@ -467,7 +470,7 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section>
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Education</h2>
             {form.educations.length === 0 ? (
               <p className="mt-3 text-sm leading-[1.5] text-black/55 dark:text-zinc-400">No education listed yet.</p>
@@ -486,7 +489,7 @@ export default function OnboardingPage() {
             )}
           </section>
 
-          <section>
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Job preferences</h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
@@ -504,7 +507,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section>
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">Links</h2>
             <dl className="mt-4 space-y-3">
               <div>
@@ -522,7 +525,7 @@ export default function OnboardingPage() {
             </dl>
           </section>
 
-          <section>
+          <section className={readonlySectionCard}>
             <h2 className="text-sm font-semibold uppercase tracking-[0.06em] text-black/55 dark:text-zinc-500">CV</h2>
             {cvFileUrl ? (
               <div className="mt-4 flex items-center gap-3">

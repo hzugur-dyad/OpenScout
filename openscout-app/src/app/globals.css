@@ -45,36 +45,37 @@ html.dark {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background-color: #f3f2ef;
+  /* Let Framer background remain visible on product pages. */
+  background-color: rgba(243, 242, 239, 0.28);
   background-image:
-    radial-gradient(ellipse 110% 65% at 50% -32%, rgba(220, 230, 174, 0.38), transparent 56%),
-    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(250, 248, 242, 0.9), transparent 48%);
+    radial-gradient(ellipse 110% 65% at 50% -32%, rgba(220, 230, 174, 0.12), transparent 56%),
+    radial-gradient(ellipse 70% 45% at 100% 0%, rgba(250, 248, 242, 0.16), transparent 48%);
 }
 
 .dark .os-product-shell::before {
-  background-color: #09090b;
+  background-color: rgba(9, 9, 11, 0.18);
   background-image:
-    radial-gradient(ellipse 95% 58% at 50% -28%, rgba(127, 143, 40, 0.14), transparent 54%),
-    radial-gradient(ellipse 65% 42% at 100% 0%, rgba(39, 39, 42, 0.45), transparent 46%),
-    linear-gradient(180deg, #0e0e10 0%, #09090b 38%, #09090b 100%);
+    radial-gradient(ellipse 95% 58% at 50% -28%, rgba(127, 143, 40, 0.06), transparent 54%),
+    radial-gradient(ellipse 65% 42% at 100% 0%, rgba(39, 39, 42, 0.1), transparent 46%),
+    linear-gradient(180deg, rgba(14, 14, 16, 0.2) 0%, rgba(9, 9, 11, 0.18) 38%, rgba(9, 9, 11, 0.18) 100%);
 }
 
 /* Elevated card: use inside product pages for consistent depth */
 .os-surface-card {
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
   border: 1px solid var(--border);
-  background-color: #ffffff;
-  box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.04),
-    0 4px 16px rgba(15, 23, 42, 0.04);
+  background-color: rgba(0, 0, 0, 0.03);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .dark .os-surface-card {
-  background-color: var(--os-surface-raised);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    0 4px 24px rgba(0, 0, 0, 0.35);
+  background-color: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
 }
 
 /* Eyebrow / section label — shared hierarchy */
