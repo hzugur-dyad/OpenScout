@@ -70,3 +70,7 @@ npm run dev
 - **Access**: The `/employer` route is protected (requires login).
 - **Company ownership**: A company is “owned” by `companies.user_id`. After creating a company in the UI, you can create/edit listings.
 - **RLS**: `004_employer_policies.sql` adds policies to allow the owner to insert/update/delete their company and listings, and read applications for their listings.
+
+## Maintenance note
+
+Repository sync checkpoint commit.
