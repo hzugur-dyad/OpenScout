@@ -27,6 +27,7 @@ export function Navbar({
   const navLinks = [
     { href: "/jobs", label: "Job Listings" },
     { href: "/blog", label: "Blog" },
+    { href: "/faq", label: "FAQ" },
   ];
 
   return (

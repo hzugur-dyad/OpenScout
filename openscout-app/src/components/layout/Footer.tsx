@@ -4,6 +4,7 @@ import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 const productLinks = [
   { href: "/jobs", label: "Job listings" },
   { href: "/blog", label: "Blog" },
+  { href: "/faq", label: "FAQ" },
 ] as const;
 
 const companyLinks = [
@@ -89,6 +90,12 @@ export function Footer() {
             <p className="text-center text-xs text-gray-600 dark:text-zinc-400 sm:text-left">
               © {new Date().getFullYear()} OpenScout. All rights reserved.
             </p>
+            <Link
+              href="/faq"
+              className="text-xs text-gray-600 transition-colors hover:text-gray-900 dark:text-zinc-400 dark:hover:text-white"
+            >
+              FAQ
+            </Link>
           </div>
         </div>
       </div>

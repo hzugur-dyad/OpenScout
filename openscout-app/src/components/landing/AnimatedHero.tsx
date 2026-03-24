@@ -36,8 +36,8 @@ export function AnimatedHero() {
                 </h1>
 
                 <p className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl">
-                  One credential, many companies. Take one mock interview, get a shareable
-                  score and report — stand out to every employer.
+                  Practice with AI, prove yourself with a shareable score, and apply with
+                  confidence - every candidate is evaluated by the same fair standards.
                 </p>
 
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -84,8 +84,8 @@ export function AnimatedHero() {
                 </h1>
 
                 <p className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl">
-                  Every candidate has a CV score and mock interview report. Cut screening time
-                  and hire faster — only applicants who passed the bar.
+                  Scout pre-vets every applicant, so your team screens less, hires faster, and
+                  selects higher-quality candidates with confidence.
                 </p>
 
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

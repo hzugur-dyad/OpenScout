@@ -1,14 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import type { Icon } from "@phosphor-icons/react";
 import {
-  Briefcase,
-  Buildings,
-  ChatCircle,
-  FileText,
-  Users,
-} from "@phosphor-icons/react";
+  User,
+  Award,
+  Send,
+  Building2,
+  ListChecks,
+  Zap,
+  Timer,
+  UserRoundSearch,
+  MessageSquareText,
+  BrainCircuit,
+  BadgeCheck,
+  GitCompareArrows,
+  Scale,
+  Rocket,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
 import { Fragment } from "react";
 import { Button } from "@/components/ui/Button";
@@ -59,7 +68,7 @@ export default function LandingPage() {
                   { value: "AI Evaluation", label: "Fair interview" },
                   { value: "< 2 weeks", label: "Fast process" },
                   { value: "100%", label: "Free for candidates" },
-                  { value: "Direct", label: "Employer access" },
+                  { value: "AI Precision", label: "Consistent quality" },
                 ]
               : [
                   { value: "Pre-vetted", label: "CV + interview score" },
@@ -100,18 +109,18 @@ export default function LandingPage() {
           {(() => {
             const steps = !isEmployer
               ? [
-                  { step: 1, title: "Build Profile", desc: "Upload your CV and fill in your details. AI evaluates and scores you.", icon: FileText },
-                  { step: 2, title: "Get your Scout Score", desc: "Take one mock interview per role. Get a shareable credential and report.", icon: ChatCircle },
-                  { step: 3, title: "Apply everywhere", desc: "One credential, many companies. Connect with employers who trust Scout.", icon: Briefcase },
+                  { step: 1, title: "Build Profile", desc: "Upload your CV and fill in your details. AI evaluates and scores you.", icon: User },
+                  { step: 2, title: "Get your Scout Score", desc: "Take one mock interview per role. Get a shareable credential and report.", icon: Award },
+                  { step: 3, title: "Apply everywhere", desc: "One credential, many companies. Connect with employers who trust Scout.", icon: Send },
                 ]
               : [
-                  { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Buildings },
-                  { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and mock interview report.", icon: Users },
-                  { step: 3, title: "Hire faster", desc: "Skip first-round screening. Compare candidates on the same score and report format.", icon: Briefcase },
+                  { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Building2 },
+                  { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and mock interview report.", icon: ListChecks },
+                  { step: 3, title: "Hire faster", desc: "Skip first-round screening. Compare candidates on the same score and report format.", icon: Zap },
                 ];
             return (
               <div className="mx-auto mt-16 flex max-w-4xl flex-col items-stretch gap-6 md:flex-row md:items-stretch md:gap-0">
-                {steps.map((item: { step: number; title: string; desc: string; icon: Icon }, i) => (
+                {steps.map((item: { step: number; title: string; desc: string; icon: LucideIcon }, i) => (
                   <Fragment key={item.step}>
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
@@ -124,7 +133,7 @@ export default function LandingPage() {
                         className="mb-4 flex h-12 w-12 items-center justify-center rounded-full text-white"
                         style={{ backgroundColor: "var(--primary)" }}
                       >
-                        <item.icon className="h-6 w-6" weight="regular" aria-hidden />
+                        <item.icon className="h-6 w-6" aria-hidden />
                       </div>
                       <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-zinc-100">{item.title}</h3>
                       <p className="mt-2 text-center text-sm text-gray-700 dark:text-zinc-300">
@@ -153,18 +162,50 @@ export default function LandingPage() {
           <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
             {(!isEmployer
               ? [
-                  { title: "Hired in days", desc: "No long waits. Our candidates get offers within 2 weeks." },
-                  { title: "Skip the gatekeepers", desc: "Connect directly with employers. No recruiter screens." },
-                  { title: "Real feedback", desc: "Learn exactly what to improve after every interview." },
-                  { title: "Practice with AI", desc: "Test yourself with mock interviews and prepare for the real one." },
+                  {
+                    title: "Hired in days",
+                    desc: "No long waits. Our candidates get offers within 2 weeks.",
+                    icon: Timer,
+                  },
+                  {
+                    title: "Skip the gatekeepers",
+                    desc: "Connect directly with employers. No recruiter screens.",
+                    icon: UserRoundSearch,
+                  },
+                  {
+                    title: "Real feedback",
+                    desc: "Learn exactly what to improve after every interview.",
+                    icon: MessageSquareText,
+                  },
+                  {
+                    title: "Practice with AI",
+                    desc: "Test yourself with mock interviews and prepare for the real one.",
+                    icon: BrainCircuit,
+                  },
                 ]
               : [
-                  { title: "Pre-vetted candidates", desc: "Every applicant has a CV score and mock interview report. No blank resumes." },
-                  { title: "Less screening time", desc: "Compare apples to apples. Same score format for every candidate." },
-                  { title: "One credential, many roles", desc: "Candidates do the work once. You see their Scout Score when they apply." },
-                  { title: "Hire in days", desc: "Cut first-round interviews. Move straight to the candidates who passed the bar." },
+                  {
+                    title: "Pre-vetted candidates",
+                    desc: "Every applicant has a CV score and mock interview report. No blank resumes.",
+                    icon: BadgeCheck,
+                  },
+                  {
+                    title: "Less screening time",
+                    desc: "Compare apples to apples. Same score format for every candidate.",
+                    icon: GitCompareArrows,
+                  },
+                  {
+                    title: "One credential, many roles",
+                    desc: "Candidates do the work once. You see their Scout Score when they apply.",
+                    icon: Scale,
+                  },
+                  {
+                    title: "Hire in days",
+                    desc: "Cut first-round interviews. Move straight to the candidates who passed the bar.",
+                    icon: Rocket,
+                  },
                 ]
-            ).map((item: { title: string; desc: string }, i) => (
+            ).map((item: { title: string; desc: string; icon: LucideIcon }, i) => (
               <motion.div
                 key={item.title}
                 initial={{ opacity: 0, y: 10 }}
@@ -175,7 +216,9 @@ export default function LandingPage() {
                 <div
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                   style={{ backgroundColor: "var(--primary-lighter)" }}
-                />
+                >
+                  <item.icon className="h-5 w-5 text-[var(--primary)]" aria-hidden />
+                </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{item.title}</h3>
                   <p className="mt-1 text-sm text-gray-700 dark:text-zinc-300">{item.desc}</p>
