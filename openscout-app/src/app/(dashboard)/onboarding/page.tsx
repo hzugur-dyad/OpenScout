@@ -62,7 +62,7 @@ const labelCompact = "text-xs font-medium text-black/55 dark:text-zinc-400";
 
 const requiredMark = "text-[#9F2F2D] dark:text-red-300/90";
 
-const mainFormCard = `mt-8 rounded-xl border border-[#E5E5E3] bg-[#FAFAF9] p-8 transition-[border-color,background-color] duration-200 ${easeOut} md:mt-12 md:p-10 hover:border-[#C8C8C4] hover:bg-[#F9F9F7] dark:border-zinc-800 dark:bg-[#141414] dark:hover:border-zinc-700 dark:hover:bg-[#161616]`;
+const mainFormCard = `mt-6 rounded-xl border border-[#E5E5E3] bg-[#FAFAF9] p-8 transition-[border-color,background-color] duration-200 ${easeOut} md:mt-0 md:p-10 hover:border-[#C8C8C4] hover:bg-[#F9F9F7] dark:border-zinc-800 dark:bg-[#141414] dark:hover:border-zinc-700 dark:hover:bg-[#161616]`;
 
 const bentoInnerCard = `space-y-3 rounded-lg border border-[#E5E5E3] bg-[#F2F1EE] p-5 transition-[border-color,background-color] duration-200 ${easeOut} hover:border-[#C8C8C4] dark:border-zinc-800 dark:bg-[#1a1a18] dark:hover:border-zinc-700`;
 
@@ -269,8 +269,15 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setSaveError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Session not found");
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
+      if (!user) {
+        setSaveError("Your session expired. Please sign in again and continue.");
+        router.push("/login?next=/onboarding");
+        return;
+      }
 
       const { data: onboardingRow } = await supabase
         .from("profiles")
@@ -366,7 +373,15 @@ export default function OnboardingPage() {
       setStep(1);
       router.refresh();
     } catch (e) {
-      captureException(e instanceof Error ? e : new Error(String(e)), { route: "/onboarding" });
+      const normalized = e instanceof Error ? e : new Error(String(e));
+      // Session/auth state can legitimately drop during long onboarding edits.
+      // We handle it gracefully without sending noisy monitoring events.
+      if (normalized.message === "Session not found") {
+        setSaveError("Your session expired. Please sign in again and continue.");
+        router.push("/login?next=/onboarding");
+        return;
+      }
+      captureException(normalized, { route: "/onboarding" });
       setSaveError("We could not save your profile. Check your connection and try again.");
     } finally {
       setIsLoading(false);
@@ -634,8 +649,8 @@ export default function OnboardingPage() {
       >
         Skip to profile form
       </a>
-      <div className="grid gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,17rem)_1fr] lg:gap-16">
-        <aside className="md:pt-0.5" aria-label="Onboarding introduction">
+      <div className="grid items-start gap-12 md:grid-cols-[minmax(0,15rem)_1fr] lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,13.5rem)] lg:gap-10">
+        <aside className="lg:-ml-3" aria-label="Onboarding introduction">
           <p className="text-xs font-medium uppercase tracking-[0.05em] text-black/55 dark:text-zinc-500">
             Setup
           </p>
@@ -663,9 +678,6 @@ export default function OnboardingPage() {
               it on applications and LinkedIn.
             </p>
             <SharePublicProfileButton surface="onboarding" />
-          </div>
-          <div className="mt-10 hidden md:block">
-            <OnboardingStepper currentStep={step} />
           </div>
         </aside>
 
@@ -1269,6 +1281,10 @@ export default function OnboardingPage() {
             </div>
           </main>
         </div>
+
+        <aside className="hidden lg:block" aria-label="Onboarding progress">
+          <OnboardingStepper currentStep={step} />
+        </aside>
       </div>
     </OnboardingShell>
   );
