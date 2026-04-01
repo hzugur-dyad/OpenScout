@@ -196,6 +196,61 @@ export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewRes
   };
 }
 
+export type MockInterviewRealtimeSupabaseOptions = {
+  userId: string | null;
+  profileGuard: "complete" | "blocked";
+  jobRow?: { ai_interview_config?: unknown } | null;
+};
+
+export function createSupabaseForMockInterviewRealtimeRoute(opts: MockInterviewRealtimeSupabaseOptions) {
+  const guardProfile =
+    opts.profileGuard === "blocked"
+      ? { first_name: "", last_name: "B", email: "a@b.com", location: "X" }
+      : { first_name: "A", last_name: "B", email: "a@b.com", location: "Berlin" };
+
+  const guardCvRow = opts.profileGuard === "blocked" ? null : { id: "cv" };
+
+  const from = (table: string) => {
+    let selectCols = "";
+    const chain: Record<string, unknown> = {};
+
+    chain.select = (cols: string) => {
+      selectCols = cols;
+      return chain;
+    };
+    chain.eq = (_col: string, _val: unknown) => chain;
+    chain.limit = () => chain;
+    chain.maybeSingle = async () => {
+      if (table === "profiles" && selectCols.includes("email")) {
+        return { data: guardProfile, error: null };
+      }
+      if (table === "profile_private") {
+        return { data: {}, error: null };
+      }
+      if (table === "cv_analyses" && selectCols === "id") {
+        return { data: guardCvRow, error: null };
+      }
+      if (table === "job_listings" && selectCols.includes("ai_interview_config")) {
+        return { data: opts.jobRow ?? null, error: null };
+      }
+      return { data: null, error: null };
+    };
+
+    return chain;
+  };
+
+  return {
+    client: {
+      auth: {
+        getUser: async () => ({
+          data: { user: opts.userId ? { id: opts.userId } : null },
+        }),
+      },
+      from,
+    },
+  };
+}
+
 export type EmployerApplicationPatchMockOptions = {
   authUserId: string | null;
   application: { id: string; job_id: string } | null;

@@ -25,8 +25,10 @@ npm install
 ```
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+OPENAI_API_KEY=your_openai_api_key
 GROQ_API_KEY=your_groq_api_key
 ```
+Live interview defaults: `OPENAI_MOCK_INTERVIEW_LIVE_MODEL=gpt-realtime`, `OPENAI_REALTIME_ASSISTANT_VOICE=marin`, and `OPENAI_REALTIME_INPUT_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe`.
 Optional: `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY` (see steps 4–5).
 
 3. Set up Supabase database:
@@ -59,7 +61,7 @@ npm run dev
 - **Auth**: Supabase Auth (Sign up / Log in). Unverified users are redirected to `/confirm-email` (resend link available).
 - **5-Step Profile**: About, Work Experience, Education, Job Preferences, Links
 - **CV Analysis**: PDF/TXT upload, AI evaluation, score and report
-- **AI Mock Interview**: Job category selection, microphone test, voice interview (Web Speech API)
+- **AI Mock Interview**: Job category selection, microphone test, live OpenAI Realtime voice interview
 - **Job Listings**: List, detail, apply (CV score check + AI interview)
 - **Employer Panel**: Create company, post/edit listings, view applications (`/employer`). Pricing at `/employer/pricing` (Stripe).
 - **Scout Score (OpenScout Pass)**: After an AI interview, get a shareable credential at `/pass/[slug]`. One credential, many companies.

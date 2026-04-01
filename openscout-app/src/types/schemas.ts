@@ -132,6 +132,29 @@ export type InterviewControl = z.infer<typeof interviewControlSchema>;
 /** Request body for POST /api/mock-interview */
 export type InterviewResponseBody = z.infer<typeof interviewResponseSchema>;
 
+export const mockInterviewRealtimeSessionSchema = z.object({
+  sessionId: z.string().trim().min(1).max(200),
+  sdp: z.string().max(200_000).refine((value) => value.trim().length > 0, {
+    message: "sdp is required",
+  }),
+  jobCategory: z.string().trim().min(1, "jobCategory is required").max(500),
+  userName: z.string().trim().max(200).optional(),
+  jobId: optionalTrimmedId,
+  interviewLanguage: z.enum(["en", "tr"]).optional(),
+});
+
+export type MockInterviewRealtimeSessionBody = z.infer<typeof mockInterviewRealtimeSessionSchema>;
+
+export const mockInterviewRealtimeClientSecretSchema = z.object({
+  sessionId: z.string().trim().min(1).max(200),
+  jobCategory: z.string().trim().min(1, "jobCategory is required").max(500),
+  userName: z.string().trim().max(200).optional(),
+  jobId: optionalTrimmedId,
+  interviewLanguage: z.enum(["en", "tr"]).optional(),
+});
+
+export type MockInterviewRealtimeClientSecretBody = z.infer<typeof mockInterviewRealtimeClientSecretSchema>;
+
 // --- Employer job listing (create / update payload) ---
 
 export const aiInterviewConfigSchema = z.object({

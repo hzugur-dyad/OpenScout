@@ -27,8 +27,8 @@ const CI_REQUIRED = [
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "NEXT_PUBLIC_APP_URL",
+  "OPENAI_API_KEY",
   "GROQ_API_KEY",
-  "GOOGLE_CLOUD_TTS_API_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_CANDIDATE_PLUS_PRICE_ID",
@@ -81,8 +81,8 @@ function looksLikeCiPlaceholder(name, value) {
     if (lower === "http://localhost:3000" || lower.startsWith("http://127.0.0.1")) return true;
   }
 
+  if (name === "OPENAI_API_KEY" && v === "ci-placeholder") return true;
   if (name === "GROQ_API_KEY" && v === "ci-placeholder") return true;
-  if (name === "GOOGLE_CLOUD_TTS_API_KEY" && v === "ci-placeholder") return true;
 
   if (name === "UPSTASH_REDIS_REST_URL" && lower.includes("ci-placeholder")) return true;
   if (name === "UPSTASH_REDIS_REST_TOKEN" && v === "ci-placeholder") return true;
