@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Microphone, MicrophoneSlash, PhoneDisconnect } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useTTS } from "@/hooks/useTTS";
+import { useTTS, type TtsPlaybackResult } from "@/hooks/useTTS";
 import { createClient } from "@/lib/supabase/client";
 import { Orb, type AgentState } from "@/components/ui/orb";
 import {
@@ -17,13 +17,28 @@ import {
 import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException, captureMessage } from "@/lib/monitoring";
-import { isInterviewContractLine } from "@/lib/mock-interview/flow-hints";
 import { mapMicrophoneError } from "@/lib/user-facing-errors";
 
 type InterviewControl = {
   questionId: string;
   attempt: number;
   isFollowup: boolean;
+};
+
+type RecognitionStopReason = "none" | "assistant" | "manual" | "teardown" | "silence-finalize";
+type InterviewTurnPhase =
+  | "idle"
+  | "waiting_for_answer_start"
+  | "user_speaking"
+  | "user_answer_complete"
+  | "nova_processing";
+type CurrentQuestionState = {
+  promptText: string;
+  questionId: string | null;
+  attempt: number;
+  hasRepeatedCurrentQuestion: boolean;
+  questionUnanswered: boolean;
+  answerStartedForCurrentQuestion: boolean;
 };
 
 export default function MockInterviewSessionPage() {
@@ -36,7 +51,7 @@ export default function MockInterviewSessionPage() {
   const cvScoreParam = searchParams.get("cvScore");
   const cvScoreForApplication = cvScoreParam !== null && cvScoreParam !== "" ? Number(cvScoreParam) : null;
   const locale: InterviewLocale = parseInterviewLocale(searchParams.get("lang"));
-  const ui = interviewUi[locale];
+  const ui = interviewUi.en;
   const copy = interviewCopy[locale];
 
   const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
@@ -46,6 +61,8 @@ export default function MockInterviewSessionPage() {
   const [transcript, setTranscript] = useState<Array<{ role: string; content: string }>>([]);
   const [aiMessage, setAiMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const [turnPhase, setTurnPhase] = useState<InterviewTurnPhase>("idle");
   const [userName, setUserName] = useState("Candidate");
 
   const recognitionRef = useRef<{ start: () => void; stop: () => void; abort: () => void } | null>(null);
@@ -53,25 +70,43 @@ export default function MockInterviewSessionPage() {
   const ttsStopRef = useRef<(() => void) | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const interviewStartTimeRef = useRef<number | null>(null);
+  const stepRef = useRef(step);
+  const turnPhaseRef = useRef(turnPhase);
   const micAnalyserRef = useRef<{ analyser: AnalyserNode; ctx: AudioContext } | null>(null);
   const micAnimationRef = useRef<number | null>(null);
-  const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const responseWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const answerStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userSilenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const controlStateRef = useRef<InterviewControl | null>(null);
+  const autoStartListeningRef = useRef(false);
+  const listeningResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const assistantPlaybackTokenRef = useRef(0);
   const sendInFlightRef = useRef(false);
   const lastSendAtRef = useRef(0);
   const lastUserMessageSentRef = useRef("");
   const retryAfterUntilRef = useRef(0);
-  /** First nudge while candidate is still composing (then hard timeout below) */
-  const RESPONSE_WARNING_MS = 18_000;
-  const RESPONSE_LIMIT_MS = 42_000;
+  const ANSWER_START_TIMEOUT_MS = 7_000;
+  const USER_SILENCE_TIMEOUT_MS = 4_000;
+  const PLAYBACK_TO_LISTEN_DELAY_MS = 120;
+  const AUTO_LISTEN_RETRY_MS = 160;
+  const AUTO_LISTEN_MAX_RETRIES = 4;
   const [providerError, setProviderError] = useState<string | null>(null);
   const reduceMotion = useReducedMotion();
   const endDialogContinueRef = useRef<HTMLButtonElement>(null);
+  const currentQuestionRef = useRef<CurrentQuestionState>({
+    promptText: "",
+    questionId: null,
+    attempt: 1,
+    hasRepeatedCurrentQuestion: false,
+    questionUnanswered: false,
+    answerStartedForCurrentQuestion: false,
+  });
+  const repeatCurrentQuestionRef = useRef<(() => void) | null>(null);
+  const advanceAfterNoResponseRef = useRef<(() => void) | null>(null);
 
   const tts = useTTS();
   ttsStopRef.current = tts.stop;
   micStreamRef.current = micStream;
+  const playTts = tts.play;
   const isAiSpeaking = tts.loading;
   const supabase = useMemo(() => createClient(), []);
   const getInterviewErrorMessage = useCallback(
@@ -87,16 +122,272 @@ export default function MockInterviewSessionPage() {
     return 0;
   }, []);
 
+  const clearListeningResumeTimer = useCallback(() => {
+    if (listeningResumeTimerRef.current) {
+      clearTimeout(listeningResumeTimerRef.current);
+      listeningResumeTimerRef.current = null;
+    }
+  }, []);
+
+  const clearAnswerStartTimer = useCallback(() => {
+    if (answerStartTimerRef.current) {
+      clearTimeout(answerStartTimerRef.current);
+      answerStartTimerRef.current = null;
+    }
+  }, []);
+
+  const clearUserSilenceTimer = useCallback(() => {
+    if (userSilenceTimerRef.current) {
+      clearTimeout(userSilenceTimerRef.current);
+      userSilenceTimerRef.current = null;
+    }
+  }, []);
+
+  const clearTurnTimers = useCallback(() => {
+    clearAnswerStartTimer();
+    clearUserSilenceTimer();
+  }, [clearAnswerStartTimer, clearUserSilenceTimer]);
+
+  const setTurnPhaseValue = useCallback((next: InterviewTurnPhase) => {
+    turnPhaseRef.current = next;
+    setTurnPhase(next);
+  }, []);
+
+  const resetCurrentQuestionTracking = useCallback(
+    (
+      promptText: string,
+      questionControl?: { questionId?: string; attempt?: number } | null
+    ) => {
+      currentQuestionRef.current = {
+        promptText: promptText.trim(),
+        questionId:
+          questionControl && typeof questionControl.questionId === "string"
+            ? questionControl.questionId
+            : null,
+        attempt: Math.max(1, Math.min(2, Number(questionControl?.attempt) || 1)),
+        hasRepeatedCurrentQuestion: false,
+        questionUnanswered: false,
+        answerStartedForCurrentQuestion: false,
+      };
+    },
+    []
+  );
+
+  const resetCurrentQuestionState = useCallback(() => {
+    resetCurrentQuestionTracking("", null);
+  }, [resetCurrentQuestionTracking]);
+
+  const setListeningState = useCallback(
+    (next: boolean) => {
+      if (!next) {
+        clearTurnTimers();
+      }
+      isListeningRef.current = next;
+      setIsListening(next);
+    },
+    [clearTurnTimers]
+  );
+
+  const stopListeningSession = useCallback(
+    (reason: RecognitionStopReason, options?: { resetListeningState?: boolean }) => {
+      if (options?.resetListeningState !== false) {
+        setListeningState(false);
+      } else {
+        clearTurnTimers();
+      }
+      recognitionStopReasonRef.current = reason;
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Ignore redundant stop requests from browser speech recognition.
+      }
+      return true;
+    },
+    [clearTurnTimers, setListeningState]
+  );
+
+  const finalizeUserTurn = useCallback(
+    (reason: "manual" | "silence-finalize") => {
+      if (!isListeningRef.current) return false;
+      if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return false;
+      setTurnPhaseValue("user_answer_complete");
+      stopListeningSession(reason, { resetListeningState: false });
+      return true;
+    },
+    [setTurnPhaseValue, stopListeningSession]
+  );
+
+  const armUserSilenceTimer = useCallback(
+    (sessionToken: number) => {
+      if (!isListeningRef.current) return;
+      if (sessionToken !== activeListeningSessionRef.current) return;
+      if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+      clearUserSilenceTimer();
+      userSilenceTimerRef.current = setTimeout(() => {
+        if (!isListeningRef.current) return;
+        if (sessionToken !== activeListeningSessionRef.current) return;
+        if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+        finalizeUserTurn("silence-finalize");
+      }, USER_SILENCE_TIMEOUT_MS);
+    },
+    [USER_SILENCE_TIMEOUT_MS, clearUserSilenceTimer, finalizeUserTurn]
+  );
+
+  const armAnswerStartTimer = useCallback(
+    (sessionToken: number) => {
+      clearAnswerStartTimer();
+      answerStartTimerRef.current = setTimeout(() => {
+        if (!isListeningRef.current) return;
+        if (sessionToken !== activeListeningSessionRef.current) return;
+        if (turnPhaseRef.current !== "waiting_for_answer_start") return;
+        if (currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+        if (!currentQuestionRef.current.hasRepeatedCurrentQuestion) {
+          repeatCurrentQuestionRef.current?.();
+          return;
+        }
+        advanceAfterNoResponseRef.current?.();
+      }, ANSWER_START_TIMEOUT_MS);
+    },
+    [ANSWER_START_TIMEOUT_MS, clearAnswerStartTimer]
+  );
+
+  useEffect(() => {
+    stepRef.current = step;
+    if (step !== "interview") {
+      assistantPlaybackTokenRef.current += 1;
+      activeListeningSessionRef.current += 1;
+      autoStartListeningRef.current = false;
+      recognitionStopReasonRef.current = "teardown";
+      clearTurnTimers();
+      clearListeningResumeTimer();
+      setListeningState(false);
+      setTurnPhaseValue("idle");
+      finalTranscriptRef.current = "";
+      setLiveTranscript("");
+      resetCurrentQuestionState();
+    }
+  }, [
+    clearListeningResumeTimer,
+    clearTurnTimers,
+    resetCurrentQuestionState,
+    setListeningState,
+    setTurnPhaseValue,
+    step,
+  ]);
+
+  const startListening = useCallback((options?: { preserveSession?: boolean }) => {
+    if (endedRef.current || stepRef.current !== "interview") return false;
+    if (!recognitionRef.current || isAiSpeaking) return false;
+    const preserveSession = Boolean(options?.preserveSession);
+    if (!preserveSession && isListeningRef.current) return false;
+
+    const sessionToken = preserveSession ? activeListeningSessionRef.current : activeListeningSessionRef.current + 1;
+    if (!preserveSession) {
+      activeListeningSessionRef.current = sessionToken;
+      finalTranscriptRef.current = "";
+      setLiveTranscript("");
+      currentQuestionRef.current.answerStartedForCurrentQuestion = false;
+      currentQuestionRef.current.questionUnanswered = false;
+      clearTurnTimers();
+      setListeningState(true);
+      setTurnPhaseValue("waiting_for_answer_start");
+    }
+
+    recognitionStopReasonRef.current = "none";
+    try {
+      recognitionRef.current.start();
+      autoStartListeningRef.current = false;
+      if (!preserveSession) {
+        armAnswerStartTimer(sessionToken);
+      }
+      return true;
+    } catch {
+      if (!preserveSession) {
+        setListeningState(false);
+        setTurnPhaseValue("idle");
+      }
+      return false;
+    }
+  }, [armAnswerStartTimer, clearTurnTimers, isAiSpeaking, setListeningState, setTurnPhaseValue]);
+
+  const scheduleListeningStart = useCallback(
+    (
+      playbackToken: number,
+      attempt = 0,
+      delayMs = PLAYBACK_TO_LISTEN_DELAY_MS,
+      preserveSession = false
+    ) => {
+      autoStartListeningRef.current = true;
+      clearListeningResumeTimer();
+      listeningResumeTimerRef.current = setTimeout(() => {
+        listeningResumeTimerRef.current = null;
+        if (endedRef.current || stepRef.current !== "interview") return;
+        if (playbackToken !== assistantPlaybackTokenRef.current) return;
+        if (isAiSpeaking) {
+          if (attempt < AUTO_LISTEN_MAX_RETRIES) {
+            scheduleListeningStart(playbackToken, attempt + 1, AUTO_LISTEN_RETRY_MS, preserveSession);
+          }
+          return;
+        }
+        if (startListening({ preserveSession })) return;
+        if (attempt < AUTO_LISTEN_MAX_RETRIES) {
+          scheduleListeningStart(playbackToken, attempt + 1, AUTO_LISTEN_RETRY_MS, preserveSession);
+        }
+      }, delayMs);
+    },
+    [
+      AUTO_LISTEN_MAX_RETRIES,
+      AUTO_LISTEN_RETRY_MS,
+      PLAYBACK_TO_LISTEN_DELAY_MS,
+      clearListeningResumeTimer,
+      isAiSpeaking,
+      startListening,
+    ]
+  );
+
+  const resumeListeningAfterPlayback = useCallback(
+    (playbackToken: number) => {
+      scheduleListeningStart(playbackToken);
+    },
+    [scheduleListeningStart]
+  );
+
+  const playAssistantTurn = useCallback(
+    async (text: string) => {
+      const playbackToken = assistantPlaybackTokenRef.current + 1;
+      assistantPlaybackTokenRef.current = playbackToken;
+      clearListeningResumeTimer();
+      autoStartListeningRef.current = false;
+      clearTurnTimers();
+      setTurnPhaseValue("nova_processing");
+      if (isListeningRef.current) {
+        stopListeningSession("assistant");
+      }
+      setLiveTranscript("");
+      const playbackResult: TtsPlaybackResult = await playTts(text, locale);
+      if (playbackToken !== assistantPlaybackTokenRef.current) return;
+      if (endedRef.current || stepRef.current !== "interview") return;
+      if (playbackResult === "interrupted") return;
+      resumeListeningAfterPlayback(playbackToken);
+    },
+    [
+      clearListeningResumeTimer,
+      clearTurnTimers,
+      locale,
+      playTts,
+      resumeListeningAfterPlayback,
+      setTurnPhaseValue,
+      stopListeningSession,
+    ]
+  );
+
   // Orb agentState: microphone → listening, waiting for AI → thinking, TTS → talking, default → null
   const agentState: AgentState = (() => {
     if (isListening) return "listening";
-    const waitingForAi =
-      step === "interview" &&
-      transcript.length > 0 &&
-      transcript[transcript.length - 1]?.role === "user";
-    const initializing = step === "interview" && transcript.length === 0 && aiMessage === copy.preparing;
-    if (waitingForAi || initializing) return "thinking";
     if (isAiSpeaking) return "talking";
+    if (step === "interview" && (turnPhase === "nova_processing" || turnPhase === "user_answer_complete")) {
+      return "thinking";
+    }
     return null;
   })();
 
@@ -146,7 +437,7 @@ export default function MockInterviewSessionPage() {
         micAnimationRef.current = requestAnimationFrame(updateLevel);
       })
       .catch((err: DOMException | Error) => {
-        setMicError(mapMicrophoneError(err, copy.micDenied));
+        setMicError(mapMicrophoneError(err, interviewCopy.en.micDenied));
         setMicStream(null);
         if (err instanceof DOMException && err.name === "NotAllowedError") {
           captureMessage("Microphone permission denied (mock interview)", {
@@ -177,7 +468,7 @@ export default function MockInterviewSessionPage() {
       setMicStream(null);
       setMicLevel(0);
     };
-  }, [step, sessionId, jobId, copy.micDenied]);
+  }, [step, sessionId, jobId]);
 
   const sendToAI = useCallback(
     async (userMessage: string) => {
@@ -185,7 +476,11 @@ export default function MockInterviewSessionPage() {
       if (!trimmedMessage) return;
 
       const now = Date.now();
-      if (now < retryAfterUntilRef.current) return;
+      if (now < retryAfterUntilRef.current) {
+        setProviderError(ui.interviewRateLimitError);
+        setTurnPhaseValue("idle");
+        return;
+      }
       if (sendInFlightRef.current) return;
       if (now - lastSendAtRef.current < 1200) return;
       if (lastUserMessageSentRef.current === trimmedMessage && now - lastSendAtRef.current < 5000) return;
@@ -193,19 +488,12 @@ export default function MockInterviewSessionPage() {
       sendInFlightRef.current = true;
       lastSendAtRef.current = now;
       lastUserMessageSentRef.current = trimmedMessage;
-
-      if (responseLimitTimerRef.current) {
-        clearTimeout(responseLimitTimerRef.current);
-        responseLimitTimerRef.current = null;
-      }
-      if (responseWarningTimerRef.current) {
-        clearTimeout(responseWarningTimerRef.current);
-        responseWarningTimerRef.current = null;
-      }
-
-      if (!isInterviewContractLine(trimmedMessage)) {
-        silenceStrikeRef.current = 0;
-      }
+      assistantPlaybackTokenRef.current += 1;
+      clearListeningResumeTimer();
+      autoStartListeningRef.current = false;
+      clearTurnTimers();
+      setTurnPhaseValue("nova_processing");
+      setLiveTranscript("");
 
       const newMessages = [
         ...transcript.map((t) => ({ role: t.role as "user" | "assistant", content: t.content })),
@@ -242,6 +530,7 @@ export default function MockInterviewSessionPage() {
             t.length > 0 && t[t.length - 1]?.role === "user" ? t.slice(0, -1) : t
           );
           setProviderError(ui.interviewProviderError);
+          setTurnPhaseValue("idle");
           return;
         }
         if (res.status === 429) {
@@ -263,33 +552,27 @@ export default function MockInterviewSessionPage() {
           setProviderError(errMsg);
           setTranscript((t) => [...t, { role: "assistant", content: errMsg }]);
           setAiMessage(errMsg);
+          setTurnPhaseValue("idle");
           return;
         }
         const visibleText = (data.content ?? "").trim();
         const interviewEnded = Boolean(data.interviewEnded);
 
-      if (interviewEnded) {
-        controlStateRef.current = null;
-        if (responseWarningTimerRef.current) {
-          clearTimeout(responseWarningTimerRef.current);
-          responseWarningTimerRef.current = null;
+        if (interviewEnded) {
+          controlStateRef.current = null;
+          resetCurrentQuestionState();
+        } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
+          controlStateRef.current = {
+            questionId: data.questionControl.questionId,
+            attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
+            isFollowup: Boolean(data.questionControl.isFollowup),
+          };
+        } else {
+          controlStateRef.current = null;
         }
-        if (responseLimitTimerRef.current) {
-          clearTimeout(responseLimitTimerRef.current);
-          responseLimitTimerRef.current = null;
-        }
-      } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
-        controlStateRef.current = {
-          questionId: data.questionControl.questionId,
-          attempt: Math.min(2, Math.max(1, Number(data.questionControl.attempt) || 1)),
-          isFollowup: Boolean(data.questionControl.isFollowup),
-        };
-      } else {
-        controlStateRef.current = null;
-      }
 
-      setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
-      setAiMessage(visibleText);
+        setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
+        setAiMessage(visibleText);
 
         if (interviewEnded) {
           setStep("processing");
@@ -342,17 +625,9 @@ export default function MockInterviewSessionPage() {
           return;
         }
 
-        responseWarningTimerRef.current = setTimeout(() => {
-          responseWarningTimerRef.current = null;
-          sendToAI(copy.responseDelayWarningCue);
-        }, RESPONSE_WARNING_MS);
+        resetCurrentQuestionTracking(visibleText, data.questionControl ?? controlStateRef.current);
 
-        responseLimitTimerRef.current = setTimeout(() => {
-          responseLimitTimerRef.current = null;
-          sendToAI(copy.noResponseCue);
-        }, RESPONSE_LIMIT_MS);
-
-        tts.play(visibleText, locale);
+        void playAssistantTurn(visibleText);
       } finally {
         sendInFlightRef.current = false;
       }
@@ -364,20 +639,62 @@ export default function MockInterviewSessionPage() {
       jobId,
       cvScoreForApplication,
       router,
-      tts.play,
+      playAssistantTurn,
       userName,
       locale,
-      copy.noResponseCue,
-      copy.responseDelayWarningCue,
+      clearTurnTimers,
+      clearListeningResumeTimer,
       getInterviewErrorMessage,
       parseRetryAfterMs,
+      resetCurrentQuestionState,
+      resetCurrentQuestionTracking,
+      setTurnPhaseValue,
     ]
   );
 
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const silenceStrikeRef = useRef(0);
+  const repeatCurrentQuestion = useCallback(() => {
+    const promptText = currentQuestionRef.current.promptText.trim();
+    if (!promptText) {
+      advanceAfterNoResponseRef.current?.();
+      return;
+    }
+    currentQuestionRef.current.hasRepeatedCurrentQuestion = true;
+    currentQuestionRef.current.questionUnanswered = false;
+    currentQuestionRef.current.answerStartedForCurrentQuestion = false;
+    finalTranscriptRef.current = "";
+    setLiveTranscript("");
+    setAiMessage(`${copy.noAnswerRetryIntro} ${promptText}`.trim());
+    void playAssistantTurn(`${copy.noAnswerRetryIntro} ${promptText}`.trim());
+  }, [copy.noAnswerRetryIntro, playAssistantTurn]);
+
+  const advanceAfterNoResponse = useCallback(() => {
+    if (currentQuestionRef.current.questionUnanswered) return;
+    currentQuestionRef.current.questionUnanswered = true;
+    currentQuestionRef.current.answerStartedForCurrentQuestion = false;
+    finalTranscriptRef.current = "";
+    setLiveTranscript("");
+    if (isListeningRef.current) {
+      stopListeningSession("assistant");
+    } else {
+      clearTurnTimers();
+    }
+    void sendToAI(copy.noResponseCue);
+  }, [clearTurnTimers, copy.noResponseCue, sendToAI, stopListeningSession]);
+
+  useEffect(() => {
+    repeatCurrentQuestionRef.current = repeatCurrentQuestion;
+    advanceAfterNoResponseRef.current = advanceAfterNoResponse;
+  }, [advanceAfterNoResponse, repeatCurrentQuestion]);
+
   const finalTranscriptRef = useRef("");
+  const recognitionStopReasonRef = useRef<RecognitionStopReason>("none");
+  const activeListeningSessionRef = useRef(0);
+  const isListeningRef = useRef(isListening);
   const endingRef = useRef(false);
+
+  useEffect(() => {
+    isListeningRef.current = isListening;
+  }, [isListening]);
 
   useEffect(() => {
     if (step !== "interview") return;
@@ -395,65 +712,101 @@ export default function MockInterviewSessionPage() {
     recognition.interimResults = true;
     recognition.lang = interviewLocaleConfig[locale].speechRecognitionLang;
 
-    const SILENCE_TIMEOUT_MS = 2500;
-
-    const resetSilenceTimer = () => {
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = setTimeout(() => {
-        // User stopped speaking for 2.5 seconds, finalize
-        recognition.stop();
-      }, SILENCE_TIMEOUT_MS);
-    };
-
     recognition.onresult = (event: unknown) => {
       const e = event as { results: { [index: number]: { [index: number]: { transcript: string }; isFinal: boolean }; length: number } };
       let full = "";
       for (let i = 0; i < e.results.length; i++) {
         full += e.results[i][0].transcript;
       }
-      finalTranscriptRef.current = full.trim();
-      resetSilenceTimer();
+      const nextTranscript = full.trim();
+      finalTranscriptRef.current = nextTranscript;
+      setLiveTranscript(nextTranscript);
+      if (nextTranscript) {
+        if (!currentQuestionRef.current.answerStartedForCurrentQuestion) {
+          currentQuestionRef.current.answerStartedForCurrentQuestion = true;
+          currentQuestionRef.current.questionUnanswered = false;
+          clearAnswerStartTimer();
+          setTurnPhaseValue("user_speaking");
+        }
+        armUserSilenceTimer(activeListeningSessionRef.current);
+      }
     };
 
     recognition.onerror = ((event?: unknown) => {
       if (endedRef.current) return;
       const err = (event ?? {}) as { error?: string };
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      if (err.error === "no-speech" || err.error === "audio-capture") {
-        if (silenceStrikeRef.current >= 1) {
-          silenceStrikeRef.current = 0;
-          sendToAI(copy.silenceEscalateCue);
-        } else {
-          silenceStrikeRef.current = 1;
-          sendToAI(copy.notHeardCue);
-        }
+      const stopReason = recognitionStopReasonRef.current;
+      if (stopReason === "assistant" || stopReason === "manual" || stopReason === "teardown") {
+        return;
       }
-      setIsListening(false);
+      if (!isListeningRef.current) return;
+      if (stopReason === "silence-finalize") {
+        return;
+      }
+
+      if (err.error === "no-speech" || err.error === "aborted" || err.error === "audio-capture") {
+        scheduleListeningStart(assistantPlaybackTokenRef.current, 0, AUTO_LISTEN_RETRY_MS, true);
+        return;
+      }
+
+      stopListeningSession("teardown");
     }) as (e: unknown) => void;
 
     recognition.onend = () => {
       if (endedRef.current) return;
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-      const text = finalTranscriptRef.current;
-      finalTranscriptRef.current = "";
-      if (text) {
-        sendToAI(text);
-      } else if (silenceStrikeRef.current >= 1) {
-        silenceStrikeRef.current = 0;
-        sendToAI(copy.silenceEscalateCue);
-      } else {
-        silenceStrikeRef.current = 1;
-        sendToAI(copy.notHeardCue);
+      const stopReason = recognitionStopReasonRef.current;
+      recognitionStopReasonRef.current = "none";
+      if (stopReason === "assistant" || stopReason === "teardown") {
+        finalTranscriptRef.current = "";
+        setLiveTranscript("");
+        return;
       }
-      setIsListening(false);
+      if (!isListeningRef.current) {
+        return;
+      }
+
+      if (stopReason !== "silence-finalize" && stopReason !== "manual") {
+        scheduleListeningStart(assistantPlaybackTokenRef.current, 0, AUTO_LISTEN_RETRY_MS, true);
+        return;
+      }
+
+      const text = finalTranscriptRef.current.trim();
+      finalTranscriptRef.current = "";
+      setLiveTranscript("");
+      setListeningState(false);
+
+      if (!text) {
+        currentQuestionRef.current.answerStartedForCurrentQuestion = false;
+        setTurnPhaseValue("waiting_for_answer_start");
+        scheduleListeningStart(assistantPlaybackTokenRef.current, 0, AUTO_LISTEN_RETRY_MS);
+        return;
+      }
+
+      void sendToAI(text);
     };
 
     recognitionRef.current = recognition;
+    if (autoStartListeningRef.current) {
+      startListening();
+    }
     return () => {
-      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      clearTurnTimers();
       recognition.abort();
     };
-  }, [step, sendToAI, locale, copy.notHeardCue, copy.silenceEscalateCue]);
+  }, [
+    armUserSilenceTimer,
+    AUTO_LISTEN_RETRY_MS,
+    clearAnswerStartTimer,
+    clearTurnTimers,
+    step,
+    sendToAI,
+    locale,
+    scheduleListeningStart,
+    setListeningState,
+    setTurnPhaseValue,
+    startListening,
+    stopListeningSession,
+  ]);
 
   const startInterview = useCallback(async () => {
     const now = Date.now();
@@ -472,7 +825,9 @@ export default function MockInterviewSessionPage() {
       ...(jobId ? { job_id: jobId } : {}),
     });
     setStep("interview");
-    setAiMessage(copy.preparing);
+    setTurnPhaseValue("nova_processing");
+    setAiMessage("");
+    resetCurrentQuestionState();
     try {
       const res = await fetch("/api/mock-interview", {
         method: "POST",
@@ -505,6 +860,7 @@ export default function MockInterviewSessionPage() {
         setProviderError(errMsg);
         setAiMessage(errMsg);
         setTranscript([{ role: "assistant", content: errMsg }]);
+        setTurnPhaseValue("idle");
         return;
       }
       const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
@@ -523,18 +879,9 @@ export default function MockInterviewSessionPage() {
       setProviderError(null);
       setAiMessage(content);
       setTranscript([{ role: "assistant", content }]);
+      resetCurrentQuestionTracking(content, data.questionControl ?? controlStateRef.current);
 
-      responseWarningTimerRef.current = setTimeout(() => {
-        responseWarningTimerRef.current = null;
-        sendToAI(copy.responseDelayWarningCue);
-      }, RESPONSE_WARNING_MS);
-
-      responseLimitTimerRef.current = setTimeout(() => {
-        responseLimitTimerRef.current = null;
-        sendToAI(copy.noResponseCue);
-      }, RESPONSE_LIMIT_MS);
-
-      tts.play(content, locale);
+      void playAssistantTurn(content);
     } finally {
       sendInFlightRef.current = false;
     }
@@ -542,27 +889,31 @@ export default function MockInterviewSessionPage() {
     jobCategory,
     jobId,
     sessionId,
-    tts.play,
+    playAssistantTurn,
     userName,
-    sendToAI,
     locale,
-    copy.preparing,
     copy.readyPhrase,
     copy.fallbackOpening,
-    copy.noResponseCue,
-    copy.responseDelayWarningCue,
     getInterviewErrorMessage,
     parseRetryAfterMs,
+    resetCurrentQuestionState,
+    resetCurrentQuestionTracking,
+    setTurnPhaseValue,
     ui.interviewRateLimitError,
   ]);
 
   const toggleListen = () => {
     if (!recognitionRef.current) return;
+    if (turnPhaseRef.current === "nova_processing" || turnPhaseRef.current === "user_answer_complete") return;
+    assistantPlaybackTokenRef.current += 1;
+    clearListeningResumeTimer();
+    autoStartListeningRef.current = false;
     if (isListening) {
-      recognitionRef.current.stop();
+      if (turnPhaseRef.current === "user_speaking") {
+        finalizeUserTurn("manual");
+      }
     } else {
-      recognitionRef.current.start();
-      setIsListening(true);
+      startListening();
     }
   };
 
@@ -583,14 +934,23 @@ export default function MockInterviewSessionPage() {
   }, [showEndConfirm]);
 
   const releaseMicrophoneResources = useCallback(() => {
-    recognitionRef.current?.stop();
+    assistantPlaybackTokenRef.current += 1;
+    clearListeningResumeTimer();
+    autoStartListeningRef.current = false;
+    recognitionStopReasonRef.current = "teardown";
+    clearTurnTimers();
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Ignore redundant stop requests during teardown.
+    }
     recognitionRef.current?.abort();
     recognitionRef.current = null;
-    setIsListening(false);
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
+    setListeningState(false);
+    setTurnPhaseValue("idle");
+    setLiveTranscript("");
+    finalTranscriptRef.current = "";
+    resetCurrentQuestionState();
     if (micAnimationRef.current) {
       cancelAnimationFrame(micAnimationRef.current);
       micAnimationRef.current = null;
@@ -603,7 +963,13 @@ export default function MockInterviewSessionPage() {
     micStreamRef.current = null;
     setMicStream(null);
     setMicLevel(0);
-  }, []);
+  }, [
+    clearListeningResumeTimer,
+    clearTurnTimers,
+    resetCurrentQuestionState,
+    setListeningState,
+    setTurnPhaseValue,
+  ]);
 
   const doEvaluateAndRedirect = useCallback(async () => {
     setStep("processing");
@@ -679,14 +1045,6 @@ export default function MockInterviewSessionPage() {
     endedRef.current = true;
     releaseMicrophoneResources();
     tts.stop();
-    if (responseLimitTimerRef.current) {
-      clearTimeout(responseLimitTimerRef.current);
-      responseLimitTimerRef.current = null;
-    }
-    if (responseWarningTimerRef.current) {
-      clearTimeout(responseWarningTimerRef.current);
-      responseWarningTimerRef.current = null;
-    }
     setShowEndConfirm(false);
 
     const farewellMessage = copy.farewell;
@@ -702,14 +1060,6 @@ export default function MockInterviewSessionPage() {
       endedRef.current = true;
       releaseMicrophoneResources();
       ttsStopRef.current?.();
-      if (responseLimitTimerRef.current) {
-        clearTimeout(responseLimitTimerRef.current);
-        responseLimitTimerRef.current = null;
-      }
-      if (responseWarningTimerRef.current) {
-        clearTimeout(responseWarningTimerRef.current);
-        responseWarningTimerRef.current = null;
-      }
     };
   }, [releaseMicrophoneResources]);
 
@@ -802,10 +1152,13 @@ export default function MockInterviewSessionPage() {
               (agentState === null || agentState === "thinking" || agentState === "talking")
                 ? Infinity
                 : 0,
-            ease: "easeInOut" as const,
-          };
+              ease: "easeInOut" as const,
+            };
 
-  const micAriaLabel = isAiSpeaking
+  const isNovaProcessing =
+    step === "interview" && (turnPhase === "nova_processing" || turnPhase === "user_answer_complete");
+  const isNovaBusy = isAiSpeaking || isNovaProcessing;
+  const micAriaLabel = isNovaBusy
     ? ui.statusWaitNova
     : isListening
       ? ui.micAriaStopListening
@@ -910,7 +1263,9 @@ export default function MockInterviewSessionPage() {
             className="w-full max-w-[560px] shrink-0 -mt-12 min-h-[88px]"
           >
             <p
-              className="rounded-2xl border border-black/10 bg-white/40 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/30 dark:text-zinc-100"
+              className={`nova-subtitle-frame rounded-2xl border border-black/10 bg-white/40 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/30 dark:text-zinc-100 ${
+                isNovaProcessing ? "nova-processing-frame" : ""
+              }`}
               style={{
                 backgroundImage:
                   "linear-gradient(135deg, rgba(255,255,255,0.58) 0%, rgba(255,255,255,0.34) 52%, rgba(255,255,255,0.22) 100%)",
@@ -918,7 +1273,7 @@ export default function MockInterviewSessionPage() {
               aria-live="polite"
               aria-atomic="true"
             >
-              {aiMessage}
+              {aiMessage || "\u00A0"}
             </p>
           </motion.div>
         </div>
@@ -946,7 +1301,7 @@ export default function MockInterviewSessionPage() {
             <button
               type="button"
               onClick={toggleListen}
-              disabled={isAiSpeaking || step === "goodbye"}
+              disabled={isNovaBusy || step === "goodbye"}
               aria-pressed={isListening}
               aria-label={micAriaLabel}
               className={`relative flex h-11 w-11 touch-manipulation items-center justify-center rounded-full transition-colors duration-200 motion-reduce:transition-none sm:h-12 sm:w-12 ${
@@ -963,10 +1318,20 @@ export default function MockInterviewSessionPage() {
               )}
             </button>
           </div>
+          <p
+            className={`mt-2 min-h-8 max-w-[220px] text-center text-[11px] leading-4 tracking-[0.01em] transition-opacity duration-200 ${
+              isListening && liveTranscript
+                ? "opacity-100 text-[#111111]/38 dark:text-zinc-400/60"
+                : "opacity-0"
+            }`}
+            aria-hidden={!isListening || !liveTranscript}
+          >
+            {isListening && liveTranscript ? liveTranscript : "\u00A0"}
+          </p>
           <p className="text-center text-sm font-normal leading-[1.5] text-[#111111]/55 dark:text-zinc-500">
             {step === "goodbye"
               ? ui.statusWrapping
-              : isAiSpeaking
+              : isNovaBusy
                 ? ui.statusWaitNova
                 : isListening
                   ? ui.statusListening

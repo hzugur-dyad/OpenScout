@@ -1,10 +1,14 @@
-import { ALL_INTERVIEW_CONTRACT_LINES } from "@/lib/mock-interview/interview-contract-messages";
+import {
+  ALL_INTERVIEW_CONTRACT_LINES,
+  INTERVIEW_CONTRACT_USER_LINES,
+} from "@/lib/mock-interview/interview-contract-messages";
 
 export type InterviewTranscriptQuality = {
   /** True when timeouts, silence cues, or extremely thin user turns dominate */
   isLowSignal: boolean;
   /** Share of user turns that are exactly a synthetic contract line */
   syntheticTurnRatio: number;
+  unansweredTurnCount: number;
   averageUserTurnChars: number;
   userTurnCount: number;
   /** When set, overall score should not exceed this after model evaluation */
@@ -25,6 +29,14 @@ function isSyntheticTurn(content: string): boolean {
   return ALL_INTERVIEW_CONTRACT_LINES.some((line) => t === line);
 }
 
+function isUnansweredTurn(content: string): boolean {
+  const t = content.trim();
+  return (
+    t === INTERVIEW_CONTRACT_USER_LINES.en.timeout ||
+    t === INTERVIEW_CONTRACT_USER_LINES.tr.timeout
+  );
+}
+
 /**
  * Heuristic transcript quality for post-interview scoring — avoids inflated scores
  * when the conversation is mostly silence markers or one-word answers.
@@ -36,6 +48,7 @@ export function assessInterviewTranscriptQuality(transcript: string): InterviewT
     return {
       isLowSignal: true,
       syntheticTurnRatio: 1,
+      unansweredTurnCount: 0,
       averageUserTurnChars: 0,
       userTurnCount: 0,
       scoreCap: 45,
@@ -44,11 +57,16 @@ export function assessInterviewTranscriptQuality(transcript: string): InterviewT
 
   let charSum = 0;
   let synthetic = 0;
+  let unanswered = 0;
   let shortSubstantive = 0;
   for (const u of userTurns) {
     charSum += u.length;
-    if (isSyntheticTurn(u)) synthetic++;
-    else if (u.length < 12) shortSubstantive++;
+    if (isSyntheticTurn(u)) {
+      synthetic++;
+      if (isUnansweredTurn(u)) unanswered++;
+    } else if (u.length < 12) {
+      shortSubstantive++;
+    }
   }
 
   const averageUserTurnChars = charSum / userTurnCount;
@@ -71,6 +89,7 @@ export function assessInterviewTranscriptQuality(transcript: string): InterviewT
   return {
     isLowSignal,
     syntheticTurnRatio,
+    unansweredTurnCount: unanswered,
     averageUserTurnChars,
     userTurnCount,
     scoreCap,

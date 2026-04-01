@@ -5,6 +5,8 @@ import type { InterviewLocale } from "@/lib/interview-locale";
 import { captureException, captureMessage } from "@/lib/monitoring";
 import { mapTtsUserError } from "@/lib/user-facing-errors";
 
+export type TtsPlaybackResult = "completed" | "interrupted" | "not_played";
+
 function formatTtsError(raw: string): string {
   try {
     const parsed = JSON.parse(raw) as { error?: string };
@@ -18,40 +20,43 @@ function formatTtsError(raw: string): string {
 export function useTTS() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
   const activeRequestIdRef = useRef(0);
   const lastCallAtRef = useRef(0);
   const lastUtteranceRef = useRef<string>("");
+  const activePlaybackRef = useRef<{
+    requestId: number;
+    resolve: (result: TtsPlaybackResult) => void;
+  } | null>(null);
 
-  const stop = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+  const interruptActivePlayback = useCallback((result: TtsPlaybackResult) => {
+    const activePlayback = activePlaybackRef.current;
+    activePlaybackRef.current = null;
+    if (activePlayback) {
+      activePlayback.resolve(result);
     }
     setLoading(false);
   }, []);
 
-  const play = useCallback(async (text: string, locale: InterviewLocale = "en") => {
+  const stop = useCallback(() => {
+    activeRequestIdRef.current += 1;
+    interruptActivePlayback("interrupted");
+  }, [interruptActivePlayback]);
+
+  const play = useCallback(async (text: string, locale: InterviewLocale = "en"): Promise<TtsPlaybackResult> => {
     const trimmedText = text.trim();
-    if (!trimmedText) return;
+    if (!trimmedText) return "not_played";
 
     const utteranceKey = `${locale}:${trimmedText}`;
     const now = Date.now();
     // Prevent accidental rapid-fire requests (common during transition states).
-    if (now - lastCallAtRef.current < 900) return;
+    if (now - lastCallAtRef.current < 900) return "not_played";
     // Prevent replaying the exact same text immediately.
-    if (utteranceKey === lastUtteranceRef.current && now - lastCallAtRef.current < 3500) return;
+    if (utteranceKey === lastUtteranceRef.current && now - lastCallAtRef.current < 3500) return "not_played";
     lastCallAtRef.current = now;
     lastUtteranceRef.current = utteranceKey;
-    const requestId = ++activeRequestIdRef.current;
-
-    stop();
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
+    interruptActivePlayback("interrupted");
 
     setLoading(true);
     setError(null);
@@ -64,7 +69,7 @@ export function useTTS() {
       });
 
       // A newer request took over while this one was in flight.
-      if (requestId !== activeRequestIdRef.current) return;
+      if (requestId !== activeRequestIdRef.current) return "interrupted";
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -77,27 +82,63 @@ export function useTTS() {
             aiInterview: { stage: "generation", reason: "tts_error" },
             level: "warning",
           });
-          return;
+          return "not_played";
         }
         throw new Error(friendly);
       }
 
       const blob = await res.blob();
-      if (requestId !== activeRequestIdRef.current) return;
+      if (requestId !== activeRequestIdRef.current) return "interrupted";
       const url = URL.createObjectURL(blob);
-      objectUrlRef.current = url;
-
       const audio = new Audio(url);
-      audioRef.current = audio;
 
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          resolve();
+      return await new Promise<TtsPlaybackResult>((resolve, reject) => {
+        let settled = false;
+        let cleanedUp = false;
+
+        const cleanup = () => {
+          if (cleanedUp) return;
+          cleanedUp = true;
+          audio.removeEventListener("ended", handleEnded);
+          audio.removeEventListener("error", handleError);
+          audio.pause();
+          audio.currentTime = 0;
+          audio.src = "";
+          URL.revokeObjectURL(url);
+          if (activePlaybackRef.current?.requestId === requestId) {
+            activePlaybackRef.current = null;
+          }
+          if (requestId === activeRequestIdRef.current) {
+            setLoading(false);
+          }
         };
-        audio.onerror = () => {
-          reject(new Error("Audio playback failed"));
+
+        const settle = (result: TtsPlaybackResult) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          resolve(result);
         };
-        audio.play().catch(reject);
+
+        const fail = (reason: unknown) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(reason instanceof Error ? reason : new Error("Audio playback failed"));
+        };
+
+        const handleEnded = () => {
+          settle("completed");
+        };
+
+        const handleError = () => {
+          fail(new Error("Audio playback failed"));
+        };
+
+        activePlaybackRef.current = { requestId, resolve: settle };
+        audio.addEventListener("ended", handleEnded, { once: true });
+        audio.addEventListener("error", handleError, { once: true });
+        audio.play().catch(fail);
       });
     } catch (e) {
       setError(mapTtsUserError(e instanceof Error ? e.message : ""));
@@ -105,12 +146,16 @@ export function useTTS() {
         route: "client/useTTS",
         aiInterview: { stage: "generation", reason: "tts_error" },
       });
-    } finally {
       if (requestId === activeRequestIdRef.current) {
-        stop();
+        setLoading(false);
+      }
+      return "not_played";
+    } finally {
+      if (requestId === activeRequestIdRef.current && activePlaybackRef.current == null) {
+        setLoading(false);
       }
     }
-  }, [stop]);
+  }, [interruptActivePlayback]);
 
   return { play, stop, loading, error };
 }

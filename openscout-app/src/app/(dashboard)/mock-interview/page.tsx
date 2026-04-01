@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, Suspense, useMemo, useSyncExternalStore } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
@@ -66,9 +66,18 @@ function jobTitleFromJobQuery(searchParams: ReturnType<typeof useSearchParams>):
 function MockInterviewContent() {
   const reduceMotion = useReducedMotion();
   const searchParams = useSearchParams();
+  const hasMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const [jobCategory, setJobCategory] = useState<string>(() => jobTitleFromJobQuery(searchParams) ?? JOB_TITLES[0]);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
-  const ui = interviewUi[interviewLang];
+  const ui = interviewUi.en;
+
+  const entrancePose = hasMounted ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 };
+  const getEntranceTransition = (delay = 0) =>
+    reduceMotion ? { duration: 0 } : { duration: 0.6, ease: EASE_MINIMAL, delay };
 
   useEffect(() => {
     setInterviewLang(getDefaultInterviewLocale());
@@ -145,11 +154,8 @@ function MockInterviewContent() {
       />
       <main id="mock-interview-main" className="relative z-10 mx-auto max-w-5xl px-4 py-2 md:py-3">
         <motion.div
-          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            reduceMotion ? { duration: 0 } : { duration: 0.6, ease: EASE_MINIMAL }
-          }
+          animate={entrancePose}
+          transition={getEntranceTransition()}
           className="flex flex-col items-center"
         >
           <header className="w-full text-center">
@@ -178,13 +184,8 @@ function MockInterviewContent() {
             ) : showProfileGate && readiness ? (
               <motion.div
                 className={cn(gateWarningSurface, "p-4 md:p-5")}
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
-                }
+                animate={entrancePose}
+                transition={getEntranceTransition(0.06)}
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -204,7 +205,7 @@ function MockInterviewContent() {
                       <p className="mt-1 text-sm leading-snug text-[#111111]/85 dark:text-zinc-200">
                         {ui.missingPrefix}{" "}
                         {readiness.missingProfileFieldKeys
-                          .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
+                          .map((k) => PROFILE_FIELD_LABEL.en[k] ?? k)
                           .join(", ")}
                         .
                       </p>
@@ -223,13 +224,8 @@ function MockInterviewContent() {
             ) : showNoCvGate && readiness ? (
               <motion.div
                 className={cn(gateWarningSurface, "p-4 md:p-5")}
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
-                }
+                animate={entrancePose}
+                transition={getEntranceTransition(0.06)}
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -259,13 +255,8 @@ function MockInterviewContent() {
             ) : showAnalysisNudge && readiness ? (
               <motion.div
                 className={cn(nudgeSurface, "p-4 md:p-5")}
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { duration: 0.6, ease: EASE_MINIMAL, delay: 0.06 }
-                }
+                animate={entrancePose}
+                transition={getEntranceTransition(0.06)}
               >
                 <div className="flex flex-col items-center gap-2.5 sm:flex-row sm:items-start sm:gap-3">
                   <div
@@ -328,8 +319,8 @@ function MockInterviewContent() {
                       value={jobCategory}
                       onChange={setJobCategory}
                       searchable
-                      searchPlaceholder={interviewLang === "tr" ? "Kategori ara..." : "Search category..."}
-                      noResultsText={interviewLang === "tr" ? "Sonuc bulunamadi" : "No results found"}
+                      searchPlaceholder="Search category..."
+                      noResultsText="No results found"
                       aria-label={ui.jobCategory}
                     />
                   </div>

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getGroq } from "@/lib/groq";
 import { createSupabaseForMockInterviewResultRoute } from "@/test/supabase-mocks";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
+import { INTERVIEW_CONTRACT_USER_LINES } from "@/lib/mock-interview/interview-contract-messages";
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
@@ -36,13 +37,43 @@ beforeEach(() => {
             {
               message: {
                 content: JSON.stringify({
-                  score: 82,
+                  final_score: 82,
+                  categories: {
+                    technical_knowledge: {
+                      score: 9,
+                      reason: "Strong command of backend mechanisms and failure handling.",
+                    },
+                    problem_solving: {
+                      score: 8,
+                      reason: "Structured debugging and prioritization under pressure.",
+                    },
+                    system_design: {
+                      score: 8,
+                      reason: "Good architecture choices with some operational detail.",
+                    },
+                    communication: {
+                      score: 8,
+                      reason: "Answers were clear, organized, and concise.",
+                    },
+                    tradeoffs: {
+                      score: 8,
+                      reason: "Trade-offs were explicit instead of generic.",
+                    },
+                    practical_experience: {
+                      score: 7,
+                      reason: "Examples sounded grounded in production work.",
+                    },
+                  },
+                  answer_breakdown: [
+                    {
+                      question_id: "q1",
+                      result: "strong",
+                      reason: "Strong cache and invalidation reasoning.",
+                    },
+                  ],
                   strengths: ["Structured answers"],
-                  improvements: ["More examples"],
-                  technical_score: 80,
-                  communication_score: 78,
-                  problem_solving_score: 76,
-                  justification: "Solid performance.",
+                  weaknesses: ["Use more concrete rollout examples"],
+                  hire_recommendation: "yes",
                 }),
               },
             },
@@ -151,7 +182,11 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.score).toBe(82);
+    expect(json.final_score).toBe(82);
     expect(json.strengths).toContain("Structured answers");
+    expect(json.hire_recommendation).toBe("yes");
+    expect(json.categories.technical_knowledge.score).toBe(9);
+    expect(json.answer_breakdown[0].result).toBe("strong");
 
     expect(insertMock).toHaveBeenCalledTimes(1);
     const row = insertMock.mock.calls[0][0] as Record<string, unknown>;
@@ -161,11 +196,23 @@ describe("POST /api/mock-interview/result", () => {
     expect(row.prompt_version).toBe(MOCK_INTERVIEW_PIPELINE_VERSION);
     expect(row.score).toBe(82);
     expect(row.report).toMatchObject({
+      final_score: 82,
+      categories: {
+        technical_knowledge: { score: 9 },
+        problem_solving: { score: 8 },
+      },
+      answer_breakdown: [
+        {
+          question_id: "q1",
+          result: "strong",
+        },
+      ],
       strengths: ["Structured answers"],
-      improvements: ["More examples"],
-      technical_score: 80,
-      communication_score: 78,
-      problem_solving_score: 76,
+      improvements: ["Use more concrete rollout examples"],
+      technical_score: 90,
+      communication_score: 80,
+      problem_solving_score: 80,
+      hire_recommendation: "yes",
       evaluation_meta: {
         used_fallback: false,
         transcript_signal: "normal",
@@ -197,5 +244,104 @@ describe("POST /api/mock-interview/result", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
+  });
+
+  it("passes unanswered/no_response markers through to the evaluation payload", async () => {
+    const createMock = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              final_score: 56,
+              categories: {
+                technical_knowledge: {
+                  score: 6,
+                  reason: "Some correct debugging ideas, but depth weakened after the missed answer.",
+                },
+                problem_solving: {
+                  score: 6,
+                  reason: "The response structure was workable, but signal dropped on unanswered questions.",
+                },
+                system_design: {
+                  score: 5,
+                  reason: "Limited architecture evidence in this transcript.",
+                },
+                communication: {
+                  score: 6,
+                  reason: "Most answers were understandable and direct.",
+                },
+                tradeoffs: {
+                  score: 5,
+                  reason: "Trade-off depth was inconsistent.",
+                },
+                practical_experience: {
+                  score: 4,
+                  reason: "Limited hands-on signal because one topic was not answered.",
+                },
+              },
+              answer_breakdown: [
+                {
+                  question_id: "q1",
+                  result: "medium",
+                  reason: "Reasonable outage process, but not deeply detailed.",
+                },
+                {
+                  question_id: "q2",
+                  result: "no_response",
+                  reason: "The candidate did not answer the cache stampede question.",
+                },
+              ],
+              strengths: ["Concise"],
+              weaknesses: ["Answer more questions directly"],
+              hire_recommendation: "no",
+            }),
+          },
+        },
+      ],
+    });
+    vi.mocked(getGroq).mockReturnValue({
+      chat: {
+        completions: {
+          create: createMock,
+        },
+      },
+    } as never);
+
+    const transcript = [
+      "assistant: Tell me about a production outage you handled.",
+      "user: I would start by checking logs and rollout history before isolating the failing dependency.",
+      "assistant: How would you debug a cache stampede?",
+      `user: ${INTERVIEW_CONTRACT_USER_LINES.en.timeout}`,
+      "assistant: What metrics would you watch during recovery?",
+      "user: Error rate, p95 latency, saturation, and downstream dependency health so we can tell whether the rollback actually stabilizes the system.",
+      "assistant: How do you document the follow-up?",
+      "user: I would write the timeline, root cause, customer impact, mitigations, and preventive actions with owners and due dates.",
+    ].join("\n");
+
+    const { client } = createSupabaseForMockInterviewResultRoute({
+      userId: "user-1",
+      profileGuard: "complete",
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const req = new NextRequest("http://localhost/api/mock-interview/result", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: testSessionId,
+        transcript,
+        jobCategory: "Engineering",
+        interviewLanguage: "en",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+
+    expect(createMock).toHaveBeenCalledTimes(1);
+    const groqPayload = createMock.mock.calls[0]?.[0] as {
+      temperature?: number;
+      messages?: Array<{ role: string; content: string }>;
+    };
+    expect(groqPayload.temperature).toBe(0);
+    expect(groqPayload.messages?.[1]?.content).toContain("unanswered/no_response");
   });
 });

@@ -5,13 +5,13 @@ import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 type Variant = "unauthenticated" | "not_found" | "eval_error";
 
 export function MockInterviewResultFallback({
-  locale,
+  locale: _locale,
   variant,
 }: {
   locale: InterviewLocale;
   variant: Variant;
 }) {
-  const ui = interviewUi[locale];
+  const ui = interviewUi.en;
 
   if (variant === "eval_error") {
     return (

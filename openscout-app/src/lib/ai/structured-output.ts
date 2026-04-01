@@ -260,20 +260,219 @@ export function parseAutoCvAnalysisModelOutput(
   };
 }
 
-/** Interview evaluation: supports new shape (score, justification, strengths, weaknesses) and legacy fields. */
+const INTERVIEW_CATEGORY_KEYS = [
+  "technical_knowledge",
+  "problem_solving",
+  "system_design",
+  "communication",
+  "tradeoffs",
+  "practical_experience",
+] as const;
+
+const INTERVIEW_ANSWER_RESULTS = ["strong", "medium", "weak", "no_response"] as const;
+const INTERVIEW_HIRE_RECOMMENDATIONS = ["strong_yes", "yes", "no", "strong_no"] as const;
+
+export type InterviewEvaluationCategoryKey = (typeof INTERVIEW_CATEGORY_KEYS)[number];
+export type InterviewEvaluationAnswerResult = (typeof INTERVIEW_ANSWER_RESULTS)[number];
+export type InterviewHireRecommendation = (typeof INTERVIEW_HIRE_RECOMMENDATIONS)[number];
+
+export type InterviewEvaluationCategory = {
+  score: number;
+  reason: string;
+};
+
+export type InterviewEvaluationAnswerBreakdown = {
+  question_id: string;
+  result: InterviewEvaluationAnswerResult;
+  reason: string;
+};
+
+const INTERVIEW_CATEGORY_WEIGHTS: Record<InterviewEvaluationCategoryKey, number> = {
+  technical_knowledge: 0.25,
+  problem_solving: 0.25,
+  system_design: 0.2,
+  communication: 0.15,
+  tradeoffs: 0.1,
+  practical_experience: 0.05,
+};
+
+function clampTenPointScore(n: number): number {
+  return Math.round(Math.min(10, Math.max(0, Number(n))));
+}
+
+function coerceTenPointScore(v: unknown): number | undefined {
+  if (typeof v === "number" && !Number.isNaN(v)) return clampTenPointScore(v);
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = Number(v);
+    if (!Number.isNaN(n)) return clampTenPointScore(n);
+  }
+  return undefined;
+}
+
+function normalizeStringArray(values: Array<string | number> | undefined, limit: number): string[] {
+  return Array.isArray(values)
+    ? values
+        .map((value) => String(value).trim())
+        .filter(Boolean)
+        .slice(0, limit)
+    : [];
+}
+
+function firstSentence(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  const [sentence] = trimmed.split(/(?<=[.!?])\s+/);
+  return sentence?.trim() || trimmed;
+}
+
+function defaultInterviewCategories(reason = ""): Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory> {
+  return Object.fromEntries(
+    INTERVIEW_CATEGORY_KEYS.map((key) => [key, { score: 5, reason }])
+  ) as Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>;
+}
+
+function computeInterviewFinalScore(
+  categories: Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>
+): number {
+  let sum = 0;
+  for (const key of INTERVIEW_CATEGORY_KEYS) {
+    sum += categories[key].score * INTERVIEW_CATEGORY_WEIGHTS[key];
+  }
+  return clampScore(sum * 10);
+}
+
+const interviewCategoryLooseSchema = z
+  .object({
+    score: z.union([z.number(), z.string()]).optional(),
+    reason: z.string().optional(),
+  })
+  .passthrough();
+
+const interviewAnswerBreakdownLooseSchema = z
+  .object({
+    question_id: z.union([z.string(), z.number()]).optional(),
+    result: z.string().optional(),
+    reason: z.string().optional(),
+  })
+  .passthrough();
+
+/** Interview evaluation: supports the recruiter-grade JSON shape and legacy fields. */
 const interviewEvalLooseSchema = z
   .object({
+    final_score: z.union([z.number(), z.string()]).optional(),
+    categories: z.record(z.string(), interviewCategoryLooseSchema).optional(),
+    answer_breakdown: z.array(interviewAnswerBreakdownLooseSchema).optional(),
+    strengths: z.array(z.union([z.string(), z.number()])).optional(),
+    weaknesses: z.array(z.union([z.string(), z.number()])).optional(),
+    hire_recommendation: z.string().optional(),
     score: z.union([z.number(), z.string()]).optional(),
     overall_score: z.union([z.number(), z.string()]).optional(),
     justification: z.string().optional(),
-    strengths: z.array(z.union([z.string(), z.number()])).optional(),
-    weaknesses: z.array(z.union([z.string(), z.number()])).optional(),
     improvements: z.array(z.union([z.string(), z.number()])).optional(),
     technical_score: z.union([z.number(), z.string()]).optional(),
     communication_score: z.union([z.number(), z.string()]).optional(),
     problem_solving_score: z.union([z.number(), z.string()]).optional(),
   })
   .passthrough();
+
+function normalizeInterviewCategories(
+  rawCategories: Record<string, z.infer<typeof interviewCategoryLooseSchema>> | undefined
+): {
+  categories: Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>;
+  hasStructuredCategories: boolean;
+} {
+  const categories = defaultInterviewCategories();
+  let hasStructuredCategories = false;
+
+  for (const key of INTERVIEW_CATEGORY_KEYS) {
+    const raw = rawCategories?.[key];
+    if (!raw) continue;
+    const score = coerceTenPointScore(raw.score);
+    const reason = typeof raw.reason === "string" ? raw.reason.trim() : "";
+    if (score !== undefined || reason) hasStructuredCategories = true;
+    categories[key] = { score: score ?? 5, reason };
+  }
+
+  return { categories, hasStructuredCategories };
+}
+
+function buildLegacyInterviewCategories(args: {
+  overallScore: number;
+  technicalScore: number | null;
+  communicationScore: number | null;
+  problemSolvingScore: number | null;
+}): Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory> {
+  const baseline = clampTenPointScore(args.overallScore / 10);
+  const technical = args.technicalScore !== null ? clampTenPointScore(args.technicalScore / 10) : baseline;
+  const communication =
+    args.communicationScore !== null ? clampTenPointScore(args.communicationScore / 10) : baseline;
+  const problemSolving =
+    args.problemSolvingScore !== null ? clampTenPointScore(args.problemSolvingScore / 10) : baseline;
+  const systemDesign = clampTenPointScore((technical + problemSolving) / 2);
+  const tradeoffs = problemSolving;
+
+  return {
+    technical_knowledge: { score: technical, reason: "" },
+    problem_solving: { score: problemSolving, reason: "" },
+    system_design: { score: systemDesign, reason: "" },
+    communication: { score: communication, reason: "" },
+    tradeoffs: { score: tradeoffs, reason: "" },
+    practical_experience: { score: baseline, reason: "" },
+  };
+}
+
+function coerceInterviewAnswerResult(value: unknown): InterviewEvaluationAnswerResult | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().toLowerCase();
+  return INTERVIEW_ANSWER_RESULTS.find((item) => item === normalized);
+}
+
+function coerceInterviewHireRecommendation(value: unknown): InterviewHireRecommendation | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim().toLowerCase();
+  return INTERVIEW_HIRE_RECOMMENDATIONS.find((item) => item === normalized) ?? null;
+}
+
+function deriveInterviewHighlights(
+  categories: Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>,
+  direction: "high" | "low"
+): string[] {
+  const ordered = [...INTERVIEW_CATEGORY_KEYS]
+    .map((key) => ({ key, ...categories[key] }))
+    .sort((a, b) => (direction === "high" ? b.score - a.score : a.score - b.score));
+  const filtered = ordered.filter((entry) => (direction === "high" ? entry.score >= 6 : entry.score <= 6));
+  const source = filtered.length > 0 ? filtered : ordered;
+
+  return source
+    .map((entry) => firstSentence(entry.reason))
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function buildInterviewJustification(args: {
+  explicitJustification: string;
+  categories: Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>;
+  strengths: string[];
+  improvements: string[];
+}): string {
+  if (args.explicitJustification) return args.explicitJustification;
+
+  const ordered = [...INTERVIEW_CATEGORY_KEYS]
+    .map((key) => ({ key, ...args.categories[key] }))
+    .sort((a, b) => b.score - a.score);
+  const strongest = ordered[0];
+  const weakest = ordered[ordered.length - 1];
+  const parts: string[] = [];
+
+  if (strongest?.reason) parts.push(strongest.reason.trim());
+  if (weakest?.reason && weakest.key !== strongest?.key) parts.push(weakest.reason.trim());
+  if (parts.length === 0) {
+    if (args.strengths[0]) parts.push(args.strengths[0]);
+    if (args.improvements[0]) parts.push(args.improvements[0]);
+  }
+
+  return parts.join(" ").trim();
+}
 
 export type NormalizedInterviewEvaluation = {
   overallScore: number;
@@ -283,6 +482,9 @@ export type NormalizedInterviewEvaluation = {
   technicalScore: number | null;
   communicationScore: number | null;
   problemSolvingScore: number | null;
+  categories: Record<InterviewEvaluationCategoryKey, InterviewEvaluationCategory>;
+  answerBreakdown: InterviewEvaluationAnswerBreakdown[];
+  hireRecommendation: InterviewHireRecommendation | null;
   usedFallback: boolean;
 };
 
@@ -303,37 +505,90 @@ export function parseInterviewEvaluationModelOutput(rawModelText: string): Norma
   }
 
   const d = parsed.data;
-  const overallScore =
-    coerceScore(d.score) ??
-    coerceScore(d.overall_score) ??
-    50;
+  const legacyOverallScore = coerceScore(d.final_score) ?? coerceScore(d.score) ?? coerceScore(d.overall_score) ?? 50;
+  const legacyTechnicalScore = coerceScore(d.technical_score) ?? null;
+  const legacyCommunicationScore = coerceScore(d.communication_score) ?? null;
+  const legacyProblemSolvingScore = coerceScore(d.problem_solving_score) ?? null;
 
-  const justification = typeof d.justification === "string" ? d.justification.trim() : "";
+  const normalizedCategories = normalizeInterviewCategories(d.categories);
+  const categories = normalizedCategories.hasStructuredCategories
+    ? normalizedCategories.categories
+    : buildLegacyInterviewCategories({
+        overallScore: legacyOverallScore,
+        technicalScore: legacyTechnicalScore,
+        communicationScore: legacyCommunicationScore,
+        problemSolvingScore: legacyProblemSolvingScore,
+      });
 
-  const strengths = Array.isArray(d.strengths)
-    ? d.strengths.map((s) => String(s)).filter(Boolean).slice(0, 8)
+  const strengthsFromOutput = normalizeStringArray(d.strengths, 8);
+  const weaknessesFromOutput = normalizeStringArray(d.weaknesses, 8);
+  const improvementsFromOutput = normalizeStringArray(d.improvements, 8);
+  const strengths =
+    strengthsFromOutput.length > 0
+      ? strengthsFromOutput
+      : normalizedCategories.hasStructuredCategories
+        ? deriveInterviewHighlights(categories, "high")
+        : [];
+  const improvementsBase = weaknessesFromOutput.length > 0 ? weaknessesFromOutput : improvementsFromOutput;
+  const improvements =
+    improvementsBase.length > 0
+      ? improvementsBase
+      : normalizedCategories.hasStructuredCategories
+        ? deriveInterviewHighlights(categories, "low")
+        : [];
+
+  const overallScore = normalizedCategories.hasStructuredCategories
+    ? computeInterviewFinalScore(categories)
+    : legacyOverallScore;
+
+  const justification = buildInterviewJustification({
+    explicitJustification: typeof d.justification === "string" ? d.justification.trim() : "",
+    categories,
+    strengths,
+    improvements,
+  });
+
+  const answerBreakdown = Array.isArray(d.answer_breakdown)
+    ? d.answer_breakdown
+        .map((item, index) => {
+          const questionId =
+            typeof item.question_id === "string" && item.question_id.trim()
+              ? item.question_id.trim()
+              : typeof item.question_id === "number" && Number.isFinite(item.question_id)
+                ? `q${Math.max(1, Math.round(item.question_id))}`
+                : `q${index + 1}`;
+          const result = coerceInterviewAnswerResult(item.result);
+          if (!result) return null;
+          return {
+            question_id: questionId,
+            result,
+            reason: typeof item.reason === "string" ? item.reason.trim() : "",
+          };
+        })
+        .filter((item): item is InterviewEvaluationAnswerBreakdown => item !== null)
+        .slice(0, 40)
     : [];
-
-  const fromWeaknesses = Array.isArray(d.weaknesses)
-    ? d.weaknesses.map((s) => String(s)).filter(Boolean)
-    : [];
-  const fromImprovements = Array.isArray(d.improvements)
-    ? d.improvements.map((s) => String(s)).filter(Boolean)
-    : [];
-  const improvements = fromWeaknesses.length > 0 ? fromWeaknesses : fromImprovements;
-
-  const technicalScore = coerceScore(d.technical_score) ?? null;
-  const communicationScore = coerceScore(d.communication_score) ?? null;
-  const problemSolvingScore = coerceScore(d.problem_solving_score) ?? null;
 
   return {
     overallScore,
     justification,
     strengths,
-    improvements: improvements.slice(0, 8),
-    technicalScore,
-    communicationScore,
-    problemSolvingScore,
+    improvements,
+    technicalScore:
+      normalizedCategories.hasStructuredCategories
+        ? categories.technical_knowledge.score * 10
+        : legacyTechnicalScore,
+    communicationScore:
+      normalizedCategories.hasStructuredCategories
+        ? categories.communication.score * 10
+        : legacyCommunicationScore,
+    problemSolvingScore:
+      normalizedCategories.hasStructuredCategories
+        ? categories.problem_solving.score * 10
+        : legacyProblemSolvingScore,
+    categories,
+    answerBreakdown,
+    hireRecommendation: coerceInterviewHireRecommendation(d.hire_recommendation),
     usedFallback: false,
   };
 }
@@ -351,6 +606,11 @@ function interviewEvalFallback(fromError: boolean): NormalizedInterviewEvaluatio
     technicalScore: null,
     communicationScore: null,
     problemSolvingScore: null,
+    categories: defaultInterviewCategories(
+      fromError ? "Automated evaluation could not be parsed; a neutral fallback was applied." : ""
+    ),
+    answerBreakdown: [],
+    hireRecommendation: null,
     usedFallback: fromError,
   };
 }

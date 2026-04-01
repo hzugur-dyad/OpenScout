@@ -16,6 +16,10 @@ import {
   buildInterviewerSystemPrompt,
 } from "@/lib/mock-interview-prompt";
 import { buildMockInterviewServerFlowHint, classifyContractStimulus } from "@/lib/mock-interview/flow-hints";
+import {
+  buildBilingualTechnicalLanguagePrompt,
+  enrichInterviewMessagesForModel,
+} from "@/lib/mock-interview/technical-language";
 import { parseJsonBody } from "@/lib/api-validation";
 import { interviewResponseSchema } from "@/types/schemas";
 import {
@@ -276,14 +280,18 @@ export async function POST(request: NextRequest) {
     });
 
     const controlHint = buildControlContextHint(locale, clientPrev);
-    const systemPrompt = buildInterviewerSystemPrompt(locale, {
-      jobCategory,
-      displayName,
-      userName: userName && typeof userName === "string" ? userName : "",
-      customQuestionsBlock,
-      serverFlowHint,
-      controlHint,
-    });
+    const systemPrompt = [
+      buildInterviewerSystemPrompt(locale, {
+        jobCategory,
+        displayName,
+        userName: userName && typeof userName === "string" ? userName : "",
+        customQuestionsBlock,
+        serverFlowHint,
+        controlHint,
+      }),
+      buildBilingualTechnicalLanguagePrompt(locale),
+    ].join("\n\n");
+    const modelMessages = enrichInterviewMessagesForModel(messages);
 
     const groq = getGroq();
 
@@ -297,7 +305,7 @@ export async function POST(request: NextRequest) {
           : groqAttempt === 1
             ? systemPrompt + buildInvalidJsonRetrySuffix(locale)
             : systemPrompt + buildJsonRepairAttemptSuffix(locale);
-      const chatMessages = [{ role: "system" as const, content: systemContent }, ...messages];
+      const chatMessages = [{ role: "system" as const, content: systemContent }, ...modelMessages];
 
       let completion;
       try {

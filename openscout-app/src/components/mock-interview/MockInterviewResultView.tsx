@@ -67,7 +67,7 @@ export function MockInterviewResultView({
   improvements,
   category,
   cvScore,
-  locale: localeProp,
+  locale: _localeProp,
   justification,
   technicalScore,
   communicationScore,
@@ -76,8 +76,7 @@ export function MockInterviewResultView({
   applicationSubmitted = false,
   firstName,
 }: Props) {
-  const locale: InterviewLocale = localeProp ?? "en";
-  const ui = interviewUi[locale];
+  const ui = interviewUi.en;
   const [passUrl, setPassUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);

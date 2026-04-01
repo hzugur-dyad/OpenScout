@@ -17,7 +17,10 @@ import {
   rateLimitForKind,
   tooManyRequestsResponse,
 } from "@/lib/rate-limit";
-import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
+import {
+  buildRecruiterGradeInterviewEvaluationSystemPrompt,
+  GROQ_JSON_OBJECT_RESPONSE_FORMAT,
+} from "@/lib/ai/prompts";
 import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 import { assessInterviewTranscriptQuality } from "@/lib/mock-interview/transcript-quality";
@@ -152,24 +155,30 @@ export async function POST(request: NextRequest) {
       rubricBlock = buildEmployerEvalRubricBlock(jobRow as { ai_interview_config?: unknown } | null);
     }
 
-    const evalSystem = buildInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
+    const evalSystem = buildRecruiterGradeInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
 
     const transcriptQuality = assessInterviewTranscriptQuality(transcriptStr);
     const lowSignalEvalNote =
       locale === "tr"
         ? `\n\n[DEĞERLENDİRME_NOTU: Transkriptte çok sayıda sessizlik/zaman aşımı satırı veya aşırı kısa aday yanıtları olabilir. Genel puanı yapay olarak yükseltme; güçlü teknik kanıt yoksa 55 üstüne çıkma. Gerekçede sınırlı sinyali açıkça belirt.]`
-        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Do not inflate the overall score; avoid scores above ~55 unless there is strong technical evidence. Explicitly note limited signal in the justification.]`;
+        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Do not inflate the overall score; avoid scores above ~55 unless there is strong technical evidence. Explicitly reflect the limited signal in category reasons and weaknesses.]`;
 
+    const unansweredEvalNote =
+      transcriptQuality.unansweredTurnCount > 0
+        ? locale === "tr"
+          ? `\n\n[DEGERLENDIRME_NOTU: Transkriptte ${transcriptQuality.unansweredTurnCount} soru unanswered/no_response olarak isaretli. Bunlari kacirilmis soru olarak degerlendir ve genel puani buna gore dusur.]`
+          : `\n\n[EVALUATION_NOTE: The transcript marks ${transcriptQuality.unansweredTurnCount} question(s) as unanswered/no_response. Treat those as missed answers and lower the overall assessment accordingly.]`
+        : "";
     const evaluationTranscriptPayload = transcriptQuality.isLowSignal
-      ? `${transcriptStr}${lowSignalEvalNote}`
-      : transcriptStr;
+      ? `${transcriptStr}${lowSignalEvalNote}${unansweredEvalNote}`
+      : `${transcriptStr}${unansweredEvalNote}`;
 
     const groq = getGroq();
     let completion;
     try {
       completion = await groq.chat.completions.create({
         model: GROQ_MOCK_INTERVIEW_MODEL,
-        temperature: 0.2,
+        temperature: 0,
         response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
         messages: [
           {
@@ -229,35 +238,31 @@ export async function POST(request: NextRequest) {
     const technicalScore = normalized.technicalScore;
     const communicationScore = normalized.communicationScore;
     const problemSolvingScore = normalized.problemSolvingScore;
+    const categories = normalized.categories;
+    const answerBreakdown = normalized.answerBreakdown;
+    const hireRecommendation = normalized.hireRecommendation;
     const strengths = normalized.strengths;
     const improvements = normalized.improvements;
     const justification = normalized.justification;
 
-    const report: {
-      strengths: string[];
-      improvements: string[];
-      justification?: string;
-      technical_score?: number;
-      communication_score?: number;
-      problem_solving_score?: number;
-      evaluation_meta: {
-        used_fallback: boolean;
-        transcript_signal: "low" | "normal";
-        transcript_score_cap?: number;
-        source: string;
-        pipeline_version: string;
-      };
-    } = {
+    const report: Record<string, unknown> = {
+      final_score: overallScore,
+      categories,
+      answer_breakdown: answerBreakdown,
       strengths,
       improvements,
       evaluation_meta: {
         used_fallback: normalized.usedFallback,
         transcript_signal: transcriptQuality.isLowSignal ? "low" : "normal",
         ...(transcriptQuality.scoreCap != null ? { transcript_score_cap: transcriptQuality.scoreCap } : {}),
+        ...(transcriptQuality.unansweredTurnCount > 0
+          ? { unanswered_turn_count: transcriptQuality.unansweredTurnCount }
+          : {}),
         source: "post_interview_evaluation",
         pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
       },
     };
+    if (hireRecommendation) report.hire_recommendation = hireRecommendation;
     if (justification) report.justification = justification;
     if (technicalScore !== null) report.technical_score = technicalScore;
     if (communicationScore !== null) report.communication_score = communicationScore;
@@ -313,10 +318,14 @@ export async function POST(request: NextRequest) {
     const responsePayload = {
       interview_id: sessionIdRaw,
       score: overallScore,
+      final_score: overallScore,
       overall_score: overallScore,
+      categories,
+      answer_breakdown: answerBreakdown,
       strengths,
       improvements,
       evaluation_used_fallback: normalized.usedFallback,
+      ...(hireRecommendation && { hire_recommendation: hireRecommendation }),
       ...(justification && { justification }),
       ...(technicalScore !== null && { technical_score: technicalScore }),
       ...(communicationScore !== null && { communication_score: communicationScore }),

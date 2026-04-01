@@ -30,6 +30,7 @@ export const interviewCopy = {
     preparing: "Nova is preparing your interview...",
     readyPhrase: "Hello, I'm ready for the interview.",
     noResponseCue: INTERVIEW_CONTRACT_USER_LINES.en.timeout,
+    noAnswerRetryIntro: "I couldn't hear your response. Let me repeat the question.",
     responseDelayWarningCue: INTERVIEW_CONTRACT_USER_LINES.en.timeoutWarning,
     notHeardCue: INTERVIEW_CONTRACT_USER_LINES.en.silenceOrUnrecognized,
     silenceEscalateCue: INTERVIEW_CONTRACT_USER_LINES.en.silenceEscalate,
@@ -42,6 +43,7 @@ export const interviewCopy = {
     preparing: "Nova mülakatınızı hazırlıyor...",
     readyPhrase: "Merhaba, mülakata hazırım.",
     noResponseCue: INTERVIEW_CONTRACT_USER_LINES.tr.timeout,
+    noAnswerRetryIntro: "Yanitinizi duyamadim. Soruyu tekrar edeyim.",
     responseDelayWarningCue: INTERVIEW_CONTRACT_USER_LINES.tr.timeoutWarning,
     notHeardCue: INTERVIEW_CONTRACT_USER_LINES.tr.silenceOrUnrecognized,
     silenceEscalateCue: INTERVIEW_CONTRACT_USER_LINES.tr.silenceEscalate,
@@ -54,7 +56,7 @@ export const interviewCopy = {
 
 export const interviewUi = {
   en: {
-    mockInterviewTitle: "Mock interview",
+    mockInterviewTitle: "Mock Interview",
     mockInterviewSubtitle: "Pick a job category and practice with Nova.",
     jobCategory: "Job Category",
     whatToExpect: "What to Expect",
@@ -68,8 +70,8 @@ export const interviewUi = {
     interviewTipsBullets: [
       "Keep answers structured: context -> action -> result.",
       "You can think briefly before answering, but avoid long pauses in the middle of a sentence.",
-      "If you stay silent for about 18 seconds, Nova sends a nudge; around 42 seconds triggers a timeout prompt.",
-      "While speaking, long pauses (~2.5s) can make Nova think your sentence is finished.",
+      "After Nova finishes a question, you have 7 seconds to start speaking. If you do not start, Nova repeats the same question once.",
+      "After you start speaking, 4 seconds of silence or a mic tap ends your turn and sends it to Nova.",
       "Do not interrupt repeatedly; wait for Nova to finish speaking.",
       "Be concise, honest, and role-focused with concrete examples.",
     ],

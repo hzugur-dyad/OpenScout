@@ -6,26 +6,28 @@ import type { InterviewLocale } from "@/lib/interview-locale";
 
 export const INTERVIEW_CONTRACT_USER_LINES = {
   en: {
-    /** Sent when the response timer fires without a user answer */
-    timeout: "[Candidate did not respond within the time limit.]",
+    /** Sent after one repeat when the candidate still never starts answering */
+    timeout:
+      "[Candidate gave no response after one repeat. Mark this question as unanswered/no_response and move to the next question.]",
     /** Sent when STT ends with no text or no-speech / audio errors */
     silenceOrUnrecognized:
       "[User was silent or speech was not recognized. Ask them to repeat briefly.]",
-    /** First-phase delay: still waiting, nudge without burning a topic attempt */
+    /** Legacy delay-warning contract line kept for compatibility with existing prompts */
     timeoutWarning:
-      "[Candidate is taking longer than usual to respond. Briefly check in, restate the current question in one short sentence, and keep the same topic — do not advance yet.]",
+      "[Candidate is taking longer than usual to respond. Briefly check in, restate the current question in one short sentence, and keep the same topic - do not advance yet.]",
     /** After repeated silence cues: must advance topic */
     silenceEscalate:
       "[User remained silent again after a repeat prompt. Do not re-ask the same wording. Acknowledge briefly and move to the next topic with a new question_id and attempt=1.]",
   },
   tr: {
-    timeout: "[Aday belirlenen süre içinde yanıt vermedi.]",
+    timeout:
+      "[Aday ayni soru bir kez tekrar edildikten sonra da yanit vermedi. Bu soruyu unanswered/no_response olarak isaretle ve sonraki soruya gec.]",
     silenceOrUnrecognized:
-      "[Kullanıcı sessiz kaldı veya konuşma algılanamadı. Kısaca tekrar etmesini iste.]",
+      "[Kullanici sessiz kaldi veya konusma algilanamadi. Kisaca tekrar etmesini iste.]",
     timeoutWarning:
-      "[Aday olağandan uzun süredir yanıt vermiyor. Kısa bir kontrol cümlesi kur, mevcut soruyu tek cümlede yeniden ifade et ve aynı konuda kal — henüz ilerleme.]",
+      "[Aday olandan uzun suredir yanit vermiyor. Kisa bir kontrol cumlesi kur, mevcut soruyu tek cumlede yeniden ifade et ve ayni konuda kal - henuz ilerleme.]",
     silenceEscalate:
-      "[Kullanıcı tekrar istemine rağmen yine sessiz kaldı. Aynı ifadeyle sorma. Kısaca onayla ve yeni question_id ile attempt=1 ve yeni konuya geç.]",
+      "[Kullanici tekrar istemine ragmen yine sessiz kaldi. Ayni ifadeyle sorma. Kisaca onayla ve yeni question_id ile attempt=1 ve yeni konuya gec.]",
   },
 } as const;
 
