@@ -18,6 +18,7 @@ import { InterviewResultCard } from "@/components/share/SocialCards";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import type { ScoutCredentialCreateBody, ScoutCredentialResponse } from "@/lib/types";
 import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+import { localizeInterviewVerdict } from "@/lib/interview/scoring";
 import { useCountUp } from "@/hooks/useCountUp";
 
 type Props = {
@@ -28,6 +29,8 @@ type Props = {
   category: string;
   cvScore: number | null;
   locale?: InterviewLocale;
+  verdict?: "strong hire" | "hire" | "no hire" | null;
+  summary?: string | null;
   justification?: string | null;
   technicalScore?: number | null;
   communicationScore?: number | null;
@@ -68,6 +71,8 @@ export function MockInterviewResultView({
   category,
   cvScore,
   locale: localeProp,
+  verdict,
+  summary,
   justification,
   technicalScore,
   communicationScore,
@@ -82,6 +87,13 @@ export function MockInterviewResultView({
   const [shareCopied, setShareCopied] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const displayOverall = useCountUp(tooShort ? 0 : score, 1600, !tooShort);
+  const displayVerdict = verdict ? localizeInterviewVerdict(verdict, locale) : null;
+  const feedbackSummary =
+    typeof summary === "string" && summary.trim().length > 0
+      ? summary.trim()
+      : typeof justification === "string" && justification.trim().length > 0
+        ? justification.trim()
+        : null;
 
   const hasDimensions =
     technicalScore != null || communicationScore != null || problemSolvingScore != null;
@@ -121,6 +133,12 @@ export function MockInterviewResultView({
     score >= 70 ? "#22c55e" : score >= 50 ? "var(--primary)" : "#ef4444";
   const interviewEvaluationLine =
     score >= 80 ? "Strong interview signal" : score >= 60 ? "Solid readiness signal" : "Room to improve";
+  const verdictToneClass =
+    verdict === "strong hire"
+      ? "border-green-200 bg-green-50 text-green-800 dark:border-green-900/60 dark:bg-green-950/30 dark:text-green-200"
+      : verdict === "hire"
+        ? "border-[var(--primary)]/25 bg-[var(--primary-lighter)]/40 text-[var(--primary-dark)] dark:border-primary/30 dark:bg-primary-muted/20 dark:text-zinc-100"
+        : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -159,6 +177,15 @@ export function MockInterviewResultView({
                   {ui.overallScore}: {displayOverall}/100
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-zinc-400">{ui.performanceSubtitle}</p>
+                {displayVerdict && (
+                  <div className="mt-3">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${verdictToneClass}`}
+                    >
+                      {displayVerdict}
+                    </span>
+                  </div>
+                )}
 
                 {hasDimensions && (
                   <div className="mt-5 space-y-4 border-t border-zinc-100 pt-5 dark:border-zinc-800">
@@ -206,7 +233,7 @@ export function MockInterviewResultView({
             </SocialCardSharePanel>
           </div>
 
-          {justification?.trim() && (
+          {feedbackSummary && (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -229,7 +256,7 @@ export function MockInterviewResultView({
                   <h3 className="font-semibold text-gray-900 dark:text-zinc-100">{ui.aiFeedbackTitle}</h3>
                   <p className="mt-0.5 text-xs text-gray-500 dark:text-zinc-400">{ui.aiFeedbackSubtitle}</p>
                   <p className="mt-3 text-sm leading-relaxed text-gray-800 dark:text-zinc-200">
-                    {justification.trim()}
+                    {feedbackSummary}
                   </p>
                 </div>
               </div>

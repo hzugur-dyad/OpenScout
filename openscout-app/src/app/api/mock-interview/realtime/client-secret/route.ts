@@ -22,8 +22,17 @@ import { getMockInterviewRealtimeSessionConfig } from "@/lib/mock-interview/real
 import { MOCK_INTERVIEW_LIVE_PROVIDER } from "@/lib/mock-interview/versioning";
 
 const OPENAI_REALTIME_CLIENT_SECRET_URL = "https://api.openai.com/v1/realtime/client_secrets";
-const OPENAI_REALTIME_CLIENT_SECRET_TIMEOUT_MS = 10_000;
 const VOICE_SERVICE_UNAVAILABLE_MESSAGE = "Voice service temporarily unavailable. Please try again.";
+
+function resolveRealtimeClientSecretTimeoutMs(raw?: string | null): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return 30_000;
+  return Math.min(60_000, Math.max(10_000, Math.round(parsed)));
+}
+
+const OPENAI_REALTIME_CLIENT_SECRET_TIMEOUT_MS = resolveRealtimeClientSecretTimeoutMs(
+  process.env.OPENAI_REALTIME_CLIENT_SECRET_TIMEOUT_MS
+);
 
 type ClientSecretResponseBody = {
   expires_at?: number;

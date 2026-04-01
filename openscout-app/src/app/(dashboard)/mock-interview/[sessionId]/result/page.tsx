@@ -74,6 +74,8 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   const report = (interview.report as {
     strengths?: string[];
     improvements?: string[];
+    verdict?: "strong hire" | "hire" | "no hire";
+    summary?: string;
     justification?: string;
     technical_score?: number;
     communication_score?: number;
@@ -82,6 +84,11 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   const score = typeof interview.score === "number" ? interview.score : 0;
   const strengths = Array.isArray(report.strengths) ? report.strengths : [];
   const improvements = Array.isArray(report.improvements) ? report.improvements : [];
+  const verdict =
+    report.verdict === "strong hire" || report.verdict === "hire" || report.verdict === "no hire"
+      ? report.verdict
+      : null;
+  const summary = typeof report.summary === "string" ? report.summary : null;
   const justification = typeof report.justification === "string" ? report.justification : null;
   const technicalScore = typeof report.technical_score === "number" ? report.technical_score : null;
   const communicationScore = typeof report.communication_score === "number" ? report.communication_score : null;
@@ -128,6 +135,8 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
       category={category}
       cvScore={cvScore}
       locale={resultLocale}
+      verdict={verdict}
+      summary={summary}
       justification={justification}
       technicalScore={technicalScore}
       communicationScore={communicationScore}

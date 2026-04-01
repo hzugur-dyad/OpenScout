@@ -155,6 +155,44 @@ export const mockInterviewRealtimeClientSecretSchema = z.object({
 
 export type MockInterviewRealtimeClientSecretBody = z.infer<typeof mockInterviewRealtimeClientSecretSchema>;
 
+export const realtimeTranscriptEntrySchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().max(100_000),
+});
+
+export const realtimeInterviewControlStateSchema = z.object({
+  questionId: z.string().trim().min(1).max(200),
+  attempt: z.number().int().min(1).max(2),
+  isFollowup: z.boolean(),
+});
+
+export const realtimeInterviewQuestionHistoryEntrySchema = z.object({
+  questionId: z.string().trim().min(1).max(200),
+  prompt: z.string().trim().min(1).max(10_000),
+  source: z.enum(["custom", "generated"]),
+  difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+});
+
+export const mockInterviewRealtimeTurnSchema = z.object({
+  sessionId: z.string().trim().min(1).max(200),
+  jobCategory: z.string().trim().min(1, "jobCategory is required").max(500),
+  userName: z.string().trim().max(200).optional(),
+  jobId: optionalTrimmedId,
+  interviewLanguage: z.enum(["en", "tr"]).optional(),
+  transcript: z.array(realtimeTranscriptEntrySchema).max(200),
+  currentControl: realtimeInterviewControlStateSchema.optional(),
+  questionHistory: z.array(realtimeInterviewQuestionHistoryEntrySchema).max(50).optional(),
+  lastUserMessage: z.string().max(100_000).optional(),
+  turnKind: z
+    .enum(["opening", "voice_turn", "timeout", "timeout_warning", "silence", "silence_escalate"])
+    .optional(),
+});
+
+export type RealtimeTranscriptEntry = z.infer<typeof realtimeTranscriptEntrySchema>;
+export type RealtimeInterviewControlState = z.infer<typeof realtimeInterviewControlStateSchema>;
+export type RealtimeInterviewQuestionHistoryEntry = z.infer<typeof realtimeInterviewQuestionHistoryEntrySchema>;
+export type MockInterviewRealtimeTurnBody = z.infer<typeof mockInterviewRealtimeTurnSchema>;
+
 // --- Employer job listing (create / update payload) ---
 
 export const aiInterviewConfigSchema = z.object({

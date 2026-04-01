@@ -1,47 +1,81 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getGroq } from "@/lib/groq";
-import { createClient } from "@/lib/supabase/server";
-import { logError, logInfo, logWarn } from "@/lib/logger";
-import { canUseFeature, logUsage, getUserPlan } from "@/lib/usage";
-import { checkProfileAndCv } from "@/lib/profile-guard";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
-import { captureServer } from "@/lib/analytics-server";
-import { ANALYTICS_EVENTS } from "@/lib/analytics";
-import {
-  REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS,
-  tryCompleteReferralRewardForUser,
-} from "@/lib/referral-rewards";
+import { logError, logInfo, logWarn } from "@/lib/logger";
+import { captureException } from "@/lib/monitoring";
+import { checkProfileAndCv } from "@/lib/profile-guard";
 import {
   getRateLimitIdentifier,
   isRateLimitBypassed,
   rateLimitForKind,
   tooManyRequestsResponse,
 } from "@/lib/rate-limit";
-import { buildInterviewEvaluationSystemPrompt, GROQ_JSON_OBJECT_RESPONSE_FORMAT } from "@/lib/ai/prompts";
-import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
-import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
+import {
+  REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS,
+  tryCompleteReferralRewardForUser,
+} from "@/lib/referral-rewards";
+import { createClient } from "@/lib/supabase/server";
+import { captureServer } from "@/lib/analytics-server";
+import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { assessInterviewTranscriptQuality } from "@/lib/mock-interview/transcript-quality";
-import { captureException, captureMessage } from "@/lib/monitoring";
+import {
+  GROQ_MOCK_INTERVIEW_SCORING_MODEL,
+  MOCK_INTERVIEW_PIPELINE_VERSION,
+} from "@/lib/mock-interview/versioning";
+import { canUseFeature, getUserPlan, logUsage } from "@/lib/usage";
+import { generateInterviewScorecard } from "@/services/ai";
+import type { InterviewJobContext, InterviewTranscriptEntry } from "@/services/interview";
 
 const SESSION_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-function buildEmployerEvalRubricBlock(jobRow: { ai_interview_config?: unknown } | null): string {
-  const config = jobRow?.ai_interview_config as { custom_questions?: unknown } | undefined;
-  const qs = Array.isArray(config?.custom_questions)
-    ? config.custom_questions.filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+function parseTranscriptEntries(transcript: string): InterviewTranscriptEntry[] {
+  return transcript
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const match = line.match(/^(assistant|user):\s*(.*)$/i);
+      if (!match) {
+        return { role: "assistant" as const, content: line };
+      }
+      return {
+        role: match[1].toLowerCase() === "user" ? ("user" as const) : ("assistant" as const),
+        content: match[2] ?? "",
+      };
+    });
+}
+
+function normalizeJobContext(
+  jobCategory: string,
+  row: {
+    title?: string | null;
+    description?: string | null;
+    requirements?: string | null;
+    ai_interview_config?: unknown;
+  } | null
+): InterviewJobContext {
+  const config = (row?.ai_interview_config as { custom_questions?: unknown } | null) ?? null;
+  const customQuestions = Array.isArray(config?.custom_questions)
+    ? config.custom_questions.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0)
     : [];
-  if (qs.length === 0) return "";
-  return qs.map((q, i) => `${i + 1}. ${q.trim()}`).join("\n");
+
+  return {
+    role: row?.title?.trim() || jobCategory,
+    description: row?.description?.trim() || "",
+    requirements: row?.requirements?.trim() || "",
+    customQuestions,
+  };
 }
 
 export async function POST(request: NextRequest) {
   logInfo("mock-interview result request received");
+
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -142,45 +176,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let rubricBlock = "";
+    let jobContext: InterviewJobContext = {
+      role: jobCategory,
+      description: "",
+      requirements: "",
+      customQuestions: [],
+    };
+
     if (jobId) {
       const { data: jobRow } = await supabase
         .from("job_listings")
-        .select("ai_interview_config")
+        .select("title, description, requirements, ai_interview_config")
         .eq("id", jobId)
         .maybeSingle();
-      rubricBlock = buildEmployerEvalRubricBlock(jobRow as { ai_interview_config?: unknown } | null);
+
+      jobContext = normalizeJobContext(jobCategory, jobRow as {
+        title?: string | null;
+        description?: string | null;
+        requirements?: string | null;
+        ai_interview_config?: unknown;
+      } | null);
     }
 
-    const evalSystem = buildInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
-
     const transcriptQuality = assessInterviewTranscriptQuality(transcriptStr);
-    const lowSignalEvalNote =
-      locale === "tr"
-        ? `\n\n[DEĞERLENDİRME_NOTU: Transkriptte çok sayıda sessizlik/zaman aşımı satırı veya aşırı kısa aday yanıtları olabilir. Genel puanı yapay olarak yükseltme; güçlü teknik kanıt yoksa 55 üstüne çıkma. Gerekçede sınırlı sinyali açıkça belirt.]`
-        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Do not inflate the overall score; avoid scores above ~55 unless there is strong technical evidence. Explicitly note limited signal in the justification.]`;
+    const transcriptEntries = parseTranscriptEntries(transcriptStr);
 
-    const evaluationTranscriptPayload = transcriptQuality.isLowSignal
-      ? `${transcriptStr}${lowSignalEvalNote}`
-      : transcriptStr;
-
-    const groq = getGroq();
-    let completion;
+    let scorecard;
     try {
-      completion = await groq.chat.completions.create({
-        model: GROQ_MOCK_INTERVIEW_MODEL,
-        temperature: 0.2,
-        response_format: GROQ_JSON_OBJECT_RESPONSE_FORMAT,
-        messages: [
-          {
-            role: "system",
-            content: evalSystem,
-          },
-          {
-            role: "user",
-            content: evaluationTranscriptPayload,
-          },
-        ],
+      scorecard = await generateInterviewScorecard({
+        locale,
+        transcript: transcriptEntries,
+        jobContext,
       });
     } catch (groqError) {
       logError("mock-interview result Groq request failed", groqError);
@@ -200,42 +226,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const text = completion.choices[0]?.message?.content ?? "";
-    if (!text.trim()) {
-      logWarn("mock-interview result Groq returned empty content — using fallback evaluation");
-      captureMessage("Mock interview result: empty model output, fallback evaluation", {
-        route: "/api/mock-interview/result",
-        user_id: user.id,
-        ...(jobId ? { job_id: jobId } : {}),
-        aiInterview: { stage: "evaluation", reason: "empty_model" },
-      });
-    }
-
-    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "");
-    if (normalized.usedFallback) {
-      logWarn("mock-interview result: parser used fallback scores", { jobCategory });
-      captureMessage("Mock interview result: fallback scoring used", {
-        route: "/api/mock-interview/result",
-        user_id: user.id,
-        ...(jobId ? { job_id: jobId } : {}),
-        aiInterview: { stage: "evaluation", reason: "fallback_scoring_used" },
-      });
-    }
-
-    let overallScore = normalized.overallScore;
+    let overallScore = scorecard.score;
     if (transcriptQuality.scoreCap != null && overallScore > transcriptQuality.scoreCap) {
       overallScore = transcriptQuality.scoreCap;
     }
-    const technicalScore = normalized.technicalScore;
-    const communicationScore = normalized.communicationScore;
-    const problemSolvingScore = normalized.problemSolvingScore;
-    const strengths = normalized.strengths;
-    const improvements = normalized.improvements;
-    const justification = normalized.justification;
 
     const report: {
       strengths: string[];
       improvements: string[];
+      weaknesses: string[];
+      verdict: string;
+      summary?: string;
       justification?: string;
       technical_score?: number;
       communication_score?: number;
@@ -248,20 +249,29 @@ export async function POST(request: NextRequest) {
         pipeline_version: string;
       };
     } = {
-      strengths,
-      improvements,
+      strengths: scorecard.strengths,
+      improvements: scorecard.weaknesses,
+      weaknesses: scorecard.weaknesses,
+      verdict: scorecard.verdict,
       evaluation_meta: {
-        used_fallback: normalized.usedFallback,
+        used_fallback: scorecard.usedFallback,
         transcript_signal: transcriptQuality.isLowSignal ? "low" : "normal",
         ...(transcriptQuality.scoreCap != null ? { transcript_score_cap: transcriptQuality.scoreCap } : {}),
         source: "post_interview_evaluation",
         pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
       },
     };
-    if (justification) report.justification = justification;
-    if (technicalScore !== null) report.technical_score = technicalScore;
-    if (communicationScore !== null) report.communication_score = communicationScore;
-    if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
+
+    if (scorecard.summary) {
+      report.summary = scorecard.summary;
+      report.justification = scorecard.summary;
+    }
+
+    report.technical_score = scorecard.technical;
+    report.communication_score = scorecard.communication;
+    if (scorecard.problemSolving !== null) {
+      report.problem_solving_score = scorecard.problemSolving;
+    }
 
     const upsertRow: Record<string, unknown> = {
       id: sessionIdRaw,
@@ -271,14 +281,13 @@ export async function POST(request: NextRequest) {
       report,
       transcript: transcriptStr,
       interview_language: locale,
-      model_version: GROQ_MOCK_INTERVIEW_MODEL,
+      model_version: GROQ_MOCK_INTERVIEW_SCORING_MODEL,
       prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
     };
     if (jobId) upsertRow.job_id = jobId;
     if (durationMs !== null) upsertRow.duration_ms = durationMs;
 
     const { error: upsertError } = await supabase.from("mock_interviews").upsert(upsertRow, { onConflict: "id" });
-
     if (upsertError) {
       logError("mock-interview result upsert failed", upsertError);
       captureException(upsertError, {
@@ -307,27 +316,28 @@ export async function POST(request: NextRequest) {
     await captureServer(user.id, ANALYTICS_EVENTS.interview_completed, {
       job_category: jobCategory,
       score: overallScore,
+      verdict: scorecard.verdict,
       ...(jobId ? { job_id: jobId } : {}),
     });
 
-    const responsePayload = {
+    return NextResponse.json({
       interview_id: sessionIdRaw,
       score: overallScore,
       overall_score: overallScore,
-      strengths,
-      improvements,
-      evaluation_used_fallback: normalized.usedFallback,
-      ...(justification && { justification }),
-      ...(technicalScore !== null && { technical_score: technicalScore }),
-      ...(communicationScore !== null && { communication_score: communicationScore }),
-      ...(problemSolvingScore !== null && { problem_solving_score: problemSolvingScore }),
-    };
-    return NextResponse.json(responsePayload);
-  } catch (e) {
-    logError("mock-interview result unexpected error", e);
-    captureException(e, { route: "/api/mock-interview/result" });
+      verdict: scorecard.verdict,
+      summary: scorecard.summary,
+      strengths: scorecard.strengths,
+      improvements: scorecard.weaknesses,
+      evaluation_used_fallback: scorecard.usedFallback,
+      technical_score: scorecard.technical,
+      communication_score: scorecard.communication,
+      ...(scorecard.problemSolving !== null && { problem_solving_score: scorecard.problemSolving }),
+    });
+  } catch (error) {
+    logError("mock-interview result unexpected error", error);
+    captureException(error, { route: "/api/mock-interview/result" });
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Evaluation error" },
+      { error: error instanceof Error ? error.message : "Evaluation error" },
       { status: 500 }
     );
   }
