@@ -11,7 +11,7 @@ import { JOB_TITLES } from "@/constants/jobFormOptions";
 import { UsageBanner } from "@/components/dashboard/UsageBanner";
 import { CVAnalysisPageSkeleton } from "@/components/ui/Skeleton";
 import { createClient } from "@/lib/supabase/client";
-import { INTERVIEW_LOCALE_LABEL, interviewUi, type InterviewLocale } from "@/lib/interview-locale";
+import { interviewUi, type InterviewLocale } from "@/lib/interview-locale";
 import { getDefaultInterviewLocale } from "@/lib/default-interview-locale";
 import { getJobTitleBySlug } from "@/lib/seo/job-titles";
 import { computeCvReadiness, type CvReadiness } from "@/lib/cv-readiness";
@@ -68,7 +68,7 @@ function MockInterviewContent() {
   const searchParams = useSearchParams();
   const [jobCategory, setJobCategory] = useState<string>(() => jobTitleFromJobQuery(searchParams) ?? JOB_TITLES[0]);
   const [interviewLang, setInterviewLang] = useState<InterviewLocale>("en");
-  const ui = interviewUi[interviewLang];
+  const ui = interviewUi.en;
 
   useEffect(() => {
     setInterviewLang(getDefaultInterviewLocale());
@@ -204,7 +204,7 @@ function MockInterviewContent() {
                       <p className="mt-1 text-sm leading-snug text-[#111111]/85 dark:text-zinc-200">
                         {ui.missingPrefix}{" "}
                         {readiness.missingProfileFieldKeys
-                          .map((k) => PROFILE_FIELD_LABEL[interviewLang][k] ?? k)
+                          .map((k) => PROFILE_FIELD_LABEL.en[k] ?? k)
                           .join(", ")}
                         .
                       </p>
@@ -306,8 +306,8 @@ function MockInterviewContent() {
                       id="mock-interview-lang"
                       triggerClassName={selectTriggerMinimal}
                       options={[
-                        { value: "en", label: INTERVIEW_LOCALE_LABEL.en },
-                        { value: "tr", label: INTERVIEW_LOCALE_LABEL.tr },
+                        { value: "en", label: "English" },
+                        { value: "tr", label: "Turkish" },
                       ]}
                       value={interviewLang}
                       onChange={(v) => setInterviewLang(v === "tr" ? "tr" : "en")}
@@ -328,8 +328,8 @@ function MockInterviewContent() {
                       value={jobCategory}
                       onChange={setJobCategory}
                       searchable
-                      searchPlaceholder={interviewLang === "tr" ? "Kategori ara..." : "Search category..."}
-                      noResultsText={interviewLang === "tr" ? "Sonuc bulunamadi" : "No results found"}
+                      searchPlaceholder="Search category..."
+                      noResultsText="No results found"
                       aria-label={ui.jobCategory}
                     />
                   </div>

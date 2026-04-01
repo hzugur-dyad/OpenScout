@@ -2,7 +2,11 @@ import { z } from "zod";
 import { extractJsonObjectFromModelText } from "@/lib/ai/extract-json";
 import { logWarn } from "@/lib/logger";
 import type { InterviewLocale } from "@/lib/interview-locale";
-import type { InterviewDifficulty, InterviewVerdict } from "@/services/interview";
+import {
+  computeDeterministicInterviewOverallScore,
+  type InterviewEvidenceQuality,
+} from "@/lib/mock-interview/policy";
+import type { InterviewDifficulty, InterviewPlannerAction, InterviewVerdict } from "@/services/interview";
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
@@ -30,21 +34,29 @@ function coerceStringArray(value: unknown, limit = 8): string[] {
 }
 
 export type NormalizedInterviewThinkingOutput = {
+  action: InterviewPlannerAction;
+  spokenPrompt: string;
   nextQuestion: string;
   followUp: string | null;
+  assessmentFocus: string;
   evaluationHint: string;
   difficulty: InterviewDifficulty;
   isOffTopic: boolean;
+  closingReason: string | null;
   usedFallback: boolean;
 };
 
 const interviewThinkingSchema = z
   .object({
+    action: z.enum(["advance", "follow_up", "close"]).optional(),
+    spokenPrompt: z.string().optional(),
     nextQuestion: z.string().optional(),
     followUp: z.union([z.string(), z.null()]).optional(),
+    assessmentFocus: z.string().optional(),
     evaluationHint: z.string().optional(),
     difficulty: z.enum(["easy", "medium", "hard"]).optional(),
     isOffTopic: z.boolean().optional(),
+    closingReason: z.union([z.string(), z.null()]).optional(),
   })
   .passthrough();
 
@@ -55,11 +67,15 @@ export function parseInterviewThinkingModelOutput(rawModelText: string): Normali
   } catch {
     logWarn("mock-interview thinking: invalid JSON, using fallback");
     return {
+      action: "advance",
+      spokenPrompt: "",
       nextQuestion: "",
       followUp: null,
+      assessmentFocus: "",
       evaluationHint: "",
       difficulty: "medium",
       isOffTopic: false,
+      closingReason: null,
       usedFallback: true,
     };
   }
@@ -68,36 +84,58 @@ export function parseInterviewThinkingModelOutput(rawModelText: string): Normali
   if (!parsed.success) {
     logWarn("mock-interview thinking: schema mismatch, using fallback");
     return {
+      action: "advance",
+      spokenPrompt: "",
       nextQuestion: "",
       followUp: null,
+      assessmentFocus: "",
       evaluationHint: "",
       difficulty: "medium",
       isOffTopic: false,
+      closingReason: null,
       usedFallback: true,
     };
   }
 
+  const spokenPrompt = coerceString(parsed.data.spokenPrompt);
+  const nextQuestion = coerceString(parsed.data.nextQuestion);
+  const followUp = coerceString(parsed.data.followUp) || null;
+  const action =
+    parsed.data.action ??
+    (followUp ? "follow_up" : spokenPrompt || nextQuestion ? "advance" : "advance");
+
   return {
-    nextQuestion: coerceString(parsed.data.nextQuestion),
-    followUp: coerceString(parsed.data.followUp) || null,
+    action,
+    spokenPrompt: spokenPrompt || followUp || nextQuestion,
+    nextQuestion: nextQuestion || (action === "advance" ? spokenPrompt : ""),
+    followUp: action === "follow_up" ? followUp || spokenPrompt || null : followUp,
+    assessmentFocus: coerceString(parsed.data.assessmentFocus) || coerceString(parsed.data.evaluationHint),
     evaluationHint: coerceString(parsed.data.evaluationHint),
     difficulty: parsed.data.difficulty ?? "medium",
     isOffTopic: Boolean(parsed.data.isOffTopic),
+    closingReason: coerceString(parsed.data.closingReason) || null,
     usedFallback: false,
   };
 }
 
 export type NormalizedInterviewScoreOutput = {
-  score: number;
   verdict: InterviewVerdict;
   strengths: string[];
   weaknesses: string[];
   communication: number;
   technical: number;
+  roleFit: number;
   problemSolving: number | null;
+  evidenceQuality: InterviewEvidenceQuality;
   summary: string;
   usedFallback: boolean;
 };
+
+function coerceEvidenceQuality(value: unknown): InterviewEvidenceQuality | null {
+  if (typeof value !== "string") return null;
+  if (value === "low" || value === "medium" || value === "high") return value;
+  return null;
+}
 
 const interviewScoreSchema = z
   .object({
@@ -113,8 +151,12 @@ const interviewScoreSchema = z
     technical_score: z.union([z.number(), z.string()]).optional(),
     problemSolving: z.union([z.number(), z.string()]).optional(),
     problem_solving_score: z.union([z.number(), z.string()]).optional(),
+    roleFit: z.union([z.number(), z.string()]).optional(),
+    role_fit_score: z.union([z.number(), z.string()]).optional(),
     summary: z.string().optional(),
     justification: z.string().optional(),
+    evidence_quality: z.enum(["low", "medium", "high"]).optional(),
+    evidenceQuality: z.enum(["low", "medium", "high"]).optional(),
   })
   .passthrough();
 
@@ -130,15 +172,15 @@ export function parseInterviewScoreModelOutput(rawModelText: string): Normalized
     raw = JSON.parse(extractJsonObjectFromModelText(rawModelText));
   } catch {
     logWarn("mock-interview score: invalid JSON, using fallback");
-    const score = 50;
     return {
-      score,
-      verdict: deriveInterviewVerdict(score),
+      verdict: deriveInterviewVerdict(50),
       strengths: ["Participation recorded; detailed strengths unavailable for this run."],
       weaknesses: ["Retry the interview summary if you need a full evaluation."],
       communication: 50,
       technical: 50,
+      roleFit: 50,
       problemSolving: null,
+      evidenceQuality: "low",
       summary: "The evaluation service returned data that could not be parsed. A neutral score was applied.",
       usedFallback: true,
     };
@@ -147,21 +189,20 @@ export function parseInterviewScoreModelOutput(rawModelText: string): Normalized
   const parsed = interviewScoreSchema.safeParse(raw);
   if (!parsed.success) {
     logWarn("mock-interview score: schema mismatch, using fallback");
-    const score = 50;
     return {
-      score,
-      verdict: deriveInterviewVerdict(score),
+      verdict: deriveInterviewVerdict(50),
       strengths: ["Participation recorded; detailed strengths unavailable for this run."],
       weaknesses: ["Retry the interview summary if you need a full evaluation."],
       communication: 50,
       technical: 50,
+      roleFit: 50,
       problemSolving: null,
+      evidenceQuality: "low",
       summary: "The evaluation service returned data that could not be parsed. A neutral score was applied.",
       usedFallback: true,
     };
   }
 
-  const score = coerceScore(parsed.data.score) ?? coerceScore(parsed.data.overall_score) ?? 50;
   const communication =
     coerceScore(parsed.data.communication) ??
     coerceScore(parsed.data.communication_score) ??
@@ -173,17 +214,31 @@ export function parseInterviewScoreModelOutput(rawModelText: string): Normalized
   const problemSolving =
     coerceScore(parsed.data.problemSolving) ??
     coerceScore(parsed.data.problem_solving_score);
+  const roleFit =
+    coerceScore(parsed.data.roleFit) ??
+    coerceScore(parsed.data.role_fit_score) ??
+    50;
+  const computedScore = computeDeterministicInterviewOverallScore({
+    technical,
+    problemSolving: problemSolving ?? 50,
+    communication,
+    roleFit,
+  });
 
   return {
-    score,
-    verdict: parsed.data.verdict ?? deriveInterviewVerdict(score),
+    verdict: parsed.data.verdict ?? deriveInterviewVerdict(computedScore),
     strengths: coerceStringArray(parsed.data.strengths),
     weaknesses: coerceStringArray(parsed.data.weaknesses).length
       ? coerceStringArray(parsed.data.weaknesses)
       : coerceStringArray(parsed.data.improvements),
     communication,
     technical,
+    roleFit,
     problemSolving,
+    evidenceQuality:
+      coerceEvidenceQuality(parsed.data.evidence_quality) ??
+      coerceEvidenceQuality(parsed.data.evidenceQuality) ??
+      "medium",
     summary: coerceString(parsed.data.summary) || coerceString(parsed.data.justification),
     usedFallback: false,
   };

@@ -1,4 +1,5 @@
 import type { InterviewLocale } from "@/lib/interview-locale";
+import { computeDeterministicInterviewOverallScore } from "@/lib/mock-interview/policy";
 import { logWarn } from "@/lib/logger";
 import {
   buildInterviewScoringSystemPrompt,
@@ -13,6 +14,7 @@ import {
 import { createGroqJsonCompletion, getGroqScoringModel, getGroqThinkingModel } from "@/services/groq";
 import {
   buildInterviewFallbackQuestion,
+  buildRealtimeSpeechInstructions,
   createInterviewTurnPlan,
   getRemainingCustomQuestions,
   sanitizeInterviewText,
@@ -23,6 +25,22 @@ import {
   type InterviewTranscriptEntry,
   type InterviewTurnPlan,
 } from "@/services/interview";
+
+function findCurrentQuestionHistoryEntry(args: {
+  currentControl?: InterviewControlState;
+  questionHistory: InterviewQuestionHistoryEntry[];
+}): InterviewQuestionHistoryEntry | null {
+  if (!args.currentControl) return null;
+
+  for (let index = args.questionHistory.length - 1; index >= 0; index -= 1) {
+    const entry = args.questionHistory[index];
+    if (entry.questionId === args.currentControl.questionId) {
+      return entry;
+    }
+  }
+
+  return null;
+}
 
 export async function generateInterviewTurnPlan(args: {
   locale: InterviewLocale;
@@ -35,6 +53,7 @@ export async function generateInterviewTurnPlan(args: {
   turnKind: string;
 }): Promise<InterviewTurnPlan> {
   const remainingCustomQuestions = getRemainingCustomQuestions(args.questionHistory, args.jobContext.customQuestions);
+  const fallbackQuestion = buildInterviewFallbackQuestion(args.locale, args.jobContext.role);
   const raw = await createGroqJsonCompletion({
     model: getGroqThinkingModel(),
     temperature: 0.2,
@@ -72,24 +91,73 @@ export async function generateInterviewTurnPlan(args: {
   const nextQuestion =
     normalized.nextQuestion ||
     remainingCustomQuestions[0] ||
-    buildInterviewFallbackQuestion(args.locale, args.jobContext.role);
+    fallbackQuestion;
 
-  return createInterviewTurnPlan({
+  const isForcedRepeatTurn = args.turnKind === "silence" || args.turnKind === "timeout_warning";
+  const isForcedAdvanceTurn = args.turnKind === "silence_escalate" || args.turnKind === "timeout";
+  const currentQuestionHistoryEntry = findCurrentQuestionHistoryEntry({
+    currentControl: args.currentControl,
+    questionHistory: args.questionHistory,
+  });
+
+  const basePlan = createInterviewTurnPlan({
     locale: args.locale,
     displayName: sanitizeInterviewText(args.displayName),
     role: args.jobContext.role,
     decision: {
+      action: isForcedAdvanceTurn ? "advance" : normalized.action,
+      spokenPrompt: isForcedAdvanceTurn ? nextQuestion : normalized.spokenPrompt,
       nextQuestion,
-      followUp: normalized.followUp,
+      followUp: isForcedAdvanceTurn ? null : normalized.followUp,
+      assessmentFocus: normalized.assessmentFocus,
       evaluationHint: normalized.evaluationHint,
       difficulty: normalized.difficulty,
       isOffTopic: normalized.isOffTopic,
+      closingReason: normalized.closingReason,
     },
     currentControl: args.currentControl,
     questionHistory: args.questionHistory,
     remainingCustomQuestions,
     isOpeningTurn: args.turnKind === "opening",
   });
+
+  if (isForcedRepeatTurn && args.currentControl) {
+    const repeatedPrompt = sanitizeInterviewText(
+      normalized.spokenPrompt ||
+        normalized.followUp ||
+        currentQuestionHistoryEntry?.prompt ||
+        normalized.nextQuestion ||
+        fallbackQuestion
+    );
+    const questionSource = args.currentControl.isFollowup
+      ? "follow_up"
+      : currentQuestionHistoryEntry?.source ?? "generated";
+    const control = {
+      questionId: args.currentControl.questionId,
+      attempt: args.currentControl.attempt,
+      isFollowup: args.currentControl.isFollowup,
+      shouldEnd: false,
+      endReason: null,
+    };
+
+    return {
+      ...basePlan,
+      plannerAction: "follow_up",
+      spokenText: repeatedPrompt,
+      nextQuestion: currentQuestionHistoryEntry?.prompt ?? repeatedPrompt,
+      followUp: repeatedPrompt,
+      questionSource,
+      closingLine: null,
+      control,
+      speechInstructions: buildRealtimeSpeechInstructions({
+        locale: args.locale,
+        spokenText: repeatedPrompt,
+        control,
+      }),
+    };
+  }
+
+  return basePlan;
 }
 
 export async function generateInterviewScorecard(args: {
@@ -123,14 +191,23 @@ export async function generateInterviewScorecard(args: {
     throw new Error("Scoring model returned invalid structured output.");
   }
 
+  const score = computeDeterministicInterviewOverallScore({
+    technical: normalized.technical,
+    problemSolving: normalized.problemSolving ?? 50,
+    communication: normalized.communication,
+    roleFit: normalized.roleFit,
+  });
+
   return {
-    score: normalized.score,
+    score,
     verdict: normalized.verdict,
     strengths: normalized.strengths,
     weaknesses: normalized.weaknesses,
     communication: normalized.communication,
     technical: normalized.technical,
+    roleFit: normalized.roleFit,
     problemSolving: normalized.problemSolving,
+    evidenceQuality: normalized.evidenceQuality,
     summary: normalized.summary,
     usedFallback: false,
   };

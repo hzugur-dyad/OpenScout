@@ -1,8 +1,8 @@
 /** Fast Groq model used for per-turn interviewer reasoning. */
-export const DEFAULT_GROQ_MOCK_INTERVIEW_THINKING_MODEL = "llama-3.1-8b-instant";
+export const DEFAULT_GROQ_MOCK_INTERVIEW_THINKING_MODEL = "openai/gpt-oss-20b";
 
 /** Higher-quality Groq model used for final interview scoring. */
-export const DEFAULT_GROQ_MOCK_INTERVIEW_SCORING_MODEL = "llama-3.3-70b-versatile";
+export const DEFAULT_GROQ_MOCK_INTERVIEW_SCORING_MODEL = "openai/gpt-oss-120b";
 
 export function resolveGroqMockInterviewThinkingModel(raw?: string | null): string {
   const candidate = raw?.trim();
@@ -51,4 +51,4 @@ export const MOCK_INTERVIEW_LIVE_PROVIDER = "openai_realtime_webrtc";
 /**
  * Bump when interviewer or evaluation instructions change (audit trail for mock_interviews.prompt_version).
  */
-export const MOCK_INTERVIEW_PIPELINE_VERSION = "2026-04-01-v3-dual-model";
+export const MOCK_INTERVIEW_PIPELINE_VERSION = "2026-04-01-v4-policy-orchestrated";

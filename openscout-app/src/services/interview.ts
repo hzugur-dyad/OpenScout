@@ -1,4 +1,9 @@
 import type { InterviewLocale } from "@/lib/interview-locale";
+import {
+  MOCK_INTERVIEW_MAX_MAIN_QUESTIONS,
+  MOCK_INTERVIEW_TARGET_MAIN_QUESTIONS,
+  type InterviewEvidenceQuality,
+} from "@/lib/mock-interview/policy";
 
 export type InterviewTranscriptEntry = {
   role: "user" | "assistant";
@@ -6,6 +11,7 @@ export type InterviewTranscriptEntry = {
 };
 
 export type InterviewDifficulty = "easy" | "medium" | "hard";
+export type InterviewPlannerAction = "advance" | "follow_up" | "close";
 
 export type InterviewQuestionSource = "custom" | "generated" | "follow_up" | "closing";
 
@@ -30,16 +36,23 @@ export type InterviewJobContext = {
 };
 
 export type InterviewThinkingDecision = {
+  action: InterviewPlannerAction;
+  spokenPrompt: string;
   nextQuestion: string;
   followUp: string | null;
+  assessmentFocus: string;
   evaluationHint: string;
   difficulty: InterviewDifficulty;
   isOffTopic: boolean;
+  closingReason: string | null;
 };
 
 export type InterviewTurnPlan = {
+  plannerAction: InterviewPlannerAction;
+  spokenText: string;
   nextQuestion: string;
   followUp: string | null;
+  assessmentFocus: string;
   evaluationHint: string;
   difficulty: InterviewDifficulty;
   isOffTopic: boolean;
@@ -64,13 +77,12 @@ export type InterviewScorecard = {
   weaknesses: string[];
   communication: number;
   technical: number;
+  roleFit: number;
   problemSolving: number | null;
+  evidenceQuality: InterviewEvidenceQuality;
   summary: string;
   usedFallback: boolean;
 };
-
-const TARGET_MAIN_QUESTIONS = 8;
-const MAX_MAIN_QUESTIONS = 10;
 
 function collapseWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
@@ -101,10 +113,17 @@ export function buildInterviewOpeningLine(
 ): string {
   const safeName = sanitizeInterviewText(displayName) || (locale === "tr" ? "aday" : "there");
   const safeRole = sanitizeInterviewText(role) || (locale === "tr" ? "bu rol" : "this role");
-  const safeQuestion = sanitizeInterviewText(question);
+  const safeQuestion = sanitizeInterviewText(question)
+    .replace(/^(hello|hi)\s+[^,.!?]+,\s*i'?m\s+nova\.?\s*/i, "")
+    .replace(/^hello\s+[^,.!?]+\.\s*i'?m\s+nova\.?\s*/i, "")
+    .replace(/^i'?m\s+nova\.?\s*/i, "")
+    .replace(/^merhaba\s+[^,.!?]+,\s*ben\s+nova\.?\s*/i, "")
+    .replace(/^merhaba\s+[^,.!?]+\.\s*ben\s+nova\.?\s*/i, "")
+    .replace(/^ben\s+nova\.?\s*/i, "")
+    .trim();
   return locale === "tr"
-    ? `Merhaba ${safeName}. ${safeRole} rolu icin kisa bir gorusme yapacagiz. Kisa ve net ilerleyecegim. ${safeQuestion}`
-    : `Hello ${safeName}. We'll run a short interview for the ${safeRole} role. I'll keep it concise and direct. ${safeQuestion}`;
+    ? `Merhaba ${safeName}, ben Nova. ${safeRole} rolu icin teknik ve net ilerleyecegiz. ${safeQuestion}`
+    : `Hello ${safeName}, I'm Nova. We'll keep this technical and concise for the ${safeRole} role. ${safeQuestion}`;
 }
 
 export function buildInterviewClosingLine(locale: InterviewLocale, displayName: string): string {
@@ -158,44 +177,15 @@ function shouldCloseInterview(args: {
   if (args.isOpeningTurn) return false;
   if (args.hasFollowUp) return false;
   if (args.remainingCustomQuestions.length > 0) return false;
-  if (args.questionHistory.length >= MAX_MAIN_QUESTIONS) return true;
-  return args.questionHistory.length >= TARGET_MAIN_QUESTIONS;
-}
-
-function buildSpokenTurnText(args: {
-  locale: InterviewLocale;
-  displayName: string;
-  role: string;
-  isOpeningTurn: boolean;
-  isOffTopic: boolean;
-  spokenQuestion: string;
-  shouldEnd: boolean;
-  closingLine: string | null;
-}): string {
-  if (args.shouldEnd && args.closingLine) return args.closingLine;
-  if (args.isOpeningTurn) {
-    return buildInterviewOpeningLine(args.locale, args.displayName, args.role, args.spokenQuestion);
-  }
-
-  const parts = [
-    args.isOffTopic ? buildInterviewOffTopicRedirect(args.locale) : "",
-    args.spokenQuestion,
-  ].filter(Boolean);
-  return parts.join(" ");
+  if (args.questionHistory.length >= MOCK_INTERVIEW_MAX_MAIN_QUESTIONS) return true;
+  return args.questionHistory.length >= MOCK_INTERVIEW_TARGET_MAIN_QUESTIONS;
 }
 
 export function buildRealtimeSpeechInstructions(args: {
   locale: InterviewLocale;
-  displayName: string;
-  role: string;
-  isOpeningTurn: boolean;
-  spokenQuestion: string;
-  isOffTopic: boolean;
-  shouldEnd: boolean;
+  spokenText: string;
   control: InterviewTurnPlan["control"];
-  closingLine: string | null;
 }): string {
-  const spokenText = buildSpokenTurnText(args);
   const languageLabel = args.locale === "tr" ? "Turkish" : "English";
 
   return [
@@ -203,7 +193,7 @@ export function buildRealtimeSpeechInstructions(args: {
     `- Speak only in ${languageLabel}. Never mix languages.`,
     "- Use a senior recruiter tone: warm, serious, concise, and direct.",
     "- Say exactly the spoken text below and do not add any extra question, explanation, or meta-commentary.",
-    `- SPOKEN_TEXT=${JSON.stringify(spokenText)}`,
+    `- SPOKEN_TEXT=${JSON.stringify(args.spokenText)}`,
     "- After speaking, call report_interview_state exactly once.",
     `- question_id=${JSON.stringify(args.control.questionId)}`,
     `- attempt=${args.control.attempt}`,
@@ -223,16 +213,23 @@ export function createInterviewTurnPlan(args: {
   remainingCustomQuestions: string[];
   isOpeningTurn: boolean;
 }): InterviewTurnPlan {
+  const plannerAction = args.decision.action;
   const followUp = sanitizeInterviewText(args.decision.followUp ?? "");
   const nextQuestion = sanitizeInterviewText(args.decision.nextQuestion);
-  const spokenQuestion = followUp || nextQuestion || buildInterviewFallbackQuestion(args.locale, args.role);
-  const isFollowup = Boolean(followUp) && Boolean(args.currentControl?.questionId) && args.currentControl?.attempt === 1;
+  const spokenPrompt = sanitizeInterviewText(args.decision.spokenPrompt);
+  const customQuestion = sanitizeInterviewText(args.remainingCustomQuestions[0] ?? "");
+  const requestedFollowUp =
+    plannerAction === "follow_up" &&
+    Boolean(args.currentControl?.questionId) &&
+    args.currentControl?.attempt === 1;
+  const isFollowup = requestedFollowUp && Boolean(followUp || spokenPrompt);
+  const requestedClose = plannerAction === "close";
   const shouldEnd = shouldCloseInterview({
     isOpeningTurn: args.isOpeningTurn,
     hasFollowUp: isFollowup,
     questionHistory: args.questionHistory,
     remainingCustomQuestions: args.remainingCustomQuestions,
-  });
+  }) || requestedClose;
 
   const questionSource: InterviewQuestionSource = shouldEnd
     ? "closing"
@@ -247,17 +244,36 @@ export function createInterviewTurnPlan(args: {
     : buildInterviewQuestionId(args.questionHistory.length + 1, questionSource === "custom" ? "custom" : "generated");
 
   const closingLine = shouldEnd ? buildInterviewClosingLine(args.locale, args.displayName) : null;
+  const fallbackQuestion = buildInterviewFallbackQuestion(args.locale, args.role);
+  const generatedMainQuestion =
+    plannerAction === "follow_up"
+      ? nextQuestion || spokenPrompt || fallbackQuestion
+      : spokenPrompt || nextQuestion || fallbackQuestion;
+  const mainQuestionText =
+    questionSource === "custom"
+      ? customQuestion || generatedMainQuestion
+      : generatedMainQuestion;
+  const followUpText = followUp || spokenPrompt || nextQuestion || fallbackQuestion;
+  const basePrompt = isFollowup ? followUpText : mainQuestionText;
+  const spokenText = shouldEnd
+    ? closingLine ?? buildInterviewClosingLine(args.locale, args.displayName)
+    : args.isOpeningTurn
+      ? buildInterviewOpeningLine(args.locale, args.displayName, args.role, basePrompt)
+      : [args.decision.isOffTopic ? buildInterviewOffTopicRedirect(args.locale) : "", basePrompt].filter(Boolean).join(" ");
   const control = {
     questionId,
     attempt: isFollowup ? 2 : 1,
     isFollowup,
     shouldEnd,
-    endReason: shouldEnd ? "target_questions_completed" : null,
+    endReason: shouldEnd ? sanitizeInterviewText(args.decision.closingReason ?? "") || "target_questions_completed" : null,
   };
 
   return {
-    nextQuestion,
-    followUp: followUp || null,
+    plannerAction,
+    spokenText,
+    nextQuestion: mainQuestionText,
+    followUp: isFollowup ? followUpText : followUp || null,
+    assessmentFocus: sanitizeInterviewText(args.decision.assessmentFocus),
     evaluationHint: sanitizeInterviewText(args.decision.evaluationHint),
     difficulty: args.decision.difficulty,
     isOffTopic: args.decision.isOffTopic,
@@ -266,14 +282,8 @@ export function createInterviewTurnPlan(args: {
     control,
     speechInstructions: buildRealtimeSpeechInstructions({
       locale: args.locale,
-      displayName: args.displayName,
-      role: args.role,
-      isOpeningTurn: args.isOpeningTurn,
-      spokenQuestion,
-      isOffTopic: args.decision.isOffTopic,
-      shouldEnd,
+      spokenText,
       control,
-      closingLine,
     }),
   };
 }

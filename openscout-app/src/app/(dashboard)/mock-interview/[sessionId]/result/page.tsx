@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { MockInterviewResultView } from "@/components/mock-interview/MockInterviewResultView";
 import { MockInterviewResultFallback } from "@/components/mock-interview/MockInterviewResultFallback";
-import { parseInterviewLocale } from "@/lib/interview-locale";
+import type { InterviewLocale } from "@/lib/interview-locale";
 
 type PageProps = {
   params: Promise<{ sessionId: string }>;
@@ -12,8 +12,7 @@ export default async function MockInterviewResultPage({ params: routeParams, sea
   const { sessionId } = await routeParams;
   const params = await searchParams;
   const tooShort = params.tooShort === "1";
-  const langRaw = typeof params.lang === "string" ? params.lang : Array.isArray(params.lang) ? params.lang[0] : undefined;
-  const resultLocale = parseInterviewLocale(langRaw);
+  const resultLocale: InterviewLocale = "en";
   const applicationSavedRaw = params.applicationSaved;
   const applicationSubmitted =
     (typeof applicationSavedRaw === "string" ? applicationSavedRaw : Array.isArray(applicationSavedRaw) ? applicationSavedRaw[0] : undefined) === "1";

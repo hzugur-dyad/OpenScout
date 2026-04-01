@@ -199,7 +199,14 @@ export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewRes
 export type MockInterviewRealtimeSupabaseOptions = {
   userId: string | null;
   profileGuard: "complete" | "blocked";
-  jobRow?: { ai_interview_config?: unknown } | null;
+  jobRow?:
+    | {
+        title?: string | null;
+        description?: string | null;
+        requirements?: string | null;
+        ai_interview_config?: unknown;
+      }
+    | null;
 };
 
 export function createSupabaseForMockInterviewRealtimeRoute(opts: MockInterviewRealtimeSupabaseOptions) {

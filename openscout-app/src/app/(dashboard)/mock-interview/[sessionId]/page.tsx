@@ -8,7 +8,13 @@ import { createClient } from "@/lib/supabase/client";
 import { Orb, type AgentState } from "@/components/ui/orb";
 import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
-import { interviewCopy, interviewUi, parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
+import {
+  interviewCopy,
+  interviewLocaleConfig,
+  interviewUi,
+  parseInterviewLocale,
+  type InterviewLocale,
+} from "@/lib/interview-locale";
 import { captureException, captureMessage } from "@/lib/monitoring";
 import {
   getRealtimeErrorUserMessage,
@@ -20,6 +26,15 @@ import {
   MOCK_INTERVIEW_REALTIME_OUTPUT_MODALITIES,
   normalizeMockInterviewRealtimeControl,
 } from "@/lib/mock-interview/realtime";
+import { resolveAuthoritativeRealtimeControl } from "@/lib/mock-interview/realtime-control";
+import {
+  AUTO_LISTEN_AFTER_ASSISTANT_MS,
+  canUseManualMicCommit,
+  getNextSilenceTransition,
+  isMicLocked,
+  LOCAL_LISTENING_IDLE_TIMEOUT_MS,
+  LOCAL_SPEECH_END_COMMIT_DELAY_MS,
+} from "@/lib/mock-interview/session-state";
 import {
   extractRealtimeAnswerSdp,
   isLikelyRealtimeOfferSdp,
@@ -74,16 +89,38 @@ type RealtimeTurnResponse = {
   speechInstructions: string;
 };
 
-const RESPONSE_WARNING_MS = 18_000;
-const RESPONSE_LIMIT_MS = 42_000;
+type BrowserSpeechRecognitionResult = {
+  transcript?: string;
+};
+
+type BrowserSpeechRecognitionResultList = ArrayLike<ArrayLike<BrowserSpeechRecognitionResult>>;
+
+type BrowserSpeechRecognition = {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onend: null | (() => void);
+  onerror: null | ((event: { error?: string }) => void);
+  onresult: null | ((event: { results: BrowserSpeechRecognitionResultList; resultIndex?: number }) => void);
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+declare global {
+  interface Window {
+    SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+  }
+}
+
 const STUCK_TURN_MS = 15_000;
 const MIN_INTERVIEW_MS = 5 * 60 * 1000;
 const ICE_GATHERING_TIMEOUT_MS = 8_000;
 const LIVE_SPEECH_LEVEL_THRESHOLD = 4;
 const VOICE_BOOTSTRAP_RETRY_HINT_DELAY_MS = 4_500;
-const LOCAL_SPEECH_END_COMMIT_DELAY_MS = 1_200;
-const LOCAL_LISTENING_IDLE_TIMEOUT_MS = 7_000;
-const LOCAL_FORCE_COMMIT_AFTER_MS = 900;
 
 function waitForIceGatheringCompletion(pc: RTCPeerConnection, timeoutMs = ICE_GATHERING_TIMEOUT_MS): Promise<boolean> {
   if (pc.iceGatheringState === "complete") return Promise.resolve(true);
@@ -161,23 +198,15 @@ export default function MockInterviewSessionPage() {
   const cvScoreParam = searchParams.get("cvScore");
   const cvScoreForApplication = cvScoreParam ? Number(cvScoreParam) : null;
   const locale: InterviewLocale = parseInterviewLocale(searchParams.get("lang"));
-  const ui = interviewUi[locale];
-  const copy = interviewCopy[locale];
+  const ui = interviewUi.en;
+  const speechCopy = interviewCopy[locale];
+  const englishCopy = interviewCopy.en;
   const supabase = useMemo(() => createClient(), []);
   const reduceMotion = useReducedMotion();
-  const voiceConnectingLabel = locale === "tr" ? "Ses baglantisi kuruluyor..." : "Connecting voice...";
-  const voiceRetryingLabel =
-    locale === "tr"
-      ? "Ses baglantisi upstream zaman asimina ugradi. Yeniden deneniyor..."
-      : "Voice connection timed out upstream. Retrying...";
-  const voiceServiceUnavailableLabel =
-    locale === "tr"
-      ? "Ses servisi gecici olarak kullanilamiyor. Lutfen tekrar deneyin."
-      : "Voice service temporarily unavailable. Please try again.";
-  const voicePlaybackIssueLabel =
-    locale === "tr"
-      ? "Ses cikisi su anda kullanilamiyor. Transkript guncellenmeye devam edecek."
-      : "Voice audio is unavailable right now. Transcript will keep updating.";
+  const voiceConnectingLabel = ui.statusConnectingVoice;
+  const voiceRetryingLabel = ui.statusRetryingVoice;
+  const voiceServiceUnavailableLabel = ui.voiceServiceUnavailable;
+  const voicePlaybackIssueLabel = ui.voicePlaybackIssue;
 
   const [step, setStep] = useState<"mic-test" | "interview" | "goodbye" | "processing">("mic-test");
   const [micError, setMicError] = useState<string | null>(null);
@@ -188,6 +217,7 @@ export default function MockInterviewSessionPage() {
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [aiMessage, setAiMessage] = useState("");
+  const [liveUserCaption, setLiveUserCaption] = useState("");
   const [userName, setUserName] = useState("Candidate");
   const [isListening, setIsListening] = useState(false);
   const [isSessionReady, setIsSessionReady] = useState(false);
@@ -198,16 +228,9 @@ export default function MockInterviewSessionPage() {
 
   const stepRef = useRef(step);
   stepRef.current = step;
-  const isSessionReadyRef = useRef(isSessionReady);
-  isSessionReadyRef.current = isSessionReady;
-  const isListeningRef = useRef(isListening);
-  isListeningRef.current = isListening;
-  const isAiRespondingRef = useRef(isAiResponding);
-  isAiRespondingRef.current = isAiResponding;
-  const isAiSpeakingRef = useRef(isAiSpeaking);
-  isAiSpeakingRef.current = isAiSpeaking;
 
   const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const liveUserCaptionRef = useRef("");
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -220,6 +243,7 @@ export default function MockInterviewSessionPage() {
   const responseWarningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const responseLimitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stuckTurnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoListenTimerRef = useRef<number | null>(null);
   const endDialogContinueRef = useRef<HTMLButtonElement>(null);
   const controlStateRef = useRef<InterviewControl | null>(null);
   const retryAfterUntilRef = useRef(0);
@@ -246,13 +270,26 @@ export default function MockInterviewSessionPage() {
   const expectedControlRef = useRef<PlannedInterviewControl | null>(null);
   const pendingQuestionHistoryEntryRef = useRef<QuestionHistoryEntry | null>(null);
   const assistantTurnStartedRef = useRef(false);
+  const assistantAudioStartedRef = useRef(false);
+  const assistantAudioFinishedRef = useRef(false);
+  const assistantResponseFinishedRef = useRef(false);
+  const assistantTurnCompletionHandledRef = useRef(false);
   const pendingThinkingAbortRef = useRef<AbortController | null>(null);
   const turnPlanningRequestSerialRef = useRef(0);
+  const localSpeechRecognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const realtimeInterimUserTranscriptRef = useRef<Record<string, string>>({});
+  const prefersRealtimeInterimUserTranscriptRef = useRef(false);
+  const startListeningRef = useRef<(() => void) | null>(null);
   const handleRealtimeMessageRef = useRef<(event: MessageEvent<string>) => void | Promise<void>>(() => {});
 
   const replaceTranscript = useCallback((next: TranscriptEntry[]) => {
     transcriptRef.current = next;
     setTranscript(next);
+  }, []);
+
+  const syncLiveUserCaption = useCallback((next: string) => {
+    liveUserCaptionRef.current = next;
+    setLiveUserCaption(next);
   }, []);
 
   const appendTranscript = useCallback(
@@ -285,10 +322,75 @@ export default function MockInterviewSessionPage() {
     stuckTurnTimerRef.current = null;
   }, []);
 
+  const clearAutoListenTimer = useCallback(() => {
+    if (autoListenTimerRef.current) clearTimeout(autoListenTimerRef.current);
+    autoListenTimerRef.current = null;
+  }, []);
+
   const abortPendingThinkingTurn = useCallback(() => {
     pendingThinkingAbortRef.current?.abort();
     pendingThinkingAbortRef.current = null;
   }, []);
+
+  const stopLocalSpeechRecognition = useCallback(
+    (options?: { abort?: boolean; clearCaption?: boolean }) => {
+      const recognition = localSpeechRecognitionRef.current;
+      localSpeechRecognitionRef.current = null;
+      if (recognition) {
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        try {
+          if (options?.abort) recognition.abort();
+          else recognition.stop();
+        } catch {
+          // Ignore browser speech-recognition shutdown errors.
+        }
+      }
+      if (options?.clearCaption) {
+        syncLiveUserCaption("");
+      }
+    },
+    [syncLiveUserCaption]
+  );
+
+  const startLocalSpeechRecognition = useCallback(() => {
+    const SpeechRecognitionCtor =
+      typeof window === "undefined" ? undefined : window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) return;
+
+    stopLocalSpeechRecognition({ clearCaption: false });
+
+    const recognition = new SpeechRecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = interviewLocaleConfig[locale].speechRecognitionLang;
+    recognition.onresult = (event) => {
+      if (prefersRealtimeInterimUserTranscriptRef.current) return;
+      const startIndex = typeof event.resultIndex === "number" ? event.resultIndex : 0;
+      let interimTranscript = "";
+      for (let index = startIndex; index < event.results.length; index += 1) {
+        const transcriptSegment = event.results[index]?.[0]?.transcript ?? "";
+        interimTranscript += transcriptSegment;
+      }
+      if (interimTranscript.trim()) {
+        syncLiveUserCaption(interimTranscript.trim());
+      }
+    };
+    recognition.onerror = () => {
+      localSpeechRecognitionRef.current = null;
+    };
+    recognition.onend = () => {
+      localSpeechRecognitionRef.current = null;
+    };
+
+    localSpeechRecognitionRef.current = recognition;
+    try {
+      recognition.start();
+    } catch {
+      localSpeechRecognitionRef.current = null;
+    }
+  }, [locale, stopLocalSpeechRecognition, syncLiveUserCaption]);
 
   const commitPendingQuestionHistory = useCallback(() => {
     const pendingEntry = pendingQuestionHistoryEntryRef.current;
@@ -313,7 +415,12 @@ export default function MockInterviewSessionPage() {
       expectedControlRef.current = null;
       pendingQuestionHistoryEntryRef.current = null;
       pendingInterviewEndRef.current = null;
-      setAiMessage(copy.preparing);
+      assistantAudioStartedRef.current = false;
+      assistantAudioFinishedRef.current = false;
+      assistantResponseFinishedRef.current = false;
+      assistantTurnCompletionHandledRef.current = false;
+      clearAutoListenTimer();
+      setAiMessage("");
       setIsAiResponding(true);
       setIsAiSpeaking(false);
       clearStuckTurnTimer();
@@ -330,7 +437,7 @@ export default function MockInterviewSessionPage() {
         setIsAiSpeaking(false);
       }, STUCK_TURN_MS);
     },
-    [clearStuckTurnTimer, copy.preparing, jobId, sessionId, ui.interviewProviderError]
+    [clearAutoListenTimer, clearStuckTurnTimer, jobId, sessionId, ui.interviewProviderError]
   );
 
   const stagePlannedAssistantTurn = useCallback((plan: RealtimeTurnResponse) => {
@@ -457,8 +564,12 @@ export default function MockInterviewSessionPage() {
 
   const releaseRealtimeResources = useCallback(() => {
     abortPendingThinkingTurn();
+    stopLocalSpeechRecognition({ abort: true, clearCaption: true });
+    realtimeInterimUserTranscriptRef.current = {};
+    prefersRealtimeInterimUserTranscriptRef.current = false;
     clearResponseTimers();
     clearStuckTurnTimer();
+    clearAutoListenTimer();
     dcRef.current?.close();
     pcRef.current?.close();
     if (micAnimationRef.current) cancelAnimationFrame(micAnimationRef.current);
@@ -489,7 +600,23 @@ export default function MockInterviewSessionPage() {
     setMicLevel(0);
     setVoiceConnectionState("idle");
     setVoiceConnectionIssue(null);
-  }, [abortPendingThinkingTurn, clearResponseTimers, clearStuckTurnTimer]);
+  }, [
+    abortPendingThinkingTurn,
+    clearAutoListenTimer,
+    clearResponseTimers,
+    clearStuckTurnTimer,
+    stopLocalSpeechRecognition,
+  ]);
+
+  const scheduleAutoListen = useCallback(() => {
+    clearAutoListenTimer();
+    autoListenTimerRef.current = window.setTimeout(() => {
+      autoListenTimerRef.current = null;
+      if (!endedRef.current && stepRef.current === "interview" && !pendingInterviewEndRef.current) {
+        startListeningRef.current?.();
+      }
+    }, AUTO_LISTEN_AFTER_ASSISTANT_MS);
+  }, [clearAutoListenTimer]);
 
   const requestAssistantResponse = useCallback(
     (kind: RealtimeTurnKind, speechInstructions: string, lastUserMessage = "") => {
@@ -660,35 +787,14 @@ export default function MockInterviewSessionPage() {
     [appendTranscript, clearResponseTimers, requestPlannedAssistantTurn, sendRealtimeEvent, ui.interviewProviderError]
   );
 
-  const scheduleResponseTimers = useCallback(() => {
-    clearResponseTimers();
-    if (
-      stepRef.current !== "interview" ||
-      endedRef.current ||
-      !isSessionReadyRef.current ||
-      isListeningRef.current ||
-      isAiRespondingRef.current ||
-      isAiSpeakingRef.current
-    ) {
-      return;
-    }
-    responseWarningTimerRef.current = setTimeout(() => injectSyntheticTurn(copy.responseDelayWarningCue, "timeout_warning"), RESPONSE_WARNING_MS);
-    responseLimitTimerRef.current = setTimeout(() => injectSyntheticTurn(copy.noResponseCue, "timeout"), RESPONSE_LIMIT_MS);
-  }, [
-    clearResponseTimers,
-    copy.noResponseCue,
-    copy.responseDelayWarningCue,
-    injectSyntheticTurn,
-  ]);
-
   const enqueueSilenceCue = useCallback(() => {
-    const shouldEscalate = silenceStrikeRef.current >= 1;
-    silenceStrikeRef.current = shouldEscalate ? 0 : 1;
+    const transition = getNextSilenceTransition(silenceStrikeRef.current);
+    silenceStrikeRef.current = transition.nextStrike;
     injectSyntheticTurn(
-      shouldEscalate ? copy.silenceEscalateCue : copy.notHeardCue,
-      shouldEscalate ? "silence_escalate" : "silence"
+      transition.turnKind === "silence_escalate" ? speechCopy.silenceEscalateCue : speechCopy.notHeardCue,
+      transition.turnKind
     );
-  }, [copy.notHeardCue, copy.silenceEscalateCue, injectSyntheticTurn]);
+  }, [injectSyntheticTurn, speechCopy.notHeardCue, speechCopy.silenceEscalateCue]);
 
   const appendUserTranscript = useCallback(
     (itemId: string | null, text: string) => {
@@ -708,10 +814,11 @@ export default function MockInterviewSessionPage() {
         processedUserItemIdsRef.current.add(itemId);
       }
       silenceStrikeRef.current = 0;
+      syncLiveUserCaption(trimmed);
       appendTranscript({ role: "user", content: trimmed });
       return trimmed;
     },
-    [appendTranscript, jobId, sessionId]
+    [appendTranscript, jobId, sessionId, syncLiveUserCaption]
   );
 
   const appendAssistantTranscript = useCallback(
@@ -790,6 +897,23 @@ export default function MockInterviewSessionPage() {
     await doEvaluateAndRedirect();
   }, [doEvaluateAndRedirect, releaseRealtimeResources]);
 
+  const finalizeAssistantTurn = useCallback(async () => {
+    if (assistantTurnCompletionHandledRef.current) return;
+    if (!assistantResponseFinishedRef.current) return;
+    if (assistantAudioStartedRef.current && !assistantAudioFinishedRef.current) return;
+
+    assistantTurnCompletionHandledRef.current = true;
+
+    if (pendingInterviewEndRef.current && !endedRef.current && stepRef.current === "interview") {
+      await finishInterviewFromRealtime();
+      return;
+    }
+
+    if (!endedRef.current && stepRef.current === "interview" && !pendingInterviewEndRef.current) {
+      scheduleAutoListen();
+    }
+  }, [finishInterviewFromRealtime, scheduleAutoListen]);
+
   const handleRealtimeMessage = useCallback(
     async (event: MessageEvent<string>) => {
       let payload: Record<string, unknown>;
@@ -815,9 +939,25 @@ export default function MockInterviewSessionPage() {
         });
         return;
       }
+      if (type === "conversation.item.input_audio_transcription.delta") {
+        const itemId = typeof payload.item_id === "string" ? payload.item_id : "";
+        const delta = typeof payload.delta === "string" ? payload.delta : "";
+        if (!itemId || !delta) return;
+        prefersRealtimeInterimUserTranscriptRef.current = true;
+        const nextTranscript = `${realtimeInterimUserTranscriptRef.current[itemId] ?? ""}${delta}`.trim();
+        realtimeInterimUserTranscriptRef.current[itemId] = nextTranscript;
+        if (nextTranscript) {
+          syncLiveUserCaption(nextTranscript);
+        }
+        return;
+      }
       if (type === "conversation.item.input_audio_transcription.completed") {
+        const itemId = typeof payload.item_id === "string" ? payload.item_id : null;
+        if (itemId) {
+          delete realtimeInterimUserTranscriptRef.current[itemId];
+        }
         const appendedUserMessage = appendUserTranscript(
-          typeof payload.item_id === "string" ? payload.item_id : null,
+          itemId,
           typeof payload.transcript === "string" ? payload.transcript : ""
         );
         if (!appendedUserMessage) {
@@ -842,6 +982,8 @@ export default function MockInterviewSessionPage() {
       }
       if (type === "response.output_audio.delta") {
         markAssistantTurnStarted();
+        assistantAudioStartedRef.current = true;
+        assistantAudioFinishedRef.current = false;
         if (!firstAssistantAudioAtRef.current) {
           firstAssistantAudioAtRef.current = Date.now();
           captureMessage("Mock interview first assistant audio packet", {
@@ -897,22 +1039,26 @@ export default function MockInterviewSessionPage() {
         return;
       }
       if (type === "response.output_audio.done") {
+        assistantAudioFinishedRef.current = true;
         setIsAiSpeaking(false);
-        setIsAiResponding(false);
+        await finalizeAssistantTurn();
         return;
       }
       if (type === "response.cancelled") {
         clearStuckTurnTimer();
+        clearAutoListenTimer();
         expectedControlRef.current = null;
         pendingQuestionHistoryEntryRef.current = null;
         assistantTurnStartedRef.current = false;
+        assistantAudioFinishedRef.current = true;
+        assistantResponseFinishedRef.current = true;
+        assistantTurnCompletionHandledRef.current = true;
         setIsAiSpeaking(false);
         setIsAiResponding(false);
         return;
       }
       if (type === "response.done") {
         clearStuckTurnTimer();
-        setIsAiSpeaking(false);
         setIsAiResponding(false);
         const response = payload.response as { output?: RealtimeResponseOutput[] } | undefined;
         const outputs = Array.isArray(response?.output) ? response.output : [];
@@ -921,13 +1067,36 @@ export default function MockInterviewSessionPage() {
           if (output?.type !== "function_call" || output.name !== "report_interview_state" || typeof output.call_id !== "string") continue;
           if (processedFunctionCallIdsRef.current.has(output.call_id)) continue;
           processedFunctionCallIdsRef.current.add(output.call_id);
-          handledControl = true;
           const normalized = normalizeMockInterviewRealtimeControl(output.arguments);
-          if (normalized?.shouldEnd) {
+          const resolved = resolveAuthoritativeRealtimeControl({
+            expectedControl: expectedControlRef.current,
+            modelControl: normalized,
+          });
+          if (resolved.mismatch && expectedControlRef.current && normalized) {
+            captureMessage("Mock interview realtime tool control mismatched server plan", {
+              route: "/mock-interview/[sessionId]",
+              session_id: sessionId,
+              ...(jobId ? { job_id: jobId } : {}),
+              tags: { feature: "ai_interview", provider_path: providerPathRef.current, turn_kind: currentResponseKindRef.current },
+              extra: {
+                expected_control: JSON.stringify(expectedControlRef.current),
+                model_control: JSON.stringify(normalized),
+              },
+              aiInterview: { stage: "generation", reason: "realtime_error" },
+            });
+          }
+          const effectiveControl = resolved.effectiveControl;
+          if (!effectiveControl) continue;
+          handledControl = true;
+          if (effectiveControl.shouldEnd) {
             controlStateRef.current = null;
-            pendingInterviewEndRef.current = normalized.endReason ?? "model_end";
-          } else if (normalized) {
-            controlStateRef.current = { questionId: normalized.questionId, attempt: normalized.attempt, isFollowup: normalized.isFollowup };
+            pendingInterviewEndRef.current = effectiveControl.endReason ?? "model_end";
+          } else {
+            controlStateRef.current = {
+              questionId: effectiveControl.questionId,
+              attempt: effectiveControl.attempt,
+              isFollowup: effectiveControl.isFollowup,
+            };
           }
           sendRealtimeEvent({ type: "conversation.item.create", item: { type: "function_call_output", call_id: output.call_id, output: JSON.stringify({ acknowledged: true }) } });
         }
@@ -957,11 +1126,11 @@ export default function MockInterviewSessionPage() {
             aiInterview: { stage: "generation", reason: "realtime_error" },
           });
         }
-        if (pendingInterviewEndRef.current && !endedRef.current && stepRef.current === "interview") {
-          await finishInterviewFromRealtime();
-          return;
+        assistantResponseFinishedRef.current = true;
+        if (!assistantAudioStartedRef.current || assistantAudioFinishedRef.current) {
+          setIsAiSpeaking(false);
         }
-        scheduleResponseTimers();
+        await finalizeAssistantTurn();
         return;
       }
       if (type === "error") {
@@ -976,6 +1145,10 @@ export default function MockInterviewSessionPage() {
         );
         setVoiceConnectionIssue(voiceServiceUnavailableLabel);
         clearStuckTurnTimer();
+        clearAutoListenTimer();
+        assistantAudioFinishedRef.current = true;
+        assistantResponseFinishedRef.current = true;
+        assistantTurnCompletionHandledRef.current = true;
         setIsAiResponding(false);
         setIsAiSpeaking(false);
       }
@@ -983,15 +1156,17 @@ export default function MockInterviewSessionPage() {
     [
       appendAssistantTranscript,
       appendUserTranscript,
+      clearAutoListenTimer,
       clearStuckTurnTimer,
       enqueueSilenceCue,
+      finalizeAssistantTurn,
       finishInterviewFromRealtime,
       jobId,
       markAssistantTurnStarted,
       requestPlannedAssistantTurn,
-      scheduleResponseTimers,
       sendRealtimeEvent,
       sessionId,
+      syncLiveUserCaption,
       ui.interviewProviderError,
       voiceServiceUnavailableLabel,
     ]
@@ -1110,7 +1285,7 @@ export default function MockInterviewSessionPage() {
       };
       micAnimationRef.current = requestAnimationFrame(tick);
     }).catch((error: DOMException | Error) => {
-      setMicError(mapMicrophoneError(error, copy.micDenied));
+      setMicError(mapMicrophoneError(error, englishCopy.micDenied));
       setMicStream(null);
       if (!(error instanceof DOMException && error.name === "AbortError")) {
         captureException(error, { route: "/mock-interview/[sessionId]", session_id: sessionId, ...(jobId ? { job_id: jobId } : {}), tags: { feature: "ai_interview", mic: "getUserMedia" } });
@@ -1125,7 +1300,7 @@ export default function MockInterviewSessionPage() {
       setMicStream(null);
       setMicLevel(0);
     };
-  }, [copy.micDenied, jobId, sessionId, step]);
+  }, [englishCopy.micDenied, jobId, sessionId, step]);
 
   const bootstrapRealtimeSession = useCallback(async () => {
     const baseStream = micStream && micStream.getAudioTracks().length > 0 ? micStream : await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1649,7 +1824,8 @@ export default function MockInterviewSessionPage() {
     processedAssistantItemIdsRef.current.clear();
     processedFunctionCallIdsRef.current.clear();
     replaceTranscript([]);
-    setAiMessage(copy.preparing);
+    syncLiveUserCaption("");
+    setAiMessage("");
     setProviderError(null);
     setVoiceConnectionIssue(null);
     setVoiceConnectionState("connecting");
@@ -1679,7 +1855,6 @@ export default function MockInterviewSessionPage() {
   }, [
     abortPendingThinkingTurn,
     bootstrapRealtimeSession,
-    copy.preparing,
     isConnectingSession,
     jobCategory,
     jobId,
@@ -1687,6 +1862,7 @@ export default function MockInterviewSessionPage() {
     replaceTranscript,
     releaseRealtimeResources,
     sessionId,
+    syncLiveUserCaption,
     ui.interviewRateLimitError,
     voiceServiceUnavailableLabel,
   ]);
@@ -1699,27 +1875,45 @@ export default function MockInterviewSessionPage() {
     heardSpeechThisTurnRef.current = false;
     lastLocalSpeechAtRef.current = null;
     speechStoppedAtRef.current = null;
+    realtimeInterimUserTranscriptRef.current = {};
+    prefersRealtimeInterimUserTranscriptRef.current = false;
+    syncLiveUserCaption("");
     setProviderError(null);
     if (!sendRealtimeEvent({ type: "input_audio_buffer.clear" })) {
       setProviderError(ui.interviewProviderError);
       return;
     }
     liveMicStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = true; });
+    startLocalSpeechRecognition();
     listeningStartedAtRef.current = Date.now();
     setIsListening(true);
     setMicLevel(40);
-  }, [clearResponseTimers, isAiResponding, isAiSpeaking, isSessionReady, sendRealtimeEvent, step, ui.interviewProviderError]);
+  }, [
+    clearResponseTimers,
+    isAiResponding,
+    isAiSpeaking,
+    isSessionReady,
+    sendRealtimeEvent,
+    startLocalSpeechRecognition,
+    step,
+    syncLiveUserCaption,
+    ui.interviewProviderError,
+  ]);
 
-  const stopListeningAndCommit = useCallback(() => {
+  startListeningRef.current = startListening;
+
+  const stopListeningAndCommit = useCallback((reason: "manual" | "after_speech" | "idle_timeout") => {
     if (!isListening) return;
     const listeningStartedAt = listeningStartedAtRef.current;
     const listenedForMs = listeningStartedAt ? Date.now() - listeningStartedAt : 0;
+    const hasCaption = liveUserCaptionRef.current.trim().length > 0;
     liveMicStreamRef.current?.getAudioTracks().forEach((track) => { track.enabled = false; });
+    stopLocalSpeechRecognition({ clearCaption: false });
     listeningStartedAtRef.current = null;
     setIsListening(false);
     setMicLevel(0);
-    if (!heardSpeechThisTurnRef.current) {
-      if (listenedForMs < LOCAL_FORCE_COMMIT_AFTER_MS) {
+    if (!heardSpeechThisTurnRef.current && !hasCaption) {
+      if (reason === "idle_timeout" || reason === "manual") {
         enqueueSilenceCue();
         return;
       }
@@ -1751,39 +1945,43 @@ export default function MockInterviewSessionPage() {
       return;
     }
     beginAssistantTurn("voice_turn");
-  }, [beginAssistantTurn, enqueueSilenceCue, isListening, jobId, sendRealtimeEvent, sessionId, ui.interviewProviderError]);
-
-  const interruptAssistantAndListen = useCallback(() => {
-    if (step !== "interview" || !isSessionReady) return;
-    clearResponseTimers();
-    abortPendingThinkingTurn();
-    clearStuckTurnTimer();
-    sendRealtimeEvent({ type: "response.cancel" });
-    sendRealtimeEvent({ type: "output_audio_buffer.clear" });
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    setIsAiSpeaking(false);
-    setIsAiResponding(false);
-    startListening({ force: true });
   }, [
-    abortPendingThinkingTurn,
-    clearResponseTimers,
-    clearStuckTurnTimer,
-    isSessionReady,
+    beginAssistantTurn,
+    enqueueSilenceCue,
+    isListening,
+    jobId,
     sendRealtimeEvent,
-    startListening,
-    step,
+    sessionId,
+    stopLocalSpeechRecognition,
+    ui.interviewProviderError,
   ]);
 
   const toggleListen = useCallback(() => {
     if (pendingRemoteAudioPlaybackRef.current && audioRef.current?.srcObject) {
       void playRemoteAudio("listen_toggle_retry");
     }
-    if (isListening) stopListeningAndCommit();
-    else if (isAiResponding || isAiSpeaking) interruptAssistantAndListen();
-    else startListening();
-  }, [interruptAssistantAndListen, isAiResponding, isAiSpeaking, isListening, playRemoteAudio, startListening, stopListeningAndCommit]);
+    if (
+      canUseManualMicCommit({
+        step,
+        isSessionReady,
+        isListening,
+        isAiResponding,
+        isAiSpeaking,
+      })
+    ) {
+      stopListeningAndCommit("manual");
+      return;
+    }
+    if (
+      step === "interview" &&
+      isSessionReady &&
+      !isListening &&
+      !isAiResponding &&
+      !isAiSpeaking
+    ) {
+      startListening();
+    }
+  }, [isAiResponding, isAiSpeaking, isListening, isSessionReady, playRemoteAudio, startListening, step, stopListeningAndCommit]);
 
   useEffect(() => {
     if (!isListening) return;
@@ -1794,7 +1992,7 @@ export default function MockInterviewSessionPage() {
       if (heardSpeechThisTurnRef.current && lastLocalSpeechAtRef.current) {
         const silenceForMs = now - lastLocalSpeechAtRef.current;
         if (silenceForMs >= LOCAL_SPEECH_END_COMMIT_DELAY_MS) {
-          stopListeningAndCommit();
+          stopListeningAndCommit("after_speech");
         }
         return;
       }
@@ -1805,7 +2003,7 @@ export default function MockInterviewSessionPage() {
 
       const listeningStartedAt = listeningStartedAtRef.current ?? now;
       if (now - listeningStartedAt >= LOCAL_LISTENING_IDLE_TIMEOUT_MS) {
-        stopListeningAndCommit();
+        stopListeningAndCommit("idle_timeout");
       }
     }, 250);
 
@@ -1820,24 +2018,36 @@ export default function MockInterviewSessionPage() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [showEndConfirm]);
 
+  useEffect(() => {
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, []);
+
   const handleEndInterview = useCallback(async () => {
     if (endingRef.current) return;
     endingRef.current = true;
     endedRef.current = true;
     setShowEndConfirm(false);
     releaseRealtimeResources();
-    setAiMessage(copy.farewell);
+    setAiMessage(speechCopy.farewell);
     setStep("goodbye");
     await new Promise((resolve) => window.setTimeout(resolve, 200));
     await doEvaluateAndRedirect();
-  }, [copy.farewell, doEvaluateAndRedirect, releaseRealtimeResources]);
+  }, [doEvaluateAndRedirect, releaseRealtimeResources, speechCopy.farewell]);
 
   useEffect(() => () => { endedRef.current = true; releaseRealtimeResources(); }, [releaseRealtimeResources]);
 
   const agentState: AgentState =
     isListening
       ? "listening"
-      : step === "interview" && (isAiResponding || (transcript.length === 0 && aiMessage === copy.preparing))
+      : step === "interview" && isAiResponding
         ? "thinking"
         : isAiSpeaking
           ? "talking"
@@ -1858,7 +2068,13 @@ export default function MockInterviewSessionPage() {
       : agentState === "listening"
         ? { duration: 0.12, ease: "easeOut" as const }
         : { duration: agentState === "talking" ? 0.78 : 1.45, repeat: step === "interview" && (agentState === null || agentState === "thinking" || agentState === "talking") ? Infinity : 0, ease: "easeInOut" as const };
-  const micDisabled = step === "goodbye" || (!isSessionReady && !isListening);
+  const micDisabled = isMicLocked({
+    step,
+    isSessionReady,
+    isListening,
+    isAiResponding,
+    isAiSpeaking,
+  });
   const statusText =
     step === "goodbye"
       ? ui.statusWrapping
@@ -1867,7 +2083,7 @@ export default function MockInterviewSessionPage() {
         : voiceConnectionState === "retrying"
           ? voiceRetryingLabel
           : isAiResponding || isAiSpeaking
-            ? ui.statusWaitNova
+            ? ""
             : isListening
               ? ui.statusListening
               : ui.statusClickToRespond;
@@ -1902,7 +2118,7 @@ export default function MockInterviewSessionPage() {
   }
 
   return (
-    <main className="mx-auto flex h-full min-h-0 w-full max-w-5xl flex-col overflow-hidden px-4 py-3">
+    <main className="mx-auto grid h-[100dvh] max-h-[100dvh] w-full max-w-[960px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-4 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(8px,env(safe-area-inset-top))] sm:px-5">
       <audio ref={audioRef} autoPlay playsInline className="hidden" aria-hidden="true" />
       {showEndConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4" role="presentation" onClick={() => setShowEndConfirm(false)}>
@@ -1924,8 +2140,8 @@ export default function MockInterviewSessionPage() {
         </div>
       )}
 
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="truncate text-base font-semibold text-[#111111] sm:text-lg dark:text-zinc-100">{`${jobCategory} ${ui.interviewSuffix}`}</h2>
+      <div className="mb-1 flex min-h-0 items-center justify-between gap-3 py-1">
+        <h2 className="truncate text-sm font-semibold text-[#111111] sm:text-base dark:text-zinc-100">{`${jobCategory} ${ui.interviewSuffix}`}</h2>
         {step !== "goodbye" && (
           <button type="button" onClick={() => setShowEndConfirm(true)} className="flex min-h-11 items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 dark:border-red-900/60 dark:text-red-400">
             <PhoneDisconnect className="h-4 w-4" weight="regular" aria-hidden />
@@ -1934,20 +2150,66 @@ export default function MockInterviewSessionPage() {
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-        <motion.div className="relative flex items-center justify-center" style={{ width: "min(70vw, 420px)", height: "min(70vw, 420px)" }} animate={orbAnimate} transition={orbTransition}>
-          <Orb agentState={agentState} colors={["#E8D078", "#D4B84A"]} className="h-full w-full" />
-        </motion.div>
-        <motion.p key={aiMessage} initial={reduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={reduceMotion ? { duration: 0 } : { duration: 0.25 }} className="-mt-8 min-h-[92px] w-full max-w-[560px] rounded-3xl border border-black/10 bg-white/50 px-5 py-4 text-center text-base font-medium leading-relaxed text-zinc-800 shadow-lg backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/40 dark:text-zinc-100">
-          {aiMessage}
-        </motion.p>
+      <div className="flex min-h-0 flex-col items-center justify-center overflow-hidden px-1 pb-0 pt-[clamp(2px,0.8vh,8px)]">
+        <div className="flex w-full max-w-[760px] flex-1 -translate-y-[clamp(68px,11vh,138px)] flex-col items-center justify-center gap-[clamp(8px,1.6vh,18px)]">
+          <motion.div
+            className="relative flex items-center justify-center"
+            style={{ width: "clamp(300px, min(48vw, 36vh), 460px)", height: "clamp(300px, min(48vw, 36vh), 460px)" }}
+            animate={orbAnimate}
+            transition={orbTransition}
+          >
+            <Orb agentState={agentState} colors={["#E8D078", "#D4B84A"]} className="h-full w-full" />
+          </motion.div>
+          <div className="relative w-full max-w-[680px] px-1">
+            {step === "interview" && isAiResponding && !isAiSpeaking && (
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 rounded-[30px] bg-[conic-gradient(from_0deg,rgba(232,208,120,0)_0deg,rgba(232,208,120,0.92)_62deg,rgba(232,208,120,0)_124deg,rgba(232,208,120,0)_360deg)]"
+                animate={reduceMotion ? { opacity: [0.45, 0.85, 0.45] } : { rotate: 360 }}
+                transition={
+                  reduceMotion
+                    ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" }
+                    : { duration: 2.2, repeat: Infinity, ease: "linear" }
+                }
+              />
+            )}
+            <motion.div
+              key={aiMessage || (isAiResponding ? "thinking" : "idle")}
+              initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.25 }}
+              className="relative min-h-[74px] max-h-[120px] overflow-hidden rounded-[28px] border border-black/10 bg-white/50 px-4 py-3 text-center text-[13px] font-medium leading-[1.6] text-zinc-800 shadow-lg backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/40 dark:text-zinc-100 sm:text-[15px]"
+            >
+              <span className={aiMessage ? "opacity-100" : "opacity-0"}>{aiMessage || "\u00A0"}</span>
+            </motion.div>
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center gap-3 pb-2">
-        <button type="button" onClick={toggleListen} disabled={micDisabled} aria-pressed={isListening} aria-label={isListening ? ui.micAriaStopListening : ui.micAriaStartListening} className={`flex h-14 w-14 items-center justify-center rounded-full text-white disabled:opacity-50 ${isListening ? "bg-red-600" : ""}`} style={!isListening ? { backgroundColor: "var(--primary)" } : {}}>
-          {isListening ? <MicrophoneSlash className="h-6 w-6" weight="regular" aria-hidden /> : <Microphone className="h-6 w-6" weight="regular" aria-hidden />}
+      <div className="relative z-10 flex min-h-[72px] -translate-y-[clamp(104px,16vh,196px)] flex-col items-center justify-start gap-1 pb-0 pt-0">
+        <button
+          type="button"
+          onClick={toggleListen}
+          disabled={micDisabled}
+          aria-pressed={isListening}
+          aria-label={isListening ? ui.micAriaStopListening : ui.micAriaStartListening}
+          className={`flex h-14 w-14 items-center justify-center rounded-full border transition-all disabled:cursor-not-allowed ${
+            isListening
+              ? "border-red-500 bg-red-600 text-white"
+              : "border-white/10 bg-black/35 text-white/82 disabled:opacity-100"
+          }`}
+          style={isListening ? undefined : { boxShadow: "inset 0 0 0 1px rgba(232,208,120,0.12)" }}
+        >
+          {isListening ? (
+            <Microphone className="h-6 w-6" weight="regular" aria-hidden />
+          ) : (
+            <MicrophoneSlash className="h-6 w-6" weight="regular" aria-hidden />
+          )}
         </button>
-        <p className="text-center text-sm text-[#111111]/60 dark:text-zinc-400">{statusText}</p>
+        <p className="min-h-[18px] max-w-[560px] text-center text-xs leading-relaxed text-[#111111]/42 dark:text-zinc-500">
+          {liveUserCaption}
+        </p>
+        {statusText ? <p className="text-center text-sm text-[#111111]/60 dark:text-zinc-400">{statusText}</p> : null}
         {voiceIssueText && step === "interview" && <p className="max-w-md text-center text-sm text-amber-900 dark:text-amber-200">{voiceIssueText}</p>}
         {providerError && step === "interview" && <p className="max-w-md text-center text-sm text-amber-900 dark:text-amber-200">{providerError}</p>}
       </div>

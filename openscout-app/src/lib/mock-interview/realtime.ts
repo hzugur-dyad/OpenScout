@@ -166,7 +166,7 @@ export function buildMockInterviewRealtimeInstructions(
   locale: InterviewLocale,
   args: RealtimePromptArgs
 ): string {
-  const { jobCategory, displayName, userName, customQuestionsBlock } = args;
+  const { jobCategory, userName, customQuestionsBlock } = args;
 
   if (locale === "tr") {
     return `Sen Nova'sin. ${jobCategory} rolu icin canli sesli mulakat yapan kidemli bir interviewer gibi konusursun. Karsindaki aday ${userName || "aday"}.
@@ -193,9 +193,9 @@ ARAC SOZLESMESI:
 - Tek follow-up icin ayni question_id, attempt=2 ve is_followup=true kullan.
 - Mulakati bitirirken once kisa kapanis konusmasi yap, sonra should_end=true ve kisa bir end_reason gonder.
 
-ILK TUR:
-- Ilk cevabinda "Merhaba ${displayName}, ben Nova." ile basla.
-- Ardindan beklemeden ilk soruya gec.`;
+FAILSAFE:
+- Sunucudan exact spoken text gelirse yalnizca onu seslendir.
+- Sunucu spoken text vermezse bile kendi akisini kurma; yalnizca role uygun, kisa ve teknik bir soru sor.`;
   }
 
   return `You are Nova. You conduct a live voice interview for the ${jobCategory} role. The candidate is ${userName || "the candidate"}.
@@ -222,7 +222,7 @@ TOOL CONTRACT:
 - For the one allowed follow-up on the same thread, keep the same question_id, set attempt=2, and set is_followup=true.
 - When ending the interview, first deliver a short natural closing aloud, then call report_interview_state with should_end=true and a short end_reason.
 
-FIRST TURN:
-- In your first reply, begin exactly with: "Hello ${displayName}, I'm Nova."
-- Then immediately ask your first substantive question.`;
+FAILSAFE:
+- If the server provides exact spoken text, speak only that text.
+- If the server does not provide spoken text, do not invent a full interview plan; ask only one concise technical question relevant to the role.`;
 }

@@ -285,7 +285,7 @@ export function EmployerJobForm(props: {
 
         {/* Custom interview questions */}
         <div>
-          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Questions you want asked in the interview</label>
+          <label className="text-sm font-medium text-gray-900 dark:text-zinc-200">Must-ask questions for the interview</label>
           <p className="mt-1 text-xs text-gray-500 dark:text-zinc-400">
             Optional. Write the question in English (e.g. &quot;Do you like soccer?&quot;) or briefly describe the topic — the AI will turn it into a natural interview question.
           </p>
@@ -299,7 +299,7 @@ export function EmployerJobForm(props: {
                     next[i] = e.target.value;
                     setCustomQuestions(next);
                   }}
-                  placeholder={`Question ${i + 1}`}
+                  placeholder={`Must-ask question ${i + 1}`}
                   className="flex-1 rounded-[10px] border border-[var(--border-strong)] bg-white px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500"
                 />
                 <button
@@ -317,7 +317,7 @@ export function EmployerJobForm(props: {
               onClick={() => setCustomQuestions([...customQuestions, ""])}
               className="flex items-center gap-1 text-sm text-gray-500 hover:text-primary dark:text-zinc-400"
             >
-              <Plus className="h-4 w-4" weight="regular" aria-hidden /> Add question
+              <Plus className="h-4 w-4" weight="regular" aria-hidden /> Add must-ask question
             </button>
           </div>
         </div>

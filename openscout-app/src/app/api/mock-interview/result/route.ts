@@ -17,7 +17,9 @@ import { createClient } from "@/lib/supabase/server";
 import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
 import { assessInterviewTranscriptQuality } from "@/lib/mock-interview/transcript-quality";
+import { MOCK_INTERVIEW_POLICY_VERSION } from "@/lib/mock-interview/policy";
 import {
+  GROQ_MOCK_INTERVIEW_THINKING_MODEL,
   GROQ_MOCK_INTERVIEW_SCORING_MODEL,
   MOCK_INTERVIEW_PIPELINE_VERSION,
 } from "@/lib/mock-interview/versioning";
@@ -146,9 +148,10 @@ export async function POST(request: NextRequest) {
     }
 
     const jobId = typeof b.jobId === "string" && b.jobId.trim() ? b.jobId.trim() : undefined;
-    const locale: InterviewLocale = parseInterviewLocale(
+    const interviewLocale: InterviewLocale = parseInterviewLocale(
       typeof b.interviewLanguage === "string" ? b.interviewLanguage : undefined
     );
+    const scoringLocale: InterviewLocale = "en";
 
     let durationMs: number | null = null;
     if (typeof b.durationMs === "number" && !Number.isNaN(b.durationMs) && b.durationMs >= 0) {
@@ -204,7 +207,7 @@ export async function POST(request: NextRequest) {
     let scorecard;
     try {
       scorecard = await generateInterviewScorecard({
-        locale,
+        locale: scoringLocale,
         transcript: transcriptEntries,
         jobContext,
       });
@@ -241,12 +244,18 @@ export async function POST(request: NextRequest) {
       technical_score?: number;
       communication_score?: number;
       problem_solving_score?: number;
+      role_fit_score?: number;
+      evidence_quality?: "low" | "medium" | "high";
       evaluation_meta: {
         used_fallback: boolean;
         transcript_signal: "low" | "normal";
         transcript_score_cap?: number;
         source: string;
         pipeline_version: string;
+        planner_model: string;
+        scoring_model: string;
+        policy_version: string;
+        evidence_quality: "low" | "medium" | "high";
       };
     } = {
       strengths: scorecard.strengths,
@@ -259,6 +268,10 @@ export async function POST(request: NextRequest) {
         ...(transcriptQuality.scoreCap != null ? { transcript_score_cap: transcriptQuality.scoreCap } : {}),
         source: "post_interview_evaluation",
         pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
+        planner_model: GROQ_MOCK_INTERVIEW_THINKING_MODEL,
+        scoring_model: GROQ_MOCK_INTERVIEW_SCORING_MODEL,
+        policy_version: MOCK_INTERVIEW_POLICY_VERSION,
+        evidence_quality: scorecard.evidenceQuality,
       },
     };
 
@@ -272,6 +285,8 @@ export async function POST(request: NextRequest) {
     if (scorecard.problemSolving !== null) {
       report.problem_solving_score = scorecard.problemSolving;
     }
+    report.role_fit_score = scorecard.roleFit;
+    report.evidence_quality = scorecard.evidenceQuality;
 
     const upsertRow: Record<string, unknown> = {
       id: sessionIdRaw,
@@ -280,7 +295,7 @@ export async function POST(request: NextRequest) {
       score: overallScore,
       report,
       transcript: transcriptStr,
-      interview_language: locale,
+      interview_language: interviewLocale,
       model_version: GROQ_MOCK_INTERVIEW_SCORING_MODEL,
       prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
     };
