@@ -3,9 +3,9 @@
  * OpenScout environment validation (CI + optional production gate).
  *
  * Profiles (OPENSCOUT_ENV_PROFILE or --profile=):
- *   local       — report only; always exits 0 (default)
- *   ci          — fail if required CI/build variables are missing or blank
- *   production  — fail if production looks misconfigured (placeholders, localhost app URL, etc.)
+ *   local       - report only; always exits 0 (default)
+ *   ci          - fail if required CI/build variables are missing or blank
+ *   production  - fail if production looks misconfigured (placeholders, localhost app URL, etc.)
  *
  * Does not print secret values.
  */
@@ -21,14 +21,25 @@ function parseProfile(argv) {
   return "local";
 }
 
+const PROVIDER_KEY_GROUPS = [
+  {
+    label: "Groq API key(s)",
+    directEnvNames: ["GROQ_API_KEY", "GROQ_API_KEYS"],
+    indexedPrefix: "GROQ_API_KEY_",
+  },
+  {
+    label: "Google Cloud TTS API key(s)",
+    directEnvNames: ["GOOGLE_CLOUD_TTS_API_KEY", "GOOGLE_CLOUD_TTS_API_KEYS"],
+    indexedPrefix: "GOOGLE_CLOUD_TTS_API_KEY_",
+  },
+];
+
 /** Variables the GitHub Actions workflow always injects (including placeholders). */
 const CI_REQUIRED = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "SUPABASE_SERVICE_ROLE_KEY",
   "NEXT_PUBLIC_APP_URL",
-  "GROQ_API_KEY",
-  "GOOGLE_CLOUD_TTS_API_KEY",
   "STRIPE_SECRET_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_CANDIDATE_PLUS_PRICE_ID",
@@ -64,7 +75,14 @@ function isBlank(v) {
   return !String(v ?? "").trim();
 }
 
-function looksLikeCiPlaceholder(name, value) {
+function splitEnvList(value) {
+  return String(value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function looksLikeSingleCiPlaceholder(name, value) {
   const v = String(value ?? "").trim();
   if (!v) return true;
   const lower = v.toLowerCase();
@@ -83,6 +101,7 @@ function looksLikeCiPlaceholder(name, value) {
 
   if (name === "GROQ_API_KEY" && v === "ci-placeholder") return true;
   if (name === "GOOGLE_CLOUD_TTS_API_KEY" && v === "ci-placeholder") return true;
+  if (name === "OPENAI_API_KEY" && v === "ci-placeholder") return true;
 
   if (name === "UPSTASH_REDIS_REST_URL" && lower.includes("ci-placeholder")) return true;
   if (name === "UPSTASH_REDIS_REST_TOKEN" && v === "ci-placeholder") return true;
@@ -93,11 +112,63 @@ function looksLikeCiPlaceholder(name, value) {
   return false;
 }
 
+function looksLikeCiPlaceholder(name, value) {
+  if (name.endsWith("_KEYS")) {
+    const baseName = name.slice(0, -1);
+    return splitEnvList(value).some((entry) => looksLikeSingleCiPlaceholder(baseName, entry));
+  }
+  return looksLikeSingleCiPlaceholder(name, value);
+}
+
+function getProviderGroupEntries(group) {
+  const directEntries = group.directEnvNames
+    .map((name) => ({ name, value: process.env[name] }))
+    .filter((entry) => !isBlank(entry.value));
+
+  const indexedEntries = Object.entries(process.env)
+    .filter(([name, value]) => {
+      if (!name.startsWith(group.indexedPrefix)) return false;
+      if (!/^\d+$/.test(name.slice(group.indexedPrefix.length))) return false;
+      return !isBlank(value);
+    })
+    .sort(([left], [right]) => Number(left.slice(group.indexedPrefix.length)) - Number(right.slice(group.indexedPrefix.length)))
+    .map(([name, value]) => ({ name, value }));
+
+  return [...directEntries, ...indexedEntries];
+}
+
+function validateProviderGroups({ failOnPlaceholder }) {
+  const missing = [];
+  const bad = [];
+
+  for (const group of PROVIDER_KEY_GROUPS) {
+    const entries = getProviderGroupEntries(group);
+    if (entries.length === 0) {
+      missing.push(`${group.label} (${group.directEnvNames.join(" / ")} or ${group.indexedPrefix}<n>)`);
+      continue;
+    }
+
+    if (failOnPlaceholder) {
+      for (const entry of entries) {
+        if (looksLikeCiPlaceholder(entry.name, entry.value)) {
+          bad.push(`${entry.name} (looks like a CI/placeholder value)`);
+        }
+      }
+    }
+  }
+
+  return { missing, bad };
+}
+
 function checkCi() {
   const missing = [];
   for (const key of CI_REQUIRED) {
     if (isBlank(process.env[key])) missing.push(key);
   }
+
+  const providerValidation = validateProviderGroups({ failOnPlaceholder: false });
+  missing.push(...providerValidation.missing);
+
   if (missing.length) {
     console.error(
       `[validate-env] CI profile: missing or empty variables:\n  - ${missing.join("\n  - ")}`,
@@ -114,7 +185,7 @@ function checkProductionOptionalInfra() {
   const wh = process.env.STRIPE_WEBHOOK_SECRET;
   if (isBlank(wh)) {
     warnings.push(
-      "STRIPE_WEBHOOK_SECRET (empty — /api/stripe-webhook returns 503 until you set a real signing secret)",
+      "STRIPE_WEBHOOK_SECRET (empty - /api/stripe-webhook returns 503 until you set a real signing secret)",
     );
   } else if (looksLikeCiPlaceholder("STRIPE_WEBHOOK_SECRET", wh)) {
     errors.push("STRIPE_WEBHOOK_SECRET (looks like a CI/placeholder value)");
@@ -126,7 +197,7 @@ function checkProductionOptionalInfra() {
   const tokBlank = isBlank(redisTok);
   if (urlBlank && tokBlank) {
     warnings.push(
-      "Upstash Redis not configured — distributed rate limits are disabled (set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable)",
+      "Upstash Redis not configured - distributed rate limits are disabled (set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable)",
     );
   } else if (urlBlank !== tokBlank) {
     errors.push(
@@ -159,6 +230,11 @@ function checkProduction() {
     if (isBlank(val)) bad.push(`${key} (empty)`);
     else if (looksLikeCiPlaceholder(key, val)) bad.push(`${key} (looks like a CI/placeholder value)`);
   }
+
+  const providerValidation = validateProviderGroups({ failOnPlaceholder: true });
+  bad.push(...providerValidation.missing.map((entry) => `${entry} (missing)`));
+  bad.push(...providerValidation.bad);
+
   if (bad.length) {
     console.error(
       `[validate-env] production profile: fix these before shipping:\n  - ${bad.join("\n  - ")}`,
@@ -189,11 +265,21 @@ function reportLocal() {
     const set = !isBlank(process.env[key]);
     const suspicious = set && looksLikeCiPlaceholder(key, process.env[key]);
     const opt =
-      PRODUCTION_OPTIONAL_INFRA.includes(key) ? " — optional; features degrade if unset" : "";
+      PRODUCTION_OPTIONAL_INFRA.includes(key) ? " - optional; features degrade if unset" : "";
     console.log(
       `  ${key}: ${!set ? "MISSING" : suspicious ? "SET (suspicious / placeholder-like)" : "set"}${opt}`,
     );
   }
+
+  console.log("\nProvider key groups:");
+  for (const group of PROVIDER_KEY_GROUPS) {
+    const entries = getProviderGroupEntries(group);
+    const suspicious = entries.some((entry) => looksLikeCiPlaceholder(entry.name, entry.value));
+    console.log(
+      `  ${group.label}: ${entries.length === 0 ? "MISSING" : suspicious ? "SET (suspicious / placeholder-like)" : "set"}`,
+    );
+  }
+
   console.log("\nOptional features (any one of each group):");
   for (const { name, anyOf } of PRODUCTION_OPTIONAL_FEATURES) {
     const ok = anyOf.some((k) => !isBlank(process.env[k]));
@@ -211,5 +297,3 @@ if (profile === "ci") {
 } else {
   reportLocal();
 }
-
-

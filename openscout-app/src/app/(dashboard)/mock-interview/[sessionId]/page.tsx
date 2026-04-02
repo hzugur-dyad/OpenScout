@@ -41,6 +41,22 @@ type CurrentQuestionState = {
   answerStartedForCurrentQuestion: boolean;
 };
 
+function mapInterviewStateToOrb(params: {
+  step: "mic-test" | "interview" | "goodbye" | "processing";
+  isListening: boolean;
+  isAiPlaying: boolean;
+  turnPhase: InterviewTurnPhase;
+}): AgentState {
+  const { step, isListening, isAiPlaying, turnPhase } = params;
+  if (step !== "interview") return null;
+  if (isListening) return "listening";
+  if (isAiPlaying) return "speaking";
+  if (turnPhase === "nova_processing" || turnPhase === "user_answer_complete") {
+    return "thinking";
+  }
+  return null;
+}
+
 export default function MockInterviewSessionPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -48,8 +64,6 @@ export default function MockInterviewSessionPage() {
   const sessionId = params.sessionId as string;
   const jobCategory = searchParams.get("category") || "Frontend Developer";
   const jobId = searchParams.get("jobId") || "";
-  const cvScoreParam = searchParams.get("cvScore");
-  const cvScoreForApplication = cvScoreParam !== null && cvScoreParam !== "" ? Number(cvScoreParam) : null;
   const locale: InterviewLocale = parseInterviewLocale(searchParams.get("lang"));
   const ui = interviewUi.en;
   const copy = interviewCopy[locale];
@@ -107,7 +121,8 @@ export default function MockInterviewSessionPage() {
   ttsStopRef.current = tts.stop;
   micStreamRef.current = micStream;
   const playTts = tts.play;
-  const isAiSpeaking = tts.loading;
+  const isAiBusy = tts.loading;
+  const isAiPlaying = tts.isPlaying;
   const supabase = useMemo(() => createClient(), []);
   const getInterviewErrorMessage = useCallback(
     (status: number) => (status === 429 ? ui.interviewRateLimitError : ui.interviewProviderError),
@@ -277,7 +292,7 @@ export default function MockInterviewSessionPage() {
 
   const startListening = useCallback((options?: { preserveSession?: boolean }) => {
     if (endedRef.current || stepRef.current !== "interview") return false;
-    if (!recognitionRef.current || isAiSpeaking) return false;
+    if (!recognitionRef.current || isAiBusy) return false;
     const preserveSession = Boolean(options?.preserveSession);
     if (!preserveSession && isListeningRef.current) return false;
 
@@ -308,7 +323,7 @@ export default function MockInterviewSessionPage() {
       }
       return false;
     }
-  }, [armAnswerStartTimer, clearTurnTimers, isAiSpeaking, setListeningState, setTurnPhaseValue]);
+  }, [armAnswerStartTimer, clearTurnTimers, isAiBusy, setListeningState, setTurnPhaseValue]);
 
   const scheduleListeningStart = useCallback(
     (
@@ -323,7 +338,7 @@ export default function MockInterviewSessionPage() {
         listeningResumeTimerRef.current = null;
         if (endedRef.current || stepRef.current !== "interview") return;
         if (playbackToken !== assistantPlaybackTokenRef.current) return;
-        if (isAiSpeaking) {
+        if (isAiBusy) {
           if (attempt < AUTO_LISTEN_MAX_RETRIES) {
             scheduleListeningStart(playbackToken, attempt + 1, AUTO_LISTEN_RETRY_MS, preserveSession);
           }
@@ -340,7 +355,7 @@ export default function MockInterviewSessionPage() {
       AUTO_LISTEN_RETRY_MS,
       PLAYBACK_TO_LISTEN_DELAY_MS,
       clearListeningResumeTimer,
-      isAiSpeaking,
+      isAiBusy,
       startListening,
     ]
   );
@@ -381,15 +396,13 @@ export default function MockInterviewSessionPage() {
     ]
   );
 
-  // Orb agentState: microphone → listening, waiting for AI → thinking, TTS → talking, default → null
-  const agentState: AgentState = (() => {
-    if (isListening) return "listening";
-    if (isAiSpeaking) return "talking";
-    if (step === "interview" && (turnPhase === "nova_processing" || turnPhase === "user_answer_complete")) {
-      return "thinking";
-    }
-    return null;
-  })();
+  // Single-source orb mapping: mic-open -> listening, Nova processing -> thinking, audio playback -> speaking.
+  const orbState = mapInterviewStateToOrb({
+    step,
+    isListening,
+    isAiPlaying,
+    turnPhase,
+  });
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -577,19 +590,6 @@ export default function MockInterviewSessionPage() {
         if (interviewEnded) {
           setStep("processing");
           const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
-          const minMs = 5 * 60 * 1000;
-          if (durationMs < minMs) {
-            trackClient(ANALYTICS_EVENTS.interview_too_short, {
-              job_category: jobCategory,
-              session_id: sessionId,
-              duration_ms: durationMs,
-              ...(jobId ? { job_id: jobId } : {}),
-            });
-            const q = new URLSearchParams({ tooShort: "1", score: "0", strengths: "[]", improvements: "[]", category: jobCategory, lang: locale });
-            if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
-            router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
-            return;
-          }
           const transcriptText = [...transcript, { role: "user", content: trimmedMessage }]
             .concat([{ role: "assistant", content: visibleText }])
             .map((m) => `${m.role}: ${m.content}`)
@@ -637,7 +637,6 @@ export default function MockInterviewSessionPage() {
       jobCategory,
       sessionId,
       jobId,
-      cvScoreForApplication,
       router,
       playAssistantTurn,
       userName,
@@ -917,7 +916,6 @@ export default function MockInterviewSessionPage() {
     }
   };
 
-  const MIN_INTERVIEW_MS = 5 * 60 * 1000;
   const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   useEffect(() => {
@@ -973,29 +971,6 @@ export default function MockInterviewSessionPage() {
 
   const doEvaluateAndRedirect = useCallback(async () => {
     setStep("processing");
-    const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
-    const tooShort = durationMs < MIN_INTERVIEW_MS;
-
-    if (tooShort) {
-      trackClient(ANALYTICS_EVENTS.interview_too_short, {
-        job_category: jobCategory,
-        session_id: sessionId,
-        duration_ms: durationMs,
-        ...(jobId ? { job_id: jobId } : {}),
-      });
-      const q = new URLSearchParams({
-        tooShort: "1",
-        score: "0",
-        strengths: "[]",
-        improvements: "[]",
-        category: jobCategory,
-        lang: locale,
-      });
-      if (cvScoreForApplication != null) q.set("cvScore", String(cvScoreForApplication));
-      router.push(`/mock-interview/${sessionId}/result?${q.toString()}`);
-      return;
-    }
-
     try {
       const transcriptText = transcript
         .map((m) => `${m.role}: ${m.content}`)
@@ -1037,7 +1012,7 @@ export default function MockInterviewSessionPage() {
       });
       router.push(`/mock-interview/${sessionId}/result?error=1&lang=${encodeURIComponent(locale)}`);
     }
-  }, [transcript, jobCategory, sessionId, jobId, cvScoreForApplication, router, locale]);
+  }, [transcript, jobCategory, sessionId, jobId, router, locale]);
 
   const handleEndInterview = useCallback(async () => {
     if (endingRef.current) return;
@@ -1131,33 +1106,42 @@ export default function MockInterviewSessionPage() {
 
   const orbAnimate =
     reduceMotion || step !== "interview"
-      ? { scale: 1, opacity: 1 }
-      : agentState === "listening"
-        ? { scale: 1 + (micLevel / 100) * 0.12, opacity: 1 }
-        : agentState === "thinking"
-          ? { scale: [1, 1.06, 1], opacity: [0.88, 1, 0.92] }
-          : agentState === "talking"
-            ? { scale: [1, 1.09, 1.04, 1], opacity: 1 }
-            : { scale: [1, 1.025, 1], opacity: [0.96, 1, 0.98] };
+      ? { scale: 1, opacity: 1, rotate: 0 }
+      : orbState === "listening"
+        ? {
+            scale: [0.995, 1.026, 1],
+            opacity: [0.96, 1, 0.98],
+            rotate: [0, -0.55, 0],
+          }
+        : orbState === "thinking"
+          ? {
+              scale: [0.986, 1.032, 0.995],
+              opacity: [0.9, 0.98, 0.92],
+              rotate: [0, 5, 0],
+            }
+          : orbState === "speaking"
+            ? {
+                scale: [1, 1.072, 1.018, 1.088, 1],
+                opacity: [0.95, 1, 0.97, 1, 0.98],
+                rotate: [0, -1.4, 1, -0.6, 0],
+              }
+            : { scale: [1, 1.02, 1], opacity: [0.96, 1, 0.98], rotate: 0 };
 
   const orbTransition =
     reduceMotion
       ? { duration: 0 }
-      : agentState === "listening"
-        ? { duration: 0.12, ease: "easeOut" as const }
-        : {
-            duration: agentState === "talking" ? 0.78 : 1.45,
-            repeat:
-              step === "interview" &&
-              (agentState === null || agentState === "thinking" || agentState === "talking")
-                ? Infinity
-                : 0,
-              ease: "easeInOut" as const,
-            };
+      : orbState === "listening"
+        ? { duration: 2.3, repeat: Infinity, ease: [0.22, 1, 0.36, 1] as const }
+        : orbState === "thinking"
+          ? { duration: 4.6, repeat: Infinity, ease: [0.32, 0, 0.16, 1] as const }
+          : orbState === "speaking"
+            ? { duration: 0.92, repeat: Infinity, ease: [0.2, 0.9, 0.2, 1] as const }
+            : { duration: 2.8, repeat: Infinity, ease: [0.22, 1, 0.36, 1] as const };
 
   const isNovaProcessing =
     step === "interview" && (turnPhase === "nova_processing" || turnPhase === "user_answer_complete");
-  const isNovaBusy = isAiSpeaking || isNovaProcessing;
+  const shouldAnimateNovaSubtitle = isNovaProcessing && !isAiPlaying;
+  const isNovaBusy = isAiBusy || isNovaProcessing;
   const micAriaLabel = isNovaBusy
     ? ui.statusWaitNova
     : isListening
@@ -1250,7 +1234,13 @@ export default function MockInterviewSessionPage() {
             animate={orbAnimate}
             transition={orbTransition}
           >
-            <Orb agentState={agentState} colors={["#E8D078", "#D4B84A"]} className="relative z-10 h-full w-full" />
+            <Orb
+              agentState={orbState}
+              volumeMode="manual"
+              getOutputVolume={tts.getOutputLevel}
+              colors={["#E8D078", "#D4B84A"]}
+              className="relative z-10 h-full w-full"
+            />
           </motion.div>
 
           <motion.div
@@ -1264,7 +1254,7 @@ export default function MockInterviewSessionPage() {
           >
             <p
               className={`nova-subtitle-frame rounded-2xl border border-black/10 bg-white/40 px-5 py-3 text-center text-base font-medium leading-relaxed tracking-tight text-zinc-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl dark:border-white/20 dark:bg-zinc-900/30 dark:text-zinc-100 ${
-                isNovaProcessing ? "nova-processing-frame" : ""
+                shouldAnimateNovaSubtitle ? "nova-processing-frame" : ""
               }`}
               style={{
                 backgroundImage:

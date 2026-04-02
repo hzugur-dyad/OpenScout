@@ -7,10 +7,7 @@ import { checkProfileAndCv } from "@/lib/profile-guard";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
 import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
-import {
-  REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS,
-  tryCompleteReferralRewardForUser,
-} from "@/lib/referral-rewards";
+import { tryCompleteReferralRewardForUser } from "@/lib/referral-rewards";
 import {
   getRateLimitIdentifier,
   isRateLimitBypassed,
@@ -98,14 +95,6 @@ export async function POST(request: NextRequest) {
     if (!transcriptStr.trim()) {
       logWarn("mock-interview result validation failed", { reason: "transcript required" });
       return NextResponse.json({ error: "transcript required" }, { status: 400 });
-    }
-
-    if (transcriptStr.trim().length < REFERRAL_QUALIFYING_TRANSCRIPT_MIN_CHARS) {
-      logWarn("mock-interview result validation failed", { reason: "transcript too short" });
-      return NextResponse.json(
-        { error: "Interview transcript too short to evaluate." },
-        { status: 400 }
-      );
     }
 
     const jobCategory = typeof b.jobCategory === "string" ? b.jobCategory.trim() : "";

@@ -120,7 +120,7 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(401);
   });
 
-  it("returns 400 when transcript is shorter than qualifying minimum", async () => {
+  it("accepts short transcripts and still returns an evaluation", async () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
@@ -137,7 +137,10 @@ describe("POST /api/mock-interview/result", () => {
       }),
     });
     const res = await POST(req);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(typeof json.score).toBe("number");
+    expect(typeof json.final_score).toBe("number");
   });
 
   it("returns 403 when profile/CV guard blocks interview results", async () => {

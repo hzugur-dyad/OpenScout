@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-export type AgentState = null | "thinking" | "listening" | "talking";
+export type AgentState = null | "thinking" | "listening" | "speaking";
 
 type OrbProps = {
   colors?: [string, string];
@@ -21,6 +21,92 @@ type OrbProps = {
   getOutputVolume?: () => number;
   className?: string;
 };
+
+type OrbVisualTargets = {
+  input: number;
+  output: number;
+  speed: number;
+  twist: number;
+  rotation: number;
+  spread: number;
+  core: number;
+  aura: number;
+};
+
+function readVolumeSource(
+  value: number | undefined,
+  ref?: React.RefObject<number>,
+  getter?: () => number
+) {
+  if (value !== undefined) return clamp01(value);
+  if (ref) return clamp01(ref.current ?? 0);
+  if (getter) return clamp01(getter());
+  return null;
+}
+
+function resolveOrbTargets(
+  agentState: AgentState,
+  time: number,
+  liveInput: number | null,
+  liveOutput: number | null
+): OrbVisualTargets {
+  if (agentState === "listening") {
+    const level =
+      liveInput ??
+      clamp01(0.28 + Math.sin(time * 1.4) * 0.12 + Math.sin(time * 2.7 + 0.8) * 0.08);
+    return {
+      input: clamp01(0.16 + level * 0.74),
+      output: clamp01(0.26 + level * 0.12),
+      speed: 0.22 + level * 0.2,
+      twist: 0.07 + level * 0.035,
+      rotation: 0.56 + level * 0.18,
+      spread: 1.08 + level * 0.08,
+      core: 1.04 + level * 0.035,
+      aura: 0.2 + level * 0.06,
+    };
+  }
+
+  if (agentState === "thinking") {
+    const flow = clamp01(0.42 + Math.sin(time * 0.7) * 0.08 + Math.sin(time * 1.9 + 1.1) * 0.04);
+    return {
+      input: flow,
+      output: clamp01(0.38 + Math.sin(time * 0.9 + 0.6) * 0.08),
+      speed: 0.38,
+      twist: 0.16,
+      rotation: 1.16,
+      spread: 0.92,
+      core: 0.985,
+      aura: 0.17,
+    };
+  }
+
+  if (agentState === "speaking") {
+    const energy =
+      liveOutput ??
+      clamp01(0.56 + Math.sin(time * 4.1) * 0.18 + Math.sin(time * 7.3 + 0.5) * 0.12);
+    return {
+      input: clamp01(0.14 + energy * 0.12),
+      output: clamp01(0.42 + energy * 0.58),
+      speed: 0.48 + energy * 0.62,
+      twist: 0.14 + energy * 0.18,
+      rotation: 1.18 + energy * 0.52,
+      spread: 1.06 + energy * 0.18,
+      core: 1.04 + energy * 0.06,
+      aura: 0.24 + energy * 0.14,
+    };
+  }
+
+  return {
+    input: 0.08,
+    output: 0.28,
+    speed: 0.18,
+    twist: 0.05,
+    rotation: 0.48,
+    spread: 0.96,
+    core: 1.0,
+    aura: 0.16,
+  };
+}
 
 export function Orb({
   colors = ["#CADCFC", "#A0B9D1"],
@@ -104,6 +190,11 @@ function Scene({
   const targetColor1Ref = useRef(new THREE.Color(colors[0]));
   const targetColor2Ref = useRef(new THREE.Color(colors[1]));
   const animSpeedRef = useRef(0.1);
+  const twistRef = useRef(0.05);
+  const rotationRef = useRef(0.48);
+  const spreadRef = useRef(0.96);
+  const coreRef = useRef(1.0);
+  const auraRef = useRef(0.16);
   const perlinNoiseTexture = useMemo(() => createNoiseTexture(), []);
 
   const agentRef = useRef<AgentState>(agentState);
@@ -181,43 +272,39 @@ function Scene({
       u.uOpacity.value = Math.min(1, uOpacity + delta * 2);
     }
 
-    let targetIn = 0;
-    let targetOut = 0.3;
-    if (modeRef.current === "manual") {
-      targetIn = clamp01(
-        manualInput ?? inputVolumeRef?.current ?? getInputVolume?.() ?? 0
-      );
-      targetOut = clamp01(
-        manualOutput ?? outputVolumeRef?.current ?? getOutputVolume?.() ?? 0
-      );
-    } else {
-      const t = (u.uTime.value as number) * 2;
-      if (agentRef.current === null) {
-        targetIn = 0;
-        targetOut = 0.3;
-      } else if (agentRef.current === "listening") {
-        targetIn = clamp01(0.55 + Math.sin(t * 3.2) * 0.35);
-        targetOut = 0.45;
-      } else if (agentRef.current === "talking") {
-        targetIn = clamp01(0.65 + Math.sin(t * 4.8) * 0.22);
-        targetOut = clamp01(0.75 + Math.sin(t * 3.6) * 0.22);
-      } else {
-        const base = 0.38 + 0.07 * Math.sin(t * 0.7);
-        const wander = 0.05 * Math.sin(t * 2.1) * Math.sin(t * 0.37 + 1.2);
-        targetIn = clamp01(base + wander);
-        targetOut = clamp01(0.48 + 0.12 * Math.sin(t * 1.05 + 0.6));
-      }
-    }
+    const liveInput =
+      modeRef.current === "manual"
+        ? readVolumeSource(manualInput, inputVolumeRef, getInputVolume)
+        : null;
+    const liveOutput =
+      modeRef.current === "manual"
+        ? readVolumeSource(manualOutput, outputVolumeRef, getOutputVolume)
+        : null;
+    const targets = resolveOrbTargets(
+      agentRef.current,
+      u.uTime.value as number,
+      liveInput,
+      liveOutput
+    );
 
-    curInRef.current += (targetIn - curInRef.current) * 0.2;
-    curOutRef.current += (targetOut - curOutRef.current) * 0.2;
+    curInRef.current += (targets.input - curInRef.current) * 0.18;
+    curOutRef.current += (targets.output - curOutRef.current) * 0.18;
 
-    const targetSpeed = 0.1 + (1 - Math.pow(curOutRef.current - 1, 2)) * 0.9;
-    animSpeedRef.current += (targetSpeed - animSpeedRef.current) * 0.12;
+    animSpeedRef.current += (targets.speed - animSpeedRef.current) * 0.12;
+    twistRef.current += (targets.twist - twistRef.current) * 0.12;
+    rotationRef.current += (targets.rotation - rotationRef.current) * 0.12;
+    spreadRef.current += (targets.spread - spreadRef.current) * 0.12;
+    coreRef.current += (targets.core - coreRef.current) * 0.12;
+    auraRef.current += (targets.aura - auraRef.current) * 0.12;
 
     u.uAnimation.value = (u.uAnimation.value as number) + delta * animSpeedRef.current;
     u.uInputVolume.value = curInRef.current;
     u.uOutputVolume.value = curOutRef.current;
+    u.uTwist.value = twistRef.current;
+    u.uRotationSpeed.value = rotationRef.current;
+    u.uSpread.value = spreadRef.current;
+    u.uCoreRadius.value = coreRef.current;
+    u.uAuraStrength.value = auraRef.current;
     (u.uColor1.value as THREE.Color).lerp(targetColor1Ref.current, 0.08);
     (u.uColor2.value as THREE.Color).lerp(targetColor2Ref.current, 0.08);
   });
@@ -251,6 +338,11 @@ function Scene({
       uInverted: new THREE.Uniform(isDark ? 1 : 0),
       uInputVolume: new THREE.Uniform(0),
       uOutputVolume: new THREE.Uniform(0),
+      uTwist: new THREE.Uniform(0.05),
+      uRotationSpeed: new THREE.Uniform(0.48),
+      uSpread: new THREE.Uniform(0.96),
+      uCoreRadius: new THREE.Uniform(1.0),
+      uAuraStrength: new THREE.Uniform(0.16),
       uOpacity: new THREE.Uniform(0),
     };
   }, [perlinNoiseTexture, offsets]);
@@ -331,6 +423,11 @@ uniform vec3 uColor1;
 uniform vec3 uColor2;
 uniform float uInputVolume;
 uniform float uOutputVolume;
+uniform float uTwist;
+uniform float uRotationSpeed;
+uniform float uSpread;
+uniform float uCoreRadius;
+uniform float uAuraStrength;
 uniform float uOpacity;
 uniform sampler2D uPerlinTexture;
 varying vec2 vUv;
@@ -436,8 +533,10 @@ void main() {
     abs(theta / PI - 1.0)
   );
 
-  float noise = flow(decomposed, radius * 0.03 - uAnimation * 0.2) - 0.5;
-  theta += noise * mix(0.08, 0.25, uOutputVolume);
+  float statePhase = uTime * uRotationSpeed;
+  float noise = flow(decomposed, radius * 0.03 - uAnimation * 0.2 - statePhase * 0.03) - 0.5;
+  theta += noise * mix(0.06 + uTwist * 0.25, 0.18 + uTwist * 0.55, uOutputVolume);
+  theta += sin(statePhase + radius * 6.0) * uTwist * 0.12;
 
   // Transparent base prevents a flat circular backing disk.
   vec4 color = vec4(0.0, 0.0, 0.0, 0.0);
@@ -446,16 +545,16 @@ void main() {
 
   float centers[7];
   for (int i = 0; i < 7; i++) {
-    centers[i] = originalCenters[i] + 0.5 * sin(uTime / 20.0 + uOffsets[i]);
+    centers[i] = originalCenters[i] + (0.22 + uTwist * 0.9) * sin(statePhase * 0.45 + uOffsets[i]);
   }
 
   float a, b;
   vec4 ovalColor;
 
   for (int i = 0; i < 7; i++) {
-    float noise = texture2D(uPerlinTexture, vec2(mod(centers[i] + uTime * 0.05, 1.0), 0.5)).r;
-    a = 0.5 + noise * 0.3;
-    b = noise * mix(3.5, 2.5, uInputVolume);
+    float noise = texture2D(uPerlinTexture, vec2(mod(centers[i] + statePhase * 0.045, 1.0), 0.5)).r;
+    a = (0.48 + noise * 0.28) * mix(0.94, 1.08, uSpread - 0.7);
+    b = noise * mix(3.4 * uSpread, 2.35 * uSpread, uInputVolume);
     bool reverseGradient = (i % 2 == 1);
 
     float distTheta = min(
@@ -467,7 +566,7 @@ void main() {
     );
     float distRadius = radius;
 
-    float softness = 0.6;
+    float softness = mix(0.52, 0.68, clamp(uSpread - 0.85, 0.0, 1.0));
 
     if (drawOval(vec2(distTheta, distRadius), vec2(0.0, 0.0), a, b, reverseGradient, softness, ovalColor)) {
       color.rgb = mix(color.rgb, ovalColor.rgb, ovalColor.a);
@@ -502,12 +601,12 @@ void main() {
 
   // Let the page background bleed through the brightest zones a bit.
   float highlight = smoothstep(0.76, 0.98, luminance);
-  color.a *= mix(1.0, 0.72, highlight);
+  color.a *= mix(1.0, 0.68 - min(uAuraStrength * 0.18, 0.12), highlight);
 
   // Soft core mask + atmospheric aura, no hard circular cutoff.
-  float coreMask = 1.0 - smoothstep(0.72, 1.02, radius);
+  float coreMask = 1.0 - smoothstep(0.72, uCoreRadius, radius);
   float auraMask = smoothstep(1.28, 0.62, radius);
-  float softMask = max(coreMask, auraMask * 0.30);
+  float softMask = max(coreMask, auraMask * uAuraStrength);
 
   color.a *= softMask;
   color.a *= uOpacity;

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/tts/route";
 import { createClient } from "@/lib/supabase/server";
-import { synthesizeInterviewSpeech } from "@/lib/tts";
+import { hasGoogleCloudTtsApiKeysConfigured, synthesizeInterviewSpeech } from "@/lib/tts";
 
 const ttsHoisted = vi.hoisted(() => ({
   rateLimitForKind: vi.fn().mockResolvedValue({ success: true }),
@@ -21,6 +21,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 vi.mock("@/lib/tts", () => ({
+  hasGoogleCloudTtsApiKeysConfigured: vi.fn(),
   synthesizeInterviewSpeech: vi.fn(),
 }));
 
@@ -29,8 +30,10 @@ describe("POST /api/tts", () => {
     process.env.GOOGLE_CLOUD_TTS_API_KEY = "test-tts-key-not-secret-leak";
     vi.mocked(createClient).mockReset();
     vi.mocked(synthesizeInterviewSpeech).mockReset();
+    vi.mocked(hasGoogleCloudTtsApiKeysConfigured).mockReset();
     ttsHoisted.rateLimitForKind.mockReset();
     ttsHoisted.rateLimitForKind.mockResolvedValue({ success: true });
+    vi.mocked(hasGoogleCloudTtsApiKeysConfigured).mockReturnValue(true);
     vi.mocked(createClient).mockResolvedValue({
       auth: {
         getUser: async () => ({ data: { user: { id: "user-tts-1" } } }),
@@ -117,6 +120,7 @@ describe("POST /api/tts", () => {
 
   it("returns 500 when TTS API key is not configured (message is generic config hint)", async () => {
     delete process.env.GOOGLE_CLOUD_TTS_API_KEY;
+    vi.mocked(hasGoogleCloudTtsApiKeysConfigured).mockReturnValue(false);
     const req = new NextRequest("http://localhost/api/tts", {
       method: "POST",
       headers: { "content-type": "application/json" },

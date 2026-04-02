@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { parseInterviewLocale } from "@/lib/interview-locale";
-import { synthesizeInterviewSpeech } from "@/lib/tts";
+import { hasGoogleCloudTtsApiKeysConfigured, synthesizeInterviewSpeech } from "@/lib/tts";
 import { captureException } from "@/lib/monitoring";
 
 export async function POST(request: NextRequest) {
@@ -17,10 +17,12 @@ export async function POST(request: NextRequest) {
     const limited = await rateLimitForKind("tts", rlId);
     if (!limited.success) return tooManyRequestsResponse(limited);
 
-    const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY;
-    if (!apiKey) {
+    if (!hasGoogleCloudTtsApiKeysConfigured()) {
       return NextResponse.json(
-        { error: "GOOGLE_CLOUD_TTS_API_KEY is not configured. Add it to .env.local." },
+        {
+          error:
+            "Google Cloud TTS API keys are not configured. Add GOOGLE_CLOUD_TTS_API_KEY, GOOGLE_CLOUD_TTS_API_KEYS, or indexed GOOGLE_CLOUD_TTS_API_KEY_1 variables.",
+        },
         { status: 500 }
       );
     }
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     let buffer: Buffer;
     try {
-      const result = await synthesizeInterviewSpeech({ text, locale, apiKey });
+      const result = await synthesizeInterviewSpeech({ text, locale });
       buffer = result.buffer;
     } catch (fetchError) {
       logError("tts Google TTS request failed", fetchError);

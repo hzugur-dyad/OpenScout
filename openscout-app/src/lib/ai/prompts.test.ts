@@ -19,6 +19,10 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("system design thinking");
     expect(prompt).toContain("trade-off awareness");
     expect(prompt).toContain("use at most one targeted follow-up on the same question_id");
+    expect(prompt).toContain(
+      `FIRST MESSAGE: Say: "Hi ${baseArgs.displayName}, I'm Nova. I'll be with you through today's interview."`,
+    );
+    expect(prompt).not.toContain("I'll lead your technical interview.");
     expect(prompt).toContain("\"type\":\"question_control\"");
     expect(prompt).toContain("\"type\":\"interview_end\"");
   });
@@ -31,6 +35,10 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("Trivia, sadece tanım isteyen sorular");
     expect(prompt).toContain("system design thinking");
     expect(prompt).toContain("trade-off awareness");
+    expect(prompt).toContain(
+      `İLK MESAJ: "Merhaba ${baseArgs.displayName}, ben Nova. Bugün görüşmede sana ben eşlik edeceğim."`,
+    );
+    expect(prompt).not.toContain("Bu görüşmeyi teknik bir mülakat olarak yöneteceğim.");
     expect(prompt).toContain("aynı question_id üzerinde en fazla 1 hedefli takip sorusu");
     expect(prompt).toContain("\"type\":\"question_control\"");
     expect(prompt).toContain("\"type\":\"interview_end\"");

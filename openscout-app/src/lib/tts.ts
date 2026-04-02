@@ -1,9 +1,27 @@
+import "server-only";
+
 import type { InterviewLocale } from "@/lib/interview-locale";
+import {
+  classifyStandardProviderFailoverError,
+  hasProviderApiKeys,
+  ProviderRequestError,
+  type ProviderKeyEnvConfig,
+  withProviderKeyFailover,
+} from "@/lib/provider-key-failover";
 
 const GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize";
 
 // Keep a small safety margin for SSML wrappers/tags.
 const MAX_TEXT_LENGTH = 4500;
+
+export const GOOGLE_CLOUD_TTS_KEY_ENV_CONFIG: ProviderKeyEnvConfig = {
+  provider: "google-cloud-tts",
+  singleKeyEnv: "GOOGLE_CLOUD_TTS_API_KEY",
+  multiKeyEnv: "GOOGLE_CLOUD_TTS_API_KEYS",
+  indexedKeyEnvPrefix: "GOOGLE_CLOUD_TTS_API_KEY_",
+  notConfiguredMessage:
+    "Google Cloud TTS API keys are not configured. Set GOOGLE_CLOUD_TTS_API_KEY, GOOGLE_CLOUD_TTS_API_KEYS, or indexed GOOGLE_CLOUD_TTS_API_KEY_1 style variables.",
+};
 
 type LanguageTtsConfig = {
   languageCode: string;
@@ -56,13 +74,18 @@ function buildSsml(rawText: string): string {
   return `<speak>${withBreaks}</speak>`;
 }
 
-function parseGoogleTtsMessage(raw: string): string {
-  if (!raw) return "Google TTS request failed";
+function parseGoogleTtsError(raw: string): { message: string; code?: string } {
+  if (!raw) return { message: "Google TTS request failed" };
   try {
-    const errJson = JSON.parse(raw) as { error?: { message?: string } };
-    return errJson?.error?.message || raw;
+    const errJson = JSON.parse(raw) as {
+      error?: { message?: string; status?: string };
+    };
+    return {
+      message: errJson?.error?.message || raw,
+      code: errJson?.error?.status,
+    };
   } catch {
-    return raw;
+    return { message: raw };
   }
 }
 
@@ -81,7 +104,7 @@ function isUnsupportedSpeakingRate(message: string): boolean {
   return (m.includes("speakingrate") || m.includes("speaking rate")) && m.includes("does not support");
 }
 
-export async function synthesizeInterviewSpeech(args: {
+async function synthesizeInterviewSpeechWithKey(args: {
   text: string;
   locale: InterviewLocale;
   apiKey: string;
@@ -117,7 +140,8 @@ export async function synthesizeInterviewSpeech(args: {
       });
 
       if (!res.ok) {
-        const message = parseGoogleTtsMessage(await res.text());
+        const parsedError = parseGoogleTtsError(await res.text());
+        const message = parsedError.message;
         lastError = message;
 
         if (voiceName && isVoiceUnavailable(message)) {
@@ -129,7 +153,12 @@ export async function synthesizeInterviewSpeech(args: {
         if (i <= 1 && isUnsupportedSpeakingRate(message)) {
           continue;
         }
-        throw new Error(message);
+        throw new ProviderRequestError({
+          provider: "google-cloud-tts",
+          message,
+          status: res.status,
+          code: parsedError.code,
+        });
       }
 
       const data = (await res.json()) as { audioContent?: string };
@@ -143,4 +172,27 @@ export async function synthesizeInterviewSpeech(args: {
   }
 
   throw new Error(lastError);
+}
+
+export function hasGoogleCloudTtsApiKeysConfigured(): boolean {
+  return hasProviderApiKeys(GOOGLE_CLOUD_TTS_KEY_ENV_CONFIG);
+}
+
+export async function synthesizeInterviewSpeech(args: {
+  text: string;
+  locale: InterviewLocale;
+}): Promise<{ buffer: Buffer; selectedVoice: string | null }> {
+  const { text, locale } = args;
+
+  return withProviderKeyFailover({
+    config: GOOGLE_CLOUD_TTS_KEY_ENV_CONFIG,
+    operationName: "google-cloud-tts.text:synthesize",
+    classifyError: classifyStandardProviderFailoverError,
+    execute: ({ key }) =>
+      synthesizeInterviewSpeechWithKey({
+        text,
+        locale,
+        apiKey: key,
+      }),
+  });
 }

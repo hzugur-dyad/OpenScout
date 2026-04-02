@@ -19,23 +19,93 @@ function formatTtsError(raw: string): string {
 
 export function useTTS() {
   const [loading, setLoading] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeRequestIdRef = useRef(0);
   const lastCallAtRef = useRef(0);
   const lastUtteranceRef = useRef<string>("");
+  const outputLevelRef = useRef(0);
   const activePlaybackRef = useRef<{
     requestId: number;
     resolve: (result: TtsPlaybackResult) => void;
   } | null>(null);
+  const playbackAnalysisRef = useRef<{
+    audioContext: AudioContext;
+    analyser: AnalyserNode;
+    source: MediaElementAudioSourceNode;
+    data: Uint8Array;
+    frameId: number | null;
+  } | null>(null);
+
+  const stopPlaybackAnalysis = useCallback(() => {
+    const activeAnalysis = playbackAnalysisRef.current;
+    playbackAnalysisRef.current = null;
+    outputLevelRef.current = 0;
+    if (!activeAnalysis) return;
+    if (activeAnalysis.frameId !== null) {
+      cancelAnimationFrame(activeAnalysis.frameId);
+    }
+    try {
+      activeAnalysis.source.disconnect();
+    } catch {
+      // Ignore disconnect errors during teardown.
+    }
+    try {
+      activeAnalysis.analyser.disconnect();
+    } catch {
+      // Ignore disconnect errors during teardown.
+    }
+    activeAnalysis.audioContext.close().catch(() => {});
+  }, []);
+
+  const startPlaybackAnalysis = useCallback(async (audio: HTMLAudioElement) => {
+    stopPlaybackAnalysis();
+    try {
+      const audioContext = new AudioContext();
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.82;
+      const source = audioContext.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioContext.destination);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const analysis = {
+        audioContext,
+        analyser,
+        source,
+        data,
+        frameId: null as number | null,
+      };
+      playbackAnalysisRef.current = analysis;
+
+      const updateLevel = () => {
+        if (playbackAnalysisRef.current !== analysis) return;
+        analyser.getByteFrequencyData(data);
+        const sum = data.reduce((acc, value) => acc + value, 0);
+        const avg = sum / data.length;
+        outputLevelRef.current = Math.min(1, Math.max(0, avg / 96));
+        analysis.frameId = requestAnimationFrame(updateLevel);
+      };
+
+      updateLevel();
+    } catch {
+      outputLevelRef.current = 0;
+    }
+  }, [stopPlaybackAnalysis]);
 
   const interruptActivePlayback = useCallback((result: TtsPlaybackResult) => {
     const activePlayback = activePlaybackRef.current;
     activePlaybackRef.current = null;
+    setIsPlaying(false);
+    stopPlaybackAnalysis();
     if (activePlayback) {
       activePlayback.resolve(result);
     }
     setLoading(false);
-  }, []);
+  }, [stopPlaybackAnalysis]);
 
   const stop = useCallback(() => {
     activeRequestIdRef.current += 1;
@@ -59,7 +129,9 @@ export function useTTS() {
     interruptActivePlayback("interrupted");
 
     setLoading(true);
+    setIsPlaying(false);
     setError(null);
+    outputLevelRef.current = 0;
 
     try {
       const res = await fetch("/api/tts", {
@@ -101,6 +173,8 @@ export function useTTS() {
           cleanedUp = true;
           audio.removeEventListener("ended", handleEnded);
           audio.removeEventListener("error", handleError);
+          setIsPlaying(false);
+          stopPlaybackAnalysis();
           audio.pause();
           audio.currentTime = 0;
           audio.src = "";
@@ -138,7 +212,17 @@ export function useTTS() {
         activePlaybackRef.current = { requestId, resolve: settle };
         audio.addEventListener("ended", handleEnded, { once: true });
         audio.addEventListener("error", handleError, { once: true });
-        audio.play().catch(fail);
+        audio
+          .play()
+          .then(() => {
+            if (settled || requestId !== activeRequestIdRef.current) {
+              settle("interrupted");
+              return;
+            }
+            setIsPlaying(true);
+            void startPlaybackAnalysis(audio);
+          })
+          .catch(fail);
       });
     } catch (e) {
       setError(mapTtsUserError(e instanceof Error ? e.message : ""));
@@ -155,7 +239,7 @@ export function useTTS() {
         setLoading(false);
       }
     }
-  }, [interruptActivePlayback]);
+  }, [interruptActivePlayback, startPlaybackAnalysis, stopPlaybackAnalysis]);
 
-  return { play, stop, loading, error };
+  return { play, stop, loading, isPlaying, error, getOutputLevel: () => outputLevelRef.current };
 }
