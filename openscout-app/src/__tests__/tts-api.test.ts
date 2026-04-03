@@ -164,4 +164,60 @@ describe("POST /api/tts", () => {
     const buf = Buffer.from(await res.arrayBuffer());
     expect(buf.length).toBeGreaterThan(0);
   });
+
+  it("returns chunked audio payloads when multiple short speech chunks are requested", async () => {
+    vi.mocked(synthesizeInterviewSpeech)
+      .mockResolvedValueOnce({
+        buffer: Buffer.from("chunk-one"),
+        selectedVoice: "en-US-Chirp3-HD-Leda",
+      })
+      .mockResolvedValueOnce({
+        buffer: Buffer.from("chunk-two"),
+        selectedVoice: "en-US-Chirp3-HD-Leda",
+      });
+
+    const req = new NextRequest("http://localhost/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chunks: ["First chunk.", "Second chunk."], locale: "en" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toContain("application/json");
+
+    const body = (await res.json()) as { audioChunks?: string[] };
+    expect(body.audioChunks).toEqual([
+      Buffer.from("chunk-one").toString("base64"),
+      Buffer.from("chunk-two").toString("base64"),
+    ]);
+    expect(vi.mocked(synthesizeInterviewSpeech)).toHaveBeenNthCalledWith(1, {
+      text: "First chunk.",
+      locale: "en",
+    });
+    expect(vi.mocked(synthesizeInterviewSpeech)).toHaveBeenNthCalledWith(2, {
+      text: "Second chunk.",
+      locale: "en",
+    });
+  });
+
+  it("preserves Turkish characters end-to-end in the API body", async () => {
+    vi.mocked(synthesizeInterviewSpeech).mockResolvedValue({
+      buffer: Buffer.from([1, 2, 3]),
+      selectedVoice: "tr-TR-Wavenet-A",
+    });
+
+    const req = new NextRequest("http://localhost/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json; charset=utf-8" },
+      body: JSON.stringify({ text: "  edeceğim, çözüm, dışarı, öğrenci, geliştirme, bağlantı  ", locale: "tr" }),
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    expect(vi.mocked(synthesizeInterviewSpeech)).toHaveBeenCalledWith({
+      text: "  edeceğim, çözüm, dışarı, öğrenci, geliştirme, bağlantı  ",
+      locale: "tr",
+    });
+  });
 });

@@ -17,6 +17,12 @@ import {
 import { MockInterviewProcessingSkeleton } from "@/components/ui/Skeleton";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { captureException, captureMessage } from "@/lib/monitoring";
+import {
+  AUDIO_SILENCE_TIMEOUT_MS,
+  analyzeAudioLevel,
+  calculateByteTimeDomainRms,
+  createAudioSpeechState,
+} from "@/lib/mock-interview/speech-silence";
 import { mapMicrophoneError } from "@/lib/user-facing-errors";
 
 type InterviewControl = {
@@ -32,6 +38,19 @@ type InterviewTurnPhase =
   | "user_speaking"
   | "user_answer_complete"
   | "nova_processing";
+type BrowserSpeechRecognition = {
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((e: unknown) => void) | null;
+  onerror: ((e: unknown) => void) | null;
+  onend: (() => void) | null;
+  onspeechstart?: (() => void) | null;
+  onspeechend?: (() => void) | null;
+};
 type CurrentQuestionState = {
   promptText: string;
   questionId: string | null;
@@ -40,6 +59,49 @@ type CurrentQuestionState = {
   questionUnanswered: boolean;
   answerStartedForCurrentQuestion: boolean;
 };
+type LiveAudioSilenceMonitor = {
+  analyser: AnalyserNode;
+  ctx: AudioContext;
+  dataArray: Uint8Array<ArrayBuffer>;
+  frameId: number | null;
+  stream: MediaStream;
+};
+
+function normalizeRecognitionTranscript(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function mergeRecognitionTranscript(base: string, next: string): string {
+  const normalizedBase = normalizeRecognitionTranscript(base);
+  const normalizedNext = normalizeRecognitionTranscript(next);
+
+  if (!normalizedBase) return normalizedNext;
+  if (!normalizedNext) return normalizedBase;
+  if (normalizedBase === normalizedNext || normalizedBase.endsWith(normalizedNext)) {
+    return normalizedBase;
+  }
+  if (normalizedNext.startsWith(normalizedBase)) {
+    return normalizedNext;
+  }
+
+  const maxOverlap = Math.min(normalizedBase.length, normalizedNext.length);
+  for (let overlap = maxOverlap; overlap > 0; overlap -= 1) {
+    if (normalizedBase.slice(-overlap) === normalizedNext.slice(0, overlap)) {
+      return `${normalizedBase}${normalizedNext.slice(overlap)}`.trim();
+    }
+  }
+
+  return `${normalizedBase} ${normalizedNext}`.replace(/\s+/g, " ").trim();
+}
+
+function getRemainingSilenceMs(
+  lastSpeechDetectedAt: number | null,
+  silenceTimeoutMs: number,
+  now = Date.now()
+): number {
+  if (!lastSpeechDetectedAt) return silenceTimeoutMs;
+  return Math.max(0, silenceTimeoutMs - (now - lastSpeechDetectedAt));
+}
 
 function mapInterviewStateToOrb(params: {
   step: "mic-test" | "interview" | "goodbye" | "processing";
@@ -94,12 +156,21 @@ export default function MockInterviewSessionPage() {
   const autoStartListeningRef = useRef(false);
   const listeningResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const assistantPlaybackTokenRef = useRef(0);
+  const assistantPlaybackLockRef = useRef(false);
   const sendInFlightRef = useRef(false);
   const lastSendAtRef = useRef(0);
   const lastUserMessageSentRef = useRef("");
   const retryAfterUntilRef = useRef(0);
+  const hasUserStartedSpeakingRef = useRef(false);
+  const isUserActivelySpeakingRef = useRef(false);
+  const lastSpeechDetectedAtRef = useRef<number | null>(null);
+  const recoveryTranscriptBaseRef = useRef("");
+  const liveAudioSilenceMonitorRef = useRef<LiveAudioSilenceMonitor | null>(null);
+  const liveAudioMonitorRequestRef = useRef(0);
+  const audioSpeechStateRef = useRef(createAudioSpeechState());
   const ANSWER_START_TIMEOUT_MS = 7_000;
-  const USER_SILENCE_TIMEOUT_MS = 4_000;
+  const ANSWER_START_ACTIVE_SPEECH_RECHECK_MS = 500;
+  const USER_SILENCE_TIMEOUT_MS = AUDIO_SILENCE_TIMEOUT_MS;
   const PLAYBACK_TO_LISTEN_DELAY_MS = 120;
   const AUTO_LISTEN_RETRY_MS = 160;
   const AUTO_LISTEN_MAX_RETRIES = 4;
@@ -123,6 +194,7 @@ export default function MockInterviewSessionPage() {
   const playTts = tts.play;
   const isAiBusy = tts.loading;
   const isAiPlaying = tts.isPlaying;
+  const isAssistantPlaybackLocked = isAiBusy || isAiPlaying;
   const supabase = useMemo(() => createClient(), []);
   const getInterviewErrorMessage = useCallback(
     (status: number) => (status === 429 ? ui.interviewRateLimitError : ui.interviewProviderError),
@@ -144,6 +216,10 @@ export default function MockInterviewSessionPage() {
     }
   }, []);
 
+  useEffect(() => {
+    assistantPlaybackLockRef.current = isAssistantPlaybackLocked;
+  }, [isAssistantPlaybackLocked]);
+
   const clearAnswerStartTimer = useCallback(() => {
     if (answerStartTimerRef.current) {
       clearTimeout(answerStartTimerRef.current);
@@ -163,9 +239,42 @@ export default function MockInterviewSessionPage() {
     clearUserSilenceTimer();
   }, [clearAnswerStartTimer, clearUserSilenceTimer]);
 
+  const stopLiveAudioSilenceMonitor = useCallback(() => {
+    const monitor = liveAudioSilenceMonitorRef.current;
+    if (!monitor) return;
+
+    if (monitor.frameId !== null) {
+      cancelAnimationFrame(monitor.frameId);
+    }
+    monitor.stream.getTracks().forEach((track) => track.stop());
+    monitor.ctx.close().catch(() => {});
+    liveAudioSilenceMonitorRef.current = null;
+  }, []);
+
+  const resetSpeechActivityTracking = useCallback(() => {
+    hasUserStartedSpeakingRef.current = false;
+    isUserActivelySpeakingRef.current = false;
+    lastSpeechDetectedAtRef.current = null;
+    recoveryTranscriptBaseRef.current = "";
+    audioSpeechStateRef.current = createAudioSpeechState();
+  }, []);
+
   const setTurnPhaseValue = useCallback((next: InterviewTurnPhase) => {
     turnPhaseRef.current = next;
     setTurnPhase(next);
+  }, []);
+
+  const markUserAnswerStarted = useCallback(() => {
+    if (hasUserStartedSpeakingRef.current) return;
+    hasUserStartedSpeakingRef.current = true;
+    currentQuestionRef.current.answerStartedForCurrentQuestion = true;
+    currentQuestionRef.current.questionUnanswered = false;
+    clearAnswerStartTimer();
+    setTurnPhaseValue("user_speaking");
+  }, [clearAnswerStartTimer, setTurnPhaseValue]);
+
+  const preserveTranscriptForRecognitionRecovery = useCallback(() => {
+    recoveryTranscriptBaseRef.current = normalizeRecognitionTranscript(finalTranscriptRef.current);
   }, []);
 
   const resetCurrentQuestionTracking = useCallback(
@@ -205,6 +314,9 @@ export default function MockInterviewSessionPage() {
 
   const stopListeningSession = useCallback(
     (reason: RecognitionStopReason, options?: { resetListeningState?: boolean }) => {
+      if (reason !== "manual" && reason !== "silence-finalize") {
+        recognitionFinalizingRef.current = false;
+      }
       if (options?.resetListeningState !== false) {
         setListeningState(false);
       } else {
@@ -224,9 +336,12 @@ export default function MockInterviewSessionPage() {
   const finalizeUserTurn = useCallback(
     (reason: "manual" | "silence-finalize") => {
       if (!isListeningRef.current) return false;
-      if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return false;
+      if (!hasUserStartedSpeakingRef.current || !currentQuestionRef.current.answerStartedForCurrentQuestion) {
+        return false;
+      }
+      recognitionFinalizingRef.current = true;
       setTurnPhaseValue("user_answer_complete");
-      stopListeningSession(reason, { resetListeningState: false });
+      stopListeningSession(reason);
       return true;
     },
     [setTurnPhaseValue, stopListeningSession]
@@ -236,42 +351,70 @@ export default function MockInterviewSessionPage() {
     (sessionToken: number) => {
       if (!isListeningRef.current) return;
       if (sessionToken !== activeListeningSessionRef.current) return;
-      if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+      if (!hasUserStartedSpeakingRef.current || !currentQuestionRef.current.answerStartedForCurrentQuestion) {
+        return;
+      }
       clearUserSilenceTimer();
+      const delayMs = isUserActivelySpeakingRef.current
+        ? USER_SILENCE_TIMEOUT_MS
+        : Math.max(120, getRemainingSilenceMs(lastSpeechDetectedAtRef.current, USER_SILENCE_TIMEOUT_MS));
       userSilenceTimerRef.current = setTimeout(() => {
         if (!isListeningRef.current) return;
         if (sessionToken !== activeListeningSessionRef.current) return;
-        if (!currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+        if (!hasUserStartedSpeakingRef.current || !currentQuestionRef.current.answerStartedForCurrentQuestion) {
+          return;
+        }
+        if (isUserActivelySpeakingRef.current) {
+          armUserSilenceTimer(sessionToken);
+          return;
+        }
+        const lastSpeechDetectedAt = lastSpeechDetectedAtRef.current;
+        if (!lastSpeechDetectedAt) {
+          armUserSilenceTimer(sessionToken);
+          return;
+        }
+        if (Date.now() - lastSpeechDetectedAt < USER_SILENCE_TIMEOUT_MS) {
+          armUserSilenceTimer(sessionToken);
+          return;
+        }
         finalizeUserTurn("silence-finalize");
-      }, USER_SILENCE_TIMEOUT_MS);
+      }, delayMs);
     },
     [USER_SILENCE_TIMEOUT_MS, clearUserSilenceTimer, finalizeUserTurn]
   );
 
   const armAnswerStartTimer = useCallback(
-    (sessionToken: number) => {
+    (sessionToken: number, delayMs = ANSWER_START_TIMEOUT_MS) => {
       clearAnswerStartTimer();
       answerStartTimerRef.current = setTimeout(() => {
         if (!isListeningRef.current) return;
         if (sessionToken !== activeListeningSessionRef.current) return;
         if (turnPhaseRef.current !== "waiting_for_answer_start") return;
-        if (currentQuestionRef.current.answerStartedForCurrentQuestion) return;
+        if (currentQuestionRef.current.answerStartedForCurrentQuestion || hasUserStartedSpeakingRef.current) {
+          return;
+        }
+        if (isUserActivelySpeakingRef.current) {
+          armAnswerStartTimer(sessionToken, ANSWER_START_ACTIVE_SPEECH_RECHECK_MS);
+          return;
+        }
         if (!currentQuestionRef.current.hasRepeatedCurrentQuestion) {
           repeatCurrentQuestionRef.current?.();
           return;
         }
         advanceAfterNoResponseRef.current?.();
-      }, ANSWER_START_TIMEOUT_MS);
+      }, delayMs);
     },
-    [ANSWER_START_TIMEOUT_MS, clearAnswerStartTimer]
+    [ANSWER_START_ACTIVE_SPEECH_RECHECK_MS, ANSWER_START_TIMEOUT_MS, clearAnswerStartTimer]
   );
 
   useEffect(() => {
     stepRef.current = step;
     if (step !== "interview") {
       assistantPlaybackTokenRef.current += 1;
+      assistantPlaybackLockRef.current = false;
       activeListeningSessionRef.current += 1;
       autoStartListeningRef.current = false;
+      recognitionFinalizingRef.current = false;
       recognitionStopReasonRef.current = "teardown";
       clearTurnTimers();
       clearListeningResumeTimer();
@@ -279,11 +422,13 @@ export default function MockInterviewSessionPage() {
       setTurnPhaseValue("idle");
       finalTranscriptRef.current = "";
       setLiveTranscript("");
+      resetSpeechActivityTracking();
       resetCurrentQuestionState();
     }
   }, [
     clearListeningResumeTimer,
     clearTurnTimers,
+    resetSpeechActivityTracking,
     resetCurrentQuestionState,
     setListeningState,
     setTurnPhaseValue,
@@ -292,7 +437,7 @@ export default function MockInterviewSessionPage() {
 
   const startListening = useCallback((options?: { preserveSession?: boolean }) => {
     if (endedRef.current || stepRef.current !== "interview") return false;
-    if (!recognitionRef.current || isAiBusy) return false;
+    if (!recognitionRef.current || assistantPlaybackLockRef.current) return false;
     const preserveSession = Boolean(options?.preserveSession);
     if (!preserveSession && isListeningRef.current) return false;
 
@@ -301,6 +446,7 @@ export default function MockInterviewSessionPage() {
       activeListeningSessionRef.current = sessionToken;
       finalTranscriptRef.current = "";
       setLiveTranscript("");
+      resetSpeechActivityTracking();
       currentQuestionRef.current.answerStartedForCurrentQuestion = false;
       currentQuestionRef.current.questionUnanswered = false;
       clearTurnTimers();
@@ -309,6 +455,7 @@ export default function MockInterviewSessionPage() {
     }
 
     recognitionStopReasonRef.current = "none";
+    recognitionFinalizingRef.current = false;
     try {
       recognitionRef.current.start();
       autoStartListeningRef.current = false;
@@ -323,7 +470,7 @@ export default function MockInterviewSessionPage() {
       }
       return false;
     }
-  }, [armAnswerStartTimer, clearTurnTimers, isAiBusy, setListeningState, setTurnPhaseValue]);
+  }, [armAnswerStartTimer, clearTurnTimers, resetSpeechActivityTracking, setListeningState, setTurnPhaseValue]);
 
   const scheduleListeningStart = useCallback(
     (
@@ -338,7 +485,7 @@ export default function MockInterviewSessionPage() {
         listeningResumeTimerRef.current = null;
         if (endedRef.current || stepRef.current !== "interview") return;
         if (playbackToken !== assistantPlaybackTokenRef.current) return;
-        if (isAiBusy) {
+        if (assistantPlaybackLockRef.current) {
           if (attempt < AUTO_LISTEN_MAX_RETRIES) {
             scheduleListeningStart(playbackToken, attempt + 1, AUTO_LISTEN_RETRY_MS, preserveSession);
           }
@@ -355,7 +502,6 @@ export default function MockInterviewSessionPage() {
       AUTO_LISTEN_RETRY_MS,
       PLAYBACK_TO_LISTEN_DELAY_MS,
       clearListeningResumeTimer,
-      isAiBusy,
       startListening,
     ]
   );
@@ -371,6 +517,7 @@ export default function MockInterviewSessionPage() {
     async (text: string) => {
       const playbackToken = assistantPlaybackTokenRef.current + 1;
       assistantPlaybackTokenRef.current = playbackToken;
+      assistantPlaybackLockRef.current = true;
       clearListeningResumeTimer();
       autoStartListeningRef.current = false;
       clearTurnTimers();
@@ -382,7 +529,14 @@ export default function MockInterviewSessionPage() {
       const playbackResult: TtsPlaybackResult = await playTts(text, locale);
       if (playbackToken !== assistantPlaybackTokenRef.current) return;
       if (endedRef.current || stepRef.current !== "interview") return;
-      if (playbackResult === "interrupted") return;
+      if (playbackResult !== "completed") {
+        assistantPlaybackLockRef.current = false;
+        if (playbackResult === "not_played") {
+          setTurnPhaseValue("idle");
+        }
+        return;
+      }
+      assistantPlaybackLockRef.current = false;
       resumeListeningAfterPlayback(playbackToken);
     },
     [
@@ -662,9 +816,10 @@ export default function MockInterviewSessionPage() {
     currentQuestionRef.current.answerStartedForCurrentQuestion = false;
     finalTranscriptRef.current = "";
     setLiveTranscript("");
+    resetSpeechActivityTracking();
     setAiMessage(`${copy.noAnswerRetryIntro} ${promptText}`.trim());
     void playAssistantTurn(`${copy.noAnswerRetryIntro} ${promptText}`.trim());
-  }, [copy.noAnswerRetryIntro, playAssistantTurn]);
+  }, [copy.noAnswerRetryIntro, playAssistantTurn, resetSpeechActivityTracking]);
 
   const advanceAfterNoResponse = useCallback(() => {
     if (currentQuestionRef.current.questionUnanswered) return;
@@ -672,13 +827,14 @@ export default function MockInterviewSessionPage() {
     currentQuestionRef.current.answerStartedForCurrentQuestion = false;
     finalTranscriptRef.current = "";
     setLiveTranscript("");
+    resetSpeechActivityTracking();
     if (isListeningRef.current) {
       stopListeningSession("assistant");
     } else {
       clearTurnTimers();
     }
     void sendToAI(copy.noResponseCue);
-  }, [clearTurnTimers, copy.noResponseCue, sendToAI, stopListeningSession]);
+  }, [clearTurnTimers, copy.noResponseCue, resetSpeechActivityTracking, sendToAI, stopListeningSession]);
 
   useEffect(() => {
     repeatCurrentQuestionRef.current = repeatCurrentQuestion;
@@ -689,27 +845,177 @@ export default function MockInterviewSessionPage() {
   const recognitionStopReasonRef = useRef<RecognitionStopReason>("none");
   const activeListeningSessionRef = useRef(0);
   const isListeningRef = useRef(isListening);
+  const recognitionFinalizingRef = useRef(false);
   const endingRef = useRef(false);
 
   useEffect(() => {
     isListeningRef.current = isListening;
   }, [isListening]);
 
+  const noteLiveAudioSpeech = useCallback(
+    (sessionToken: number, detectedAt: number) => {
+      if (!isListeningRef.current) return;
+      if (sessionToken !== activeListeningSessionRef.current) return;
+
+      isUserActivelySpeakingRef.current = true;
+      lastSpeechDetectedAtRef.current = detectedAt;
+
+      if (hasUserStartedSpeakingRef.current || finalTranscriptRef.current.trim()) {
+        markUserAnswerStarted();
+        armUserSilenceTimer(sessionToken);
+      }
+    },
+    [armUserSilenceTimer, markUserAnswerStarted]
+  );
+
+  const startLiveAudioSilenceMonitor = useCallback(
+    async (sessionToken: number) => {
+      if (typeof window === "undefined") return;
+      if (stepRef.current !== "interview" || !isListeningRef.current || endedRef.current) return;
+
+      const requestToken = liveAudioMonitorRequestRef.current + 1;
+      liveAudioMonitorRequestRef.current = requestToken;
+      stopLiveAudioSilenceMonitor();
+      audioSpeechStateRef.current = createAudioSpeechState();
+
+      let stream: MediaStream | null = null;
+      let ctx: AudioContext | null = null;
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (
+          requestToken !== liveAudioMonitorRequestRef.current ||
+          sessionToken !== activeListeningSessionRef.current ||
+          stepRef.current !== "interview" ||
+          !isListeningRef.current ||
+          endedRef.current
+        ) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        ctx = new AudioContext();
+        if (ctx.state === "suspended") {
+          await ctx.resume().catch(() => {});
+        }
+
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.2;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(new ArrayBuffer(analyser.fftSize));
+        const monitor: LiveAudioSilenceMonitor = {
+          analyser,
+          ctx,
+          dataArray,
+          frameId: null,
+          stream,
+        };
+        liveAudioSilenceMonitorRef.current = monitor;
+
+        const tick = () => {
+          const activeMonitor = liveAudioSilenceMonitorRef.current;
+          if (!activeMonitor) return;
+          if (
+            requestToken !== liveAudioMonitorRequestRef.current ||
+            sessionToken !== activeListeningSessionRef.current ||
+            stepRef.current !== "interview" ||
+            !isListeningRef.current ||
+            endedRef.current
+          ) {
+            stopLiveAudioSilenceMonitor();
+            return;
+          }
+
+          activeMonitor.analyser.getByteTimeDomainData(activeMonitor.dataArray);
+          const now = Date.now();
+          const rms = calculateByteTimeDomainRms(activeMonitor.dataArray);
+          const decision = analyzeAudioLevel({
+            state: audioSpeechStateRef.current,
+            rms,
+            now,
+          });
+          audioSpeechStateRef.current = decision.nextState;
+
+          if (decision.shouldRefreshSpeech) {
+            noteLiveAudioSpeech(sessionToken, now);
+          } else if (decision.didSpeechEnd) {
+            isUserActivelySpeakingRef.current = false;
+            if (hasUserStartedSpeakingRef.current || finalTranscriptRef.current.trim()) {
+              armUserSilenceTimer(sessionToken);
+            }
+          }
+
+          activeMonitor.frameId = requestAnimationFrame(tick);
+        };
+
+        monitor.frameId = requestAnimationFrame(tick);
+      } catch (error) {
+        stream?.getTracks().forEach((track) => track.stop());
+        ctx?.close().catch(() => {});
+        if (endedRef.current || stepRef.current !== "interview") return;
+        captureMessage("Live audio silence monitor unavailable (mock interview)", {
+          route: "/mock-interview/[sessionId]",
+          session_id: sessionId,
+          ...(jobId ? { job_id: jobId } : {}),
+          tags: { feature: "ai_interview", mic: "live_silence_monitor" },
+          level: "warning",
+          extra: {
+            error_message:
+              error instanceof Error
+                ? `${error.name}: ${error.message}`
+                : String(error),
+          },
+        });
+      }
+    },
+    [armUserSilenceTimer, jobId, noteLiveAudioSpeech, sessionId, stopLiveAudioSilenceMonitor]
+  );
+
+  useEffect(() => {
+    if (step !== "interview" || !isListening) {
+      stopLiveAudioSilenceMonitor();
+      return;
+    }
+
+    void startLiveAudioSilenceMonitor(activeListeningSessionRef.current);
+    return () => {
+      stopLiveAudioSilenceMonitor();
+    };
+  }, [isListening, startLiveAudioSilenceMonitor, step, stopLiveAudioSilenceMonitor]);
+
   useEffect(() => {
     if (step !== "interview") return;
     const SpeechRecognitionAPI = (typeof window !== "undefined" && ((window as unknown as { SpeechRecognition?: new () => unknown }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition?: new () => unknown }).webkitSpeechRecognition));
     if (!SpeechRecognitionAPI) return;
 
-    const recognition = new SpeechRecognitionAPI() as {
-      start: () => void; stop: () => void; abort: () => void;
-      continuous: boolean; interimResults: boolean; lang: string;
-      onresult: ((e: unknown) => void) | null;
-      onerror: ((e: unknown) => void) | null;
-      onend: (() => void) | null;
-    };
+    const recognition = new SpeechRecognitionAPI() as BrowserSpeechRecognition;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = interviewLocaleConfig[locale].speechRecognitionLang;
+
+    recognition.onspeechstart = () => {
+      if (endedRef.current || !isListeningRef.current) return;
+      if (!liveAudioSilenceMonitorRef.current) {
+        isUserActivelySpeakingRef.current = true;
+        if (hasUserStartedSpeakingRef.current) {
+          lastSpeechDetectedAtRef.current = Date.now();
+        }
+      }
+    };
+
+    recognition.onspeechend = () => {
+      if (endedRef.current || !isListeningRef.current) return;
+      if (!liveAudioSilenceMonitorRef.current) {
+        isUserActivelySpeakingRef.current = false;
+        if (hasUserStartedSpeakingRef.current) {
+          lastSpeechDetectedAtRef.current = Date.now();
+          armUserSilenceTimer(activeListeningSessionRef.current);
+        }
+      }
+    };
 
     recognition.onresult = (event: unknown) => {
       const e = event as { results: { [index: number]: { [index: number]: { transcript: string }; isFinal: boolean }; length: number } };
@@ -717,17 +1023,19 @@ export default function MockInterviewSessionPage() {
       for (let i = 0; i < e.results.length; i++) {
         full += e.results[i][0].transcript;
       }
-      const nextTranscript = full.trim();
+      const nextTranscript = mergeRecognitionTranscript(recoveryTranscriptBaseRef.current, full);
       finalTranscriptRef.current = nextTranscript;
       setLiveTranscript(nextTranscript);
-      if (nextTranscript) {
-        if (!currentQuestionRef.current.answerStartedForCurrentQuestion) {
-          currentQuestionRef.current.answerStartedForCurrentQuestion = true;
-          currentQuestionRef.current.questionUnanswered = false;
-          clearAnswerStartTimer();
-          setTurnPhaseValue("user_speaking");
+      if (normalizeRecognitionTranscript(full)) {
+        markUserAnswerStarted();
+        if (liveAudioSilenceMonitorRef.current) {
+          lastSpeechDetectedAtRef.current ??= Date.now();
+          armUserSilenceTimer(activeListeningSessionRef.current);
+        } else {
+          isUserActivelySpeakingRef.current = true;
+          lastSpeechDetectedAtRef.current = Date.now();
+          armUserSilenceTimer(activeListeningSessionRef.current);
         }
-        armUserSilenceTimer(activeListeningSessionRef.current);
       }
     };
 
@@ -744,6 +1052,7 @@ export default function MockInterviewSessionPage() {
       }
 
       if (err.error === "no-speech" || err.error === "aborted" || err.error === "audio-capture") {
+        preserveTranscriptForRecognitionRecovery();
         scheduleListeningStart(assistantPlaybackTokenRef.current, 0, AUTO_LISTEN_RETRY_MS, true);
         return;
       }
@@ -754,17 +1063,21 @@ export default function MockInterviewSessionPage() {
     recognition.onend = () => {
       if (endedRef.current) return;
       const stopReason = recognitionStopReasonRef.current;
+      const shouldFinalizeTurn = recognitionFinalizingRef.current;
+      recognitionFinalizingRef.current = false;
       recognitionStopReasonRef.current = "none";
       if (stopReason === "assistant" || stopReason === "teardown") {
         finalTranscriptRef.current = "";
         setLiveTranscript("");
+        resetSpeechActivityTracking();
         return;
       }
-      if (!isListeningRef.current) {
+      if (!isListeningRef.current && !shouldFinalizeTurn) {
         return;
       }
 
       if (stopReason !== "silence-finalize" && stopReason !== "manual") {
+        preserveTranscriptForRecognitionRecovery();
         scheduleListeningStart(assistantPlaybackTokenRef.current, 0, AUTO_LISTEN_RETRY_MS, true);
         return;
       }
@@ -772,6 +1085,7 @@ export default function MockInterviewSessionPage() {
       const text = finalTranscriptRef.current.trim();
       finalTranscriptRef.current = "";
       setLiveTranscript("");
+      resetSpeechActivityTracking();
       setListeningState(false);
 
       if (!text) {
@@ -800,6 +1114,9 @@ export default function MockInterviewSessionPage() {
     step,
     sendToAI,
     locale,
+    markUserAnswerStarted,
+    preserveTranscriptForRecognitionRecovery,
+    resetSpeechActivityTracking,
     scheduleListeningStart,
     setListeningState,
     setTurnPhaseValue,
@@ -902,7 +1219,7 @@ export default function MockInterviewSessionPage() {
   ]);
 
   const toggleListen = () => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current || assistantPlaybackLockRef.current) return;
     if (turnPhaseRef.current === "nova_processing" || turnPhaseRef.current === "user_answer_complete") return;
     assistantPlaybackTokenRef.current += 1;
     clearListeningResumeTimer();
@@ -933,10 +1250,13 @@ export default function MockInterviewSessionPage() {
 
   const releaseMicrophoneResources = useCallback(() => {
     assistantPlaybackTokenRef.current += 1;
+    assistantPlaybackLockRef.current = false;
     clearListeningResumeTimer();
     autoStartListeningRef.current = false;
+    recognitionFinalizingRef.current = false;
     recognitionStopReasonRef.current = "teardown";
     clearTurnTimers();
+    stopLiveAudioSilenceMonitor();
     try {
       recognitionRef.current?.stop();
     } catch {
@@ -948,6 +1268,7 @@ export default function MockInterviewSessionPage() {
     setTurnPhaseValue("idle");
     setLiveTranscript("");
     finalTranscriptRef.current = "";
+    resetSpeechActivityTracking();
     resetCurrentQuestionState();
     if (micAnimationRef.current) {
       cancelAnimationFrame(micAnimationRef.current);
@@ -964,8 +1285,10 @@ export default function MockInterviewSessionPage() {
   }, [
     clearListeningResumeTimer,
     clearTurnTimers,
+    resetSpeechActivityTracking,
     resetCurrentQuestionState,
     setListeningState,
+    stopLiveAudioSilenceMonitor,
     setTurnPhaseValue,
   ]);
 

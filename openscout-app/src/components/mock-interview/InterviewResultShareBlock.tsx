@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, ShareNetwork } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/Button";
 import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
@@ -35,19 +35,27 @@ export function InterviewResultShareBlock({
 }: Props) {
   const [hideName, setHideName] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [fullUrl, setFullUrl] = useState("");
+  const [canNativeShare, setCanNativeShare] = useState(false);
 
   const publicPath = useMemo(
     () => buildPublicInterviewResultPath(resultId, { anon: hideName }),
     [resultId, hideName]
   );
 
-  const fullUrl = useMemo(() => {
-    if (typeof window === "undefined") return publicPath;
+  useEffect(() => {
+    setFullUrl(publicPath);
+    if (typeof window === "undefined") {
+      setCanNativeShare(false);
+      return;
+    }
+
     const u = new URL(publicPath, window.location.origin);
     u.searchParams.set("utm_source", "openscout");
     u.searchParams.set("utm_medium", "share");
     u.searchParams.set("utm_campaign", "interview_result");
-    return u.href;
+    setFullUrl(u.href);
+    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
   }, [publicPath]);
 
   const viralText = interviewResultViralText(score, jobCategory);
@@ -80,9 +88,6 @@ export function InterviewResultShareBlock({
       }
     }
   };
-
-  const canNativeShare =
-    typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
     <div className="rounded-[10px] border border-[var(--border)] bg-white p-6 shadow-card dark:border-white/[0.12] dark:bg-black/25 dark:backdrop-blur-xl">

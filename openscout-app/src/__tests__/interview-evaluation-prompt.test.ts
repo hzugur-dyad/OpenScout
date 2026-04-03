@@ -3,30 +3,27 @@ import { describe, expect, it } from "vitest";
 import { buildRecruiterGradeInterviewEvaluationSystemPrompt } from "@/lib/ai/prompts";
 
 describe("buildRecruiterGradeInterviewEvaluationSystemPrompt", () => {
-  it("defines the weighted recruiter-grade JSON contract in English", () => {
+  it("defines a question-level evidence-only JSON contract in English", () => {
     const prompt = buildRecruiterGradeInterviewEvaluationSystemPrompt("Senior Backend Engineer", "en", "");
 
     expect(prompt).toContain("recruiter-grade evaluation lead");
-    expect(prompt).toContain("Do not reward memorized definitions");
-    expect(prompt).toContain("Repeated weak answers must stack negatively");
-    expect(prompt).toContain("technical_knowledge = 25%");
-    expect(prompt).toContain("problem_solving = 25%");
-    expect(prompt).toContain("system_design = 20%");
-    expect(prompt).toContain("communication = 15%");
-    expect(prompt).toContain("tradeoffs = 10%");
-    expect(prompt).toContain("practical_experience = 5%");
-    expect(prompt).toContain("\"final_score\": 0");
-    expect(prompt).toContain("\"answer_breakdown\": [");
-    expect(prompt).toContain("\"hire_recommendation\": \"yes\"");
+    expect(prompt).toContain("Your job is ONLY question-level structured evaluation");
+    expect(prompt).toContain("Do NOT compute or output final_score");
+    expect(prompt).toContain("If a question has follow-ups");
+    expect(prompt).toContain("\"question_evaluations\": [");
+    expect(prompt).toContain("\"answered\": true");
+    expect(prompt).toContain("\"tradeoff_awareness\": 0");
+    expect(prompt).toContain("Do not add final_score, confidence, coverage_score");
   });
 
   it("mirrors the same structured contract in Turkish", () => {
     const prompt = buildRecruiterGradeInterviewEvaluationSystemPrompt("Junior Frontend Developer", "tr", "");
 
-    expect(prompt).toContain("recruiter-grade kaliteyle degerlendir");
-    expect(prompt).toContain("Her mantiksal soru icin sonucu strong | medium | weak | no_response");
-    expect(prompt).toContain("Yayinlanan final_score agirliklari SABIT kalmali");
-    expect(prompt).toContain("\"technical_knowledge\": { \"score\": 0, \"reason\": \"\" }");
-    expect(prompt).toContain("\"hire_recommendation\": \"yes\"");
+    expect(prompt).toContain("recruiter-grade kaliteyle soru bazli degerlendir");
+    expect(prompt).toContain("Bu modelin gorevi SADECE soru bazli yapisal degerlendirme uretmektir");
+    expect(prompt).toContain("final_score, overall_score, confidence, coverage_score");
+    expect(prompt).toContain("\"question_evaluations\": [");
+    expect(prompt).toContain("\"answered\": true");
+    expect(prompt).toContain("\"tradeoff_awareness\": 0");
   });
 });

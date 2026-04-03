@@ -8,7 +8,8 @@ import {
   withProviderKeyFailover,
   type ProviderKeyEnvConfig,
 } from "@/lib/provider-key-failover";
-import { synthesizeInterviewSpeech } from "@/lib/tts";
+import { synthesizeInterviewSpeech, TTS_LANGUAGE_CONFIG } from "@/lib/tts";
+import { buildSsmlForSpeech, formatTextForSpeech, splitTextIntoSpeechChunks } from "@/lib/tts-text";
 
 const groqHoisted = vi.hoisted(() => ({
   createByKey: new Map<string, ReturnType<typeof vi.fn>>(),
@@ -227,5 +228,148 @@ describe("Google Cloud TTS wrapper", () => {
     const second = await synthesizeInterviewSpeech({ text: "Hello again.", locale: "en" });
     expect(second.buffer.toString("utf-8")).toBe("audio-two");
     expect(String(fetchMock.mock.calls[2]?.[0])).toContain("tts-backup");
+  });
+
+  it("falls back to the next configured voice when the first voice is unavailable", async () => {
+    process.env.GOOGLE_CLOUD_TTS_API_KEY = "tts-primary";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              message: `Voice ${TTS_LANGUAGE_CONFIG.en.preferredVoiceNames[0]} does not exist.`,
+              status: "INVALID_ARGUMENT",
+            },
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            audioContent: Buffer.from("voice-fallback-audio").toString("base64"),
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        ),
+      );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await synthesizeInterviewSpeech({ text: "Please walk me through the failure mode.", locale: "en" });
+
+    expect(result.buffer.toString("utf-8")).toBe("voice-fallback-audio");
+    expect(result.selectedVoice).toBe(TTS_LANGUAGE_CONFIG.en.preferredVoiceNames[1]);
+
+    const firstBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body)) as {
+      voice?: { name?: string };
+    };
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
+      voice?: { name?: string };
+      audioConfig?: { speakingRate?: number; pitch?: number; effectsProfileId?: string[] };
+    };
+
+    expect(firstBody.voice?.name).toBe(TTS_LANGUAGE_CONFIG.en.preferredVoiceNames[0]);
+    expect(secondBody.voice?.name).toBe(TTS_LANGUAGE_CONFIG.en.preferredVoiceNames[1]);
+    expect(secondBody.audioConfig?.speakingRate).toBeGreaterThanOrEqual(0.92);
+    expect(secondBody.audioConfig?.speakingRate).toBeLessThanOrEqual(0.98);
+    expect(secondBody.audioConfig?.pitch).toBeLessThanOrEqual(-1);
+    expect(secondBody.audioConfig?.pitch).toBeGreaterThanOrEqual(-2);
+    expect(secondBody.audioConfig?.effectsProfileId).toEqual(["headphone-class-device"]);
+  });
+
+  it("removes internal control payloads and shapes text for speech-friendly SSML", () => {
+    const rawText = [
+      "Let's focus on the rollback path.",
+      "",
+      "<technical_normalization>terms: apı=api</technical_normalization>",
+      '{"type":"question_control","question_id":"q1","attempt":1,"is_followup":false}',
+    ].join("\n");
+
+    const formatted = formatTextForSpeech(rawText, "en");
+    const ssml = buildSsmlForSpeech(rawText, "en");
+
+    expect(formatted).toBe("Let's focus on the rollback path.");
+    expect(ssml).toContain("<speak><p><s>Let&apos;s focus on the rollback path.</s></p></speak>");
+    expect(ssml).not.toContain("technical_normalization");
+    expect(ssml).not.toContain("question_control");
+  });
+
+  it("splits long spoken text into short sequential chunks", () => {
+    const chunks = splitTextIntoSpeechChunks(
+      [
+        "You mentioned cache invalidation.",
+        "As you said, the stale read risk matters here.",
+        "You should consider implementing a write-through strategy, but tell me what breaks first when the queue lags behind.",
+      ].join(" "),
+      "en"
+    );
+
+    expect(chunks.length).toBeGreaterThanOrEqual(2);
+    expect(chunks.length).toBeLessThanOrEqual(3);
+    expect(chunks.join(" ")).not.toContain("You mentioned");
+    expect(chunks.join(" ")).not.toContain("As you said");
+    expect(chunks.join(" ")).toContain("You could try");
+  });
+
+  it("preserves Turkish text exactly as written in the TTS shaping path", () => {
+    const text = "Veriyi senkronize edeceğim. Çözüm dışarıda; öğrenci geliştirme bağlantısı hazır.";
+
+    const formatted = formatTextForSpeech(text, "tr");
+    const chunks = splitTextIntoSpeechChunks(text, "tr");
+    const ssml = buildSsmlForSpeech(text, "tr");
+
+    expect(formatted).toBe(text);
+    expect(chunks).toEqual([text]);
+    expect(ssml).toBe(`<speak>${text}</speak>`);
+  });
+
+  it("sends Turkish synthesis requests as UTF-8 with tr-TR locale and natural settings only", async () => {
+    process.env.GOOGLE_CLOUD_TTS_API_KEY = "tts-primary";
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          audioContent: Buffer.from("turkish-audio").toString("base64"),
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await synthesizeInterviewSpeech({ text: "İstanbul için ölçülü çözüm şu.", locale: "tr" });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const body = JSON.parse(String(requestInit?.body)) as {
+      input?: { ssml?: string };
+      voice?: { languageCode?: string; name?: string; ssmlGender?: string };
+      audioConfig?: { speakingRate?: number; pitch?: number };
+    };
+
+    expect(requestInit?.headers).toMatchObject({
+      "Content-Type": "application/json; charset=utf-8",
+      "Accept-Charset": "utf-8",
+    });
+    expect(body.voice?.languageCode).toBe("tr-TR");
+    expect(body.voice?.name?.startsWith("tr-TR-") ?? false).toBe(true);
+    expect(body.voice?.ssmlGender).toBeUndefined();
+    expect(body.input?.ssml).toContain("İstanbul için ölçülü çözüm şu.");
+    expect(body.input?.ssml).not.toContain("Istanbul icin");
+    expect(body.voice?.languageCode).not.toBe("en-US");
+    expect(body.audioConfig?.speakingRate).toBeGreaterThanOrEqual(1.05);
+    expect(body.audioConfig?.speakingRate).toBeLessThanOrEqual(1.12);
+    expect(body.audioConfig?.pitch).toBeLessThanOrEqual(-1);
+    expect(body.audioConfig?.pitch).toBeGreaterThanOrEqual(-2);
   });
 });

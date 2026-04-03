@@ -43,7 +43,7 @@ export const interviewCopy = {
     preparing: "Nova mülakatınızı hazırlıyor...",
     readyPhrase: "Merhaba, mülakata hazırım.",
     noResponseCue: INTERVIEW_CONTRACT_USER_LINES.tr.timeout,
-    noAnswerRetryIntro: "Yanitinizi duyamadim. Soruyu tekrar edeyim.",
+    noAnswerRetryIntro: "Yanıtınızı duyamadım. Soruyu tekrar edeyim.",
     responseDelayWarningCue: INTERVIEW_CONTRACT_USER_LINES.tr.timeoutWarning,
     notHeardCue: INTERVIEW_CONTRACT_USER_LINES.tr.silenceOrUnrecognized,
     silenceEscalateCue: INTERVIEW_CONTRACT_USER_LINES.tr.silenceEscalate,

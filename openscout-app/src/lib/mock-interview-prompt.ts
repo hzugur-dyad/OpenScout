@@ -2,4 +2,4 @@ export {
   buildInterviewerSystemPrompt,
   buildEmployerQuestionsBlockEn,
   buildEmployerQuestionsBlockTr,
-} from "@/lib/ai/prompts";
+} from "@/lib/mock-interview/interviewer-prompts";

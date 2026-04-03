@@ -37,43 +37,64 @@ beforeEach(() => {
             {
               message: {
                 content: JSON.stringify({
-                  final_score: 82,
-                  categories: {
-                    technical_knowledge: {
-                      score: 9,
-                      reason: "Strong command of backend mechanisms and failure handling.",
-                    },
-                    problem_solving: {
-                      score: 8,
-                      reason: "Structured debugging and prioritization under pressure.",
-                    },
-                    system_design: {
-                      score: 8,
-                      reason: "Good architecture choices with some operational detail.",
-                    },
-                    communication: {
-                      score: 8,
-                      reason: "Answers were clear, organized, and concise.",
-                    },
-                    tradeoffs: {
-                      score: 8,
-                      reason: "Trade-offs were explicit instead of generic.",
-                    },
-                    practical_experience: {
-                      score: 7,
-                      reason: "Examples sounded grounded in production work.",
-                    },
-                  },
-                  answer_breakdown: [
+                  question_evaluations: [
                     {
                       question_id: "q1",
-                      result: "strong",
-                      reason: "Strong cache and invalidation reasoning.",
+                      answered: true,
+                      label: "strong",
+                      score: 8,
+                      competencies: {
+                        technical_knowledge: 9,
+                        problem_solving: 8,
+                        communication: 8,
+                        system_design: 7,
+                        tradeoff_awareness: 8,
+                      },
+                      reason: "The candidate explained cache invalidation trade-offs with concrete failure cases.",
+                    },
+                    {
+                      question_id: "q2",
+                      answered: true,
+                      label: "strong",
+                      score: 8,
+                      competencies: {
+                        technical_knowledge: 8,
+                        problem_solving: 8,
+                        communication: 7,
+                        system_design: 7,
+                        tradeoff_awareness: 8,
+                      },
+                      reason: "They broke the outage response into triage, mitigation, rollback, and verification.",
+                    },
+                    {
+                      question_id: "q3",
+                      answered: true,
+                      label: "medium",
+                      score: 7,
+                      competencies: {
+                        technical_knowledge: 8,
+                        problem_solving: 9,
+                        communication: 8,
+                        system_design: 8,
+                        tradeoff_awareness: 7,
+                      },
+                      reason: "The scaling answer was mostly solid, but some observability detail stayed thin.",
+                    },
+                    {
+                      question_id: "q4",
+                      answered: true,
+                      label: "medium",
+                      score: 7,
+                      competencies: {
+                        technical_knowledge: 9,
+                        problem_solving: 8,
+                        communication: 8,
+                        system_design: 7,
+                        tradeoff_awareness: 8,
+                      },
+                      reason: "They compared rollout safety, latency risk, and operational impact before choosing a path.",
                     },
                   ],
-                  strengths: ["Structured answers"],
-                  weaknesses: ["Use more concrete rollout examples"],
-                  hire_recommendation: "yes",
                 }),
               },
             },
@@ -86,7 +107,6 @@ beforeEach(() => {
 
 const longTranscript = "x".repeat(400);
 
-/** Qualifying length + realistic dialogue so transcript-quality heuristics stay "normal" */
 const qualifyingInterviewTranscript = [
   "assistant: How would you design caching for a read-heavy API?",
   "user: I would start with a short TTL CDN layer, then add an application cache with explicit invalidation on writes and monitor hit rate plus stale reads.",
@@ -120,7 +140,7 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(401);
   });
 
-  it("accepts short transcripts and still returns an evaluation", async () => {
+  it("forces hallucinated scoring down to zero when the transcript has no usable evidence", async () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
@@ -141,6 +161,12 @@ describe("POST /api/mock-interview/result", () => {
     const json = await res.json();
     expect(typeof json.score).toBe("number");
     expect(typeof json.final_score).toBe("number");
+    expect(json.confidence).toBe("low");
+    expect(json.is_preliminary).toBe(true);
+    expect(json.final_score).toBe(0);
+    expect(json.hire_recommendation).toBe("strong_no");
+    expect(json.technical_score).toBe(0);
+    expect(json.categories.technical_knowledge.score).toBe(0);
   });
 
   it("returns 403 when profile/CV guard blocks interview results", async () => {
@@ -163,7 +189,7 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(403);
   });
 
-  it("persists transcript, locale, model_version, prompt_version and normalized scores (Groq mocked)", async () => {
+  it("persists deterministic scoring fields and compatibility aliases", async () => {
     const transcript = qualifyingInterviewTranscript;
     const { client, insertMock } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
@@ -184,12 +210,25 @@ describe("POST /api/mock-interview/result", () => {
     const res = await POST(req);
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.score).toBe(82);
-    expect(json.final_score).toBe(82);
-    expect(json.strengths).toContain("Structured answers");
+    expect(json.score).toBe(81);
+    expect(json.final_score).toBe(81);
+    expect(json.confidence).toBe("high");
+    expect(json.coverage_score).toBe(93);
+    expect(json.is_preliminary).toBe(false);
     expect(json.hire_recommendation).toBe("yes");
+    expect(json.competency_breakdown).toEqual({
+      technical_knowledge: 85,
+      problem_solving: 83,
+      communication: 78,
+      system_design: 73,
+      tradeoff_awareness: 78,
+    });
     expect(json.categories.technical_knowledge.score).toBe(9);
+    expect(json.question_evaluations[0].label).toBe("strong");
     expect(json.answer_breakdown[0].result).toBe("strong");
+    expect(json.technical_score).toBe(85);
+    expect(json.communication_score).toBe(78);
+    expect(json.problem_solving_score).toBe(83);
 
     expect(insertMock).toHaveBeenCalledTimes(1);
     const row = insertMock.mock.calls[0][0] as Record<string, unknown>;
@@ -197,31 +236,52 @@ describe("POST /api/mock-interview/result", () => {
     expect(row.interview_language).toBe("tr");
     expect(row.model_version).toBe(GROQ_MOCK_INTERVIEW_MODEL);
     expect(row.prompt_version).toBe(MOCK_INTERVIEW_PIPELINE_VERSION);
-    expect(row.score).toBe(82);
+    expect(row.score).toBe(81);
     expect(row.report).toMatchObject({
-      final_score: 82,
+      final_score: 81,
+      confidence: "high",
+      coverage_score: 93,
+      is_preliminary: false,
+      competency_breakdown: {
+        technical_knowledge: 85,
+        problem_solving: 83,
+      },
       categories: {
         technical_knowledge: { score: 9 },
         problem_solving: { score: 8 },
       },
-      answer_breakdown: [
-        {
-          question_id: "q1",
-          result: "strong",
-        },
-      ],
-      strengths: ["Structured answers"],
-      improvements: ["Use more concrete rollout examples"],
-      technical_score: 90,
-      communication_score: 80,
-      problem_solving_score: 80,
+      technical_score: 85,
+      communication_score: 78,
+      problem_solving_score: 83,
       hire_recommendation: "yes",
       evaluation_meta: {
         used_fallback: false,
         transcript_signal: "normal",
+        transcript_signal_strength: "strong",
+        total_questions: 4,
+        answered_questions: 4,
+        usable_answer_count: 4,
+        competencies_covered_count: 5,
+        confidence: "high",
+        coverage_score: 93,
+        is_preliminary: false,
         source: "post_interview_evaluation",
         pipeline_version: MOCK_INTERVIEW_PIPELINE_VERSION,
       },
+    });
+    const report = row.report as {
+      question_evaluations?: Array<Record<string, unknown>>;
+      answer_breakdown?: Array<Record<string, unknown>>;
+    };
+    expect(report.question_evaluations?.[0]).toMatchObject({
+      question_id: "q1",
+      answered: true,
+      label: "strong",
+      score: 8,
+    });
+    expect(report.answer_breakdown?.[0]).toMatchObject({
+      question_id: "q1",
+      result: "strong",
     });
     expect(row.user_id).toBe("user-1");
     expect(row.job_id).toBe("job-xyz");
@@ -249,54 +309,166 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(200);
   });
 
+  it("returns zero for an interview with no answered questions", async () => {
+    const createMock = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              question_evaluations: [
+                {
+                  question_id: "q1",
+                  answered: false,
+                  label: "no_response",
+                  score: 0,
+                  competencies: {
+                    technical_knowledge: 0,
+                    problem_solving: 0,
+                    communication: 0,
+                    system_design: 0,
+                    tradeoff_awareness: 0,
+                  },
+                  reason: "The candidate never answered the first question.",
+                },
+                {
+                  question_id: "q2",
+                  answered: false,
+                  label: "no_response",
+                  score: 0,
+                  competencies: {
+                    technical_knowledge: 0,
+                    problem_solving: 0,
+                    communication: 0,
+                    system_design: 0,
+                    tradeoff_awareness: 0,
+                  },
+                  reason: "The candidate never answered the second question.",
+                },
+              ],
+            }),
+          },
+        },
+      ],
+    });
+    vi.mocked(getGroq).mockReturnValue({
+      chat: {
+        completions: {
+          create: createMock,
+        },
+      },
+    } as never);
+
+    const transcript = [
+      "assistant: Tell me about a production incident you handled.",
+      `user: ${INTERVIEW_CONTRACT_USER_LINES.en.timeout}`,
+      "assistant: How do you approach cache invalidation?",
+      `user: ${INTERVIEW_CONTRACT_USER_LINES.en.timeout}`,
+    ].join("\n");
+
+    const { client } = createSupabaseForMockInterviewResultRoute({
+      userId: "user-1",
+      profileGuard: "complete",
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const req = new NextRequest("http://localhost/api/mock-interview/result", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: testSessionId,
+        transcript,
+        jobCategory: "Engineering",
+        interviewLanguage: "en",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.final_score).toBe(0);
+    expect(json.confidence).toBe("low");
+    expect(json.is_preliminary).toBe(true);
+    expect(json.hire_recommendation).toBe("strong_no");
+    expect(json.categories.technical_knowledge.score).toBe(0);
+    expect(json.technical_score).toBe(0);
+  });
+
+  it("keeps parser fallback results in the 0-10 band instead of inventing a neutral score", async () => {
+    vi.mocked(getGroq).mockReturnValue({
+      chat: {
+        completions: {
+          create: vi.fn().mockResolvedValue({
+            choices: [
+              {
+                message: {
+                  content: "not valid json",
+                },
+              },
+            ],
+          }),
+        },
+      },
+    } as never);
+
+    const { client } = createSupabaseForMockInterviewResultRoute({
+      userId: "user-1",
+      profileGuard: "complete",
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const req = new NextRequest("http://localhost/api/mock-interview/result", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: testSessionId,
+        transcript: qualifyingInterviewTranscript,
+        jobCategory: "Engineering",
+        interviewLanguage: "en",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.evaluation_used_fallback).toBe(true);
+    expect(json.final_score).toBeLessThanOrEqual(10);
+    expect(json.confidence).toBe("low");
+    expect(json.is_preliminary).toBe(true);
+    expect(json.hire_recommendation).toBe("strong_no");
+  });
+
   it("passes unanswered/no_response markers through to the evaluation payload", async () => {
     const createMock = vi.fn().mockResolvedValue({
       choices: [
         {
           message: {
             content: JSON.stringify({
-              final_score: 56,
-              categories: {
-                technical_knowledge: {
-                  score: 6,
-                  reason: "Some correct debugging ideas, but depth weakened after the missed answer.",
-                },
-                problem_solving: {
-                  score: 6,
-                  reason: "The response structure was workable, but signal dropped on unanswered questions.",
-                },
-                system_design: {
-                  score: 5,
-                  reason: "Limited architecture evidence in this transcript.",
-                },
-                communication: {
-                  score: 6,
-                  reason: "Most answers were understandable and direct.",
-                },
-                tradeoffs: {
-                  score: 5,
-                  reason: "Trade-off depth was inconsistent.",
-                },
-                practical_experience: {
-                  score: 4,
-                  reason: "Limited hands-on signal because one topic was not answered.",
-                },
-              },
-              answer_breakdown: [
+              question_evaluations: [
                 {
                   question_id: "q1",
-                  result: "medium",
+                  answered: true,
+                  label: "medium",
+                  score: 6,
+                  competencies: {
+                    technical_knowledge: 6,
+                    problem_solving: 6,
+                    communication: 6,
+                    system_design: 4,
+                    tradeoff_awareness: 5,
+                  },
                   reason: "Reasonable outage process, but not deeply detailed.",
                 },
                 {
                   question_id: "q2",
-                  result: "no_response",
+                  answered: false,
+                  label: "no_response",
+                  score: 0,
+                  competencies: {
+                    technical_knowledge: 0,
+                    problem_solving: 0,
+                    communication: 0,
+                    system_design: 0,
+                    tradeoff_awareness: 0,
+                  },
                   reason: "The candidate did not answer the cache stampede question.",
                 },
               ],
-              strengths: ["Concise"],
-              weaknesses: ["Answer more questions directly"],
-              hire_recommendation: "no",
             }),
           },
         },
@@ -338,6 +510,12 @@ describe("POST /api/mock-interview/result", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.question_evaluations[1].label).toBe("no_response");
+    expect(json.final_score).toBe(19);
+    expect(json.confidence).toBe("low");
+    expect(json.is_preliminary).toBe(true);
+    expect(json.hire_recommendation).toBe("strong_no");
 
     expect(createMock).toHaveBeenCalledTimes(1);
     const groqPayload = createMock.mock.calls[0]?.[0] as {
@@ -345,6 +523,6 @@ describe("POST /api/mock-interview/result", () => {
       messages?: Array<{ role: string; content: string }>;
     };
     expect(groqPayload.temperature).toBe(0);
-    expect(groqPayload.messages?.[1]?.content).toContain("unanswered/no_response");
+    expect(groqPayload.messages?.[1]?.content).toContain("answered=false, label=no_response");
   });
 });

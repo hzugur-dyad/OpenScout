@@ -21,13 +21,13 @@ export const INTERVIEW_CONTRACT_USER_LINES = {
   },
   tr: {
     timeout:
-      "[Aday ayni soru bir kez tekrar edildikten sonra da yanit vermedi. Bu soruyu unanswered/no_response olarak isaretle ve sonraki soruya gec.]",
+      "[Aday aynı soru bir kez tekrar edildikten sonra da yanıt vermedi. Bu soruyu unanswered/no_response olarak işaretle ve sonraki soruya geç.]",
     silenceOrUnrecognized:
-      "[Kullanici sessiz kaldi veya konusma algilanamadi. Kisaca tekrar etmesini iste.]",
+      "[Kullanıcı sessiz kaldı veya konuşma algılanamadı. Kısaca tekrar etmesini iste.]",
     timeoutWarning:
-      "[Aday olandan uzun suredir yanit vermiyor. Kisa bir kontrol cumlesi kur, mevcut soruyu tek cumlede yeniden ifade et ve ayni konuda kal - henuz ilerleme.]",
+      "[Aday olandan uzun süredir yanıt vermiyor. Kısa bir kontrol cümlesi kur, mevcut soruyu tek cümlede yeniden ifade et ve aynı konuda kal - henüz ilerleme.]",
     silenceEscalate:
-      "[Kullanici tekrar istemine ragmen yine sessiz kaldi. Ayni ifadeyle sorma. Kisaca onayla ve yeni question_id ile attempt=1 ve yeni konuya gec.]",
+      "[Kullanıcı tekrar istemine rağmen yine sessiz kaldı. Aynı ifadeyle sorma. Kısaca onayla ve yeni question_id ile attempt=1 ve yeni konuya geç.]",
   },
 } as const;
 

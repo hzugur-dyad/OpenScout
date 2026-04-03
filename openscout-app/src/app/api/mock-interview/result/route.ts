@@ -149,14 +149,14 @@ export async function POST(request: NextRequest) {
     const transcriptQuality = assessInterviewTranscriptQuality(transcriptStr);
     const lowSignalEvalNote =
       locale === "tr"
-        ? `\n\n[DEĞERLENDİRME_NOTU: Transkriptte çok sayıda sessizlik/zaman aşımı satırı veya aşırı kısa aday yanıtları olabilir. Genel puanı yapay olarak yükseltme; güçlü teknik kanıt yoksa 55 üstüne çıkma. Gerekçede sınırlı sinyali açıkça belirt.]`
-        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Do not inflate the overall score; avoid scores above ~55 unless there is strong technical evidence. Explicitly reflect the limited signal in category reasons and weaknesses.]`;
+        ? `\n\n[DEGERLENDIRME_NOTU: Transkriptte cok sayida sessizlik/zaman asimi satiri veya asiri kisa aday yanitlari olabilir. Bunu sinirli kanit olarak kabul et. Guclu transcript kaniti yoksa strong etiketi veya yuksek competency skoru verme.]`
+        : `\n\n[EVALUATION_NOTE: The transcript may include many silence/timeout lines or very short candidate answers. Treat this as limited evidence. Do not award strong labels or high competency scores unless the transcript clearly supports them.]`;
 
     const unansweredEvalNote =
       transcriptQuality.unansweredTurnCount > 0
         ? locale === "tr"
-          ? `\n\n[DEGERLENDIRME_NOTU: Transkriptte ${transcriptQuality.unansweredTurnCount} soru unanswered/no_response olarak isaretli. Bunlari kacirilmis soru olarak degerlendir ve genel puani buna gore dusur.]`
-          : `\n\n[EVALUATION_NOTE: The transcript marks ${transcriptQuality.unansweredTurnCount} question(s) as unanswered/no_response. Treat those as missed answers and lower the overall assessment accordingly.]`
+          ? `\n\n[DEGERLENDIRME_NOTU: Transkriptte ${transcriptQuality.unansweredTurnCount} soru unanswered/no_response olarak isaretli. Anlamli cevap yoksa answered=false, label=no_response, score=0 ve tum competency skorlerini 0 ver.]`
+          : `\n\n[EVALUATION_NOTE: The transcript marks ${transcriptQuality.unansweredTurnCount} question(s) as unanswered/no_response. When there is no meaningful answer, set answered=false, label=no_response, score=0, and every competency score to 0.]`
         : "";
     const evaluationTranscriptPayload = transcriptQuality.isLowSignal
       ? `${transcriptStr}${lowSignalEvalNote}${unansweredEvalNote}`
@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     const text = completion.choices[0]?.message?.content ?? "";
     if (!text.trim()) {
-      logWarn("mock-interview result Groq returned empty content — using fallback evaluation");
+      logWarn("mock-interview result Groq returned empty content - using fallback evaluation");
       captureMessage("Mock interview result: empty model output, fallback evaluation", {
         route: "/api/mock-interview/result",
         user_id: user.id,
@@ -209,7 +209,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "");
+    const normalized = parseInterviewEvaluationModelOutput(text.trim() ? text : "", {
+      transcriptQuality,
+    });
     if (normalized.usedFallback) {
       logWarn("mock-interview result: parser used fallback scores", { jobCategory });
       captureMessage("Mock interview result: fallback scoring used", {
@@ -220,29 +222,48 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let overallScore = normalized.overallScore;
-    if (transcriptQuality.scoreCap != null && overallScore > transcriptQuality.scoreCap) {
-      overallScore = transcriptQuality.scoreCap;
-    }
+    const overallScore = normalized.finalScore;
     const technicalScore = normalized.technicalScore;
     const communicationScore = normalized.communicationScore;
     const problemSolvingScore = normalized.problemSolvingScore;
+    const confidence = normalized.confidence;
+    const coverageScore = normalized.coverageScore;
+    const isPreliminary = normalized.isPreliminary;
+    const competencyBreakdown = normalized.competencyBreakdown;
     const categories = normalized.categories;
+    const questionEvaluations = normalized.questionEvaluations;
     const answerBreakdown = normalized.answerBreakdown;
     const hireRecommendation = normalized.hireRecommendation;
     const strengths = normalized.strengths;
+    const weaknesses = normalized.weaknesses;
     const improvements = normalized.improvements;
+    const summary = normalized.summary;
     const justification = normalized.justification;
 
     const report: Record<string, unknown> = {
       final_score: overallScore,
+      confidence,
+      coverage_score: coverageScore,
+      is_preliminary: isPreliminary,
+      competency_breakdown: competencyBreakdown,
       categories,
+      question_evaluations: questionEvaluations,
       answer_breakdown: answerBreakdown,
       strengths,
+      weaknesses,
       improvements,
+      summary,
       evaluation_meta: {
         used_fallback: normalized.usedFallback,
         transcript_signal: transcriptQuality.isLowSignal ? "low" : "normal",
+        transcript_signal_strength: transcriptQuality.signalStrength,
+        total_questions: normalized.coverage.totalQuestions,
+        answered_questions: normalized.coverage.answeredQuestions,
+        usable_answer_count: normalized.coverage.usableAnswerCount,
+        competencies_covered_count: normalized.coverage.competenciesCoveredCount,
+        confidence,
+        coverage_score: coverageScore,
+        is_preliminary: isPreliminary,
         ...(transcriptQuality.scoreCap != null ? { transcript_score_cap: transcriptQuality.scoreCap } : {}),
         ...(transcriptQuality.unansweredTurnCount > 0
           ? { unanswered_turn_count: transcriptQuality.unansweredTurnCount }
@@ -253,6 +274,7 @@ export async function POST(request: NextRequest) {
     };
     if (hireRecommendation) report.hire_recommendation = hireRecommendation;
     if (justification) report.justification = justification;
+    report.confidence_score = normalized.confidenceScore;
     if (technicalScore !== null) report.technical_score = technicalScore;
     if (communicationScore !== null) report.communication_score = communicationScore;
     if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
@@ -309,10 +331,17 @@ export async function POST(request: NextRequest) {
       score: overallScore,
       final_score: overallScore,
       overall_score: overallScore,
+      confidence,
+      coverage_score: coverageScore,
+      is_preliminary: isPreliminary,
+      competency_breakdown: competencyBreakdown,
       categories,
+      question_evaluations: questionEvaluations,
       answer_breakdown: answerBreakdown,
       strengths,
+      weaknesses,
       improvements,
+      summary,
       evaluation_used_fallback: normalized.usedFallback,
       ...(hireRecommendation && { hire_recommendation: hireRecommendation }),
       ...(justification && { justification }),

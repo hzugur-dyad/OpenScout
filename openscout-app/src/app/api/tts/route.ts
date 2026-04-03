@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let body: { text?: string; locale?: string };
+    let body: { text?: string; locale?: string; chunks?: string[] };
     try {
       body = await request.json();
     } catch {
@@ -35,18 +35,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    const text = typeof body.text === "string" ? body.text.trim() : "";
-    if (!text) {
-      logWarn("tts validation failed", { reason: "text required" });
-      return NextResponse.json({ error: "text is required" }, { status: 400 });
+    const locale = parseInterviewLocale(typeof body.locale === "string" ? body.locale : undefined);
+    const preserveExactText = locale === "tr";
+
+    const text = typeof body.text === "string" ? (preserveExactText ? body.text : body.text.trim()) : "";
+    const textHasContent = typeof body.text === "string" && body.text.trim().length > 0;
+    const chunks = Array.isArray(body.chunks)
+      ? body.chunks
+          .filter((chunk): chunk is string => typeof chunk === "string")
+          .filter((chunk) => chunk.trim().length > 0)
+          .slice(0, 3)
+          .map((chunk) => (preserveExactText ? chunk : chunk.trim()))
+      : [];
+    if (!textHasContent && chunks.length === 0) {
+      logWarn("tts validation failed", { reason: "text or chunks required" });
+      return NextResponse.json({ error: "text or chunks is required" }, { status: 400 });
     }
 
-    const locale = parseInterviewLocale(typeof body.locale === "string" ? body.locale : undefined);
-
-    let buffer: Buffer;
+    const textsToSynthesize = chunks.length > 0 ? chunks : [text];
     try {
-      const result = await synthesizeInterviewSpeech({ text, locale });
-      buffer = result.buffer;
+      const results = await Promise.all(
+        textsToSynthesize.map((chunkText) => synthesizeInterviewSpeech({ text: chunkText, locale }))
+      );
+
+      if (chunks.length > 0) {
+        return NextResponse.json({
+          audioChunks: results.map((result) => result.buffer.toString("base64")),
+        });
+      }
+
+      const buffer = results[0]?.buffer;
+      if (!buffer) {
+        return NextResponse.json({ error: "TTS request failed" }, { status: 502 });
+      }
+
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: {
+          "Content-Type": "audio/mpeg",
+        },
+      });
     } catch (fetchError) {
       logError("tts Google TTS request failed", fetchError);
       captureException(fetchError, {
@@ -59,11 +86,6 @@ export async function POST(request: NextRequest) {
         { status: 502 }
       );
     }
-    return new NextResponse(new Uint8Array(buffer), {
-      headers: {
-        "Content-Type": "audio/mpeg",
-      },
-    });
   } catch (e) {
     captureException(e, { route: "/api/tts" });
     return NextResponse.json({ error: "TTS error" }, { status: 500 });

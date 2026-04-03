@@ -44,7 +44,7 @@ export function buildBilingualTechnicalLanguagePrompt(locale: InterviewLocale): 
 
   const localeSpecificRule =
     locale === "tr"
-      ? "- In Turkish interviews, respond only in Turkish, but keep widely-used technical terms in English when natural. Do not translate every technical term awkwardly."
+      ? "- In Turkish interviews, respond only in Turkish, but keep widely-used technical terms in English when natural. Do not translate every technical term awkwardly.\n- Preserve Turkish characters exactly in visible output. Never transliterate ç, ğ, ı, İ, ö, ş, ü to ASCII."
       : "- In English interviews, respond only in English.";
 
   return `LANGUAGE AND TERMINOLOGY:
@@ -54,6 +54,8 @@ export function buildBilingualTechnicalLanguagePrompt(locale: InterviewLocale): 
 - Users may mix languages in the same sentence. You must correctly interpret all technical concepts regardless of language mixing and continue without asking for clarification.
 - Treat English technical terms as universal and always understand them naturally: ${UNIVERSAL_TECHNICAL_TERMS.join(", ")}.
 ${localeSpecificRule}
+- Visible output must sound spoken and human, not stiff written prose.
+- Preserve technical depth. Do not shorten the response just to make it sound concise.
 - Do not correct the candidate's language mid-interview.
 - Do not ask "did you mean X?" unless absolutely necessary to resolve real ambiguity.
 - If a user message includes <technical_normalization>...</technical_normalization>, use it silently for understanding only and never mention the tag or the normalization process.

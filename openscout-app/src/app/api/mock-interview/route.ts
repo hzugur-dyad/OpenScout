@@ -15,7 +15,11 @@ import {
   buildEmployerQuestionsBlockTr,
   buildInterviewerSystemPrompt,
 } from "@/lib/mock-interview-prompt";
-import { buildMockInterviewServerFlowHint, classifyContractStimulus } from "@/lib/mock-interview/flow-hints";
+import {
+  buildMockInterviewProgressHint,
+  buildMockInterviewServerFlowHint,
+  classifyContractStimulus,
+} from "@/lib/mock-interview/flow-hints";
 import {
   buildBilingualTechnicalLanguagePrompt,
   enrichInterviewMessagesForModel,
@@ -102,6 +106,10 @@ function buildControlContextHint(
   if (!interviewControl) return "";
   const q = interviewControl.questionId;
   const a = Math.max(1, Math.min(2, interviewControl.attemptCount));
+  if (locale === "tr") {
+    return `\nKONTROL BAGLAMI: Aktif question_id=${q}, bildirilen attempt=${a}. attempt=2 ise ayni question_id'yi ve ayni topigi tekrar kullanma. Yeni question_id ile siradaki topige gec; attempt=1, is_followup=false. __deep gibi turetilmis ayni-topic id'leri kullanma.`;
+  }
+  return `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt=2, do not reuse the same question_id and do not stay on the same topic. Advance to the next topic with a new question_id, attempt=1, is_followup=false. Do not create same-topic derived ids like ${q}__deep.`;
   return locale === "tr"
     ? `\nKONTROL BAĞLAMI: Aktif question_id=${q}, bildirilen attempt=${a}. attempt zaten 2 ise aynı soruda kalma; yeni question_id ve attempt=1 kullan.`
     : `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt is already 2, advance with a new question_id and attempt=1.`;
@@ -278,6 +286,11 @@ export async function POST(request: NextRequest) {
       lastUserMessage,
       clientPrev,
     });
+    const progressHint = buildMockInterviewProgressHint({
+      locale,
+      messages,
+      clientPrev,
+    });
 
     const controlHint = buildControlContextHint(locale, clientPrev);
     const systemPrompt = [
@@ -287,6 +300,7 @@ export async function POST(request: NextRequest) {
         userName: userName && typeof userName === "string" ? userName : "",
         customQuestionsBlock,
         serverFlowHint,
+        progressHint,
         controlHint,
       }),
       buildBilingualTechnicalLanguagePrompt(locale),

@@ -64,6 +64,8 @@ describe("mock interview bilingual terminology prompt", () => {
     expect(enPrompt).toContain('RESPONSE LANGUAGE LOCK: interview_language="en" -> respond ONLY in English.');
     expect(trPrompt).toContain("You are fluent in bilingual (Turkish + English) technical communication.");
     expect(enPrompt).toContain("Treat English technical terms as universal");
+    expect(trPrompt).toContain("Visible output must sound spoken and human");
+    expect(enPrompt).toContain("Do not shorten the response just to make it sound concise.");
     expect(trPrompt).toContain("<technical_normalization>");
   });
 });

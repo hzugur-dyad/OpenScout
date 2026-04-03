@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { InterviewLocale } from "@/lib/interview-locale";
+import { buildSsmlForSpeech, formatTextForSpeech } from "@/lib/tts-text";
 import {
   classifyStandardProviderFailoverError,
   hasProviderApiKeys,
@@ -10,9 +11,6 @@ import {
 } from "@/lib/provider-key-failover";
 
 const GOOGLE_TTS_URL = "https://texttospeech.googleapis.com/v1/text:synthesize";
-
-// Keep a small safety margin for SSML wrappers/tags.
-const MAX_TEXT_LENGTH = 4500;
 
 export const GOOGLE_CLOUD_TTS_KEY_ENV_CONFIG: ProviderKeyEnvConfig = {
   provider: "google-cloud-tts",
@@ -26,53 +24,46 @@ export const GOOGLE_CLOUD_TTS_KEY_ENV_CONFIG: ProviderKeyEnvConfig = {
 type LanguageTtsConfig = {
   languageCode: string;
   preferredVoiceNames: string[];
-  speakingRate: number;
-  pitch: number;
+  speakingRate?: number;
+  pitch?: number;
+  effectsProfileIds?: string[];
+  ssmlGender: "FEMALE" | "MALE" | "NEUTRAL";
 };
 
 export const TTS_LANGUAGE_CONFIG: Record<InterviewLocale, LanguageTtsConfig> = {
   en: {
     languageCode: "en-US",
-    preferredVoiceNames: ["en-US-Neural2-F", "en-US-Wavenet-F", "en-US-Standard-F"],
-    speakingRate: 1,
-    pitch: 0,
+    preferredVoiceNames: [
+      "en-US-Chirp3-HD-Leda",
+      "en-US-Chirp3-HD-Kore",
+      "en-US-Chirp3-HD-Zephyr",
+      "en-US-Chirp3-HD-Aoede",
+      "en-US-Neural2-F",
+      "en-US-Wavenet-F",
+      "en-US-Standard-F",
+    ],
+    speakingRate: 0.95,
+    pitch: -1.4,
+    effectsProfileIds: ["headphone-class-device"],
+    ssmlGender: "FEMALE",
   },
   tr: {
     languageCode: "tr-TR",
-    // Prefer premium neural voices; fallback progressively for compatibility.
-    preferredVoiceNames: ["tr-TR-Chirp3-HD-Achernar", "tr-TR-Wavenet-B", "tr-TR-Wavenet-A", "tr-TR-Standard-B"],
-    speakingRate: 1.02,
-    pitch: -1,
+    preferredVoiceNames: [
+      "tr-TR-Chirp3-HD-Leda",
+      "tr-TR-Chirp3-HD-Kore",
+      "tr-TR-Chirp3-HD-Zephyr",
+      "tr-TR-Chirp3-HD-Aoede",
+      "tr-TR-Wavenet-A",
+      "tr-TR-Wavenet-C",
+      "tr-TR-Standard-A",
+    ],
+    speakingRate: 1.08,
+    pitch: -1.4,
+    effectsProfileIds: ["headphone-class-device"],
+    ssmlGender: "FEMALE",
   },
 };
-
-function escapeXml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
-function buildSsml(rawText: string): string {
-  const safeText = rawText.length > MAX_TEXT_LENGTH ? rawText.slice(0, MAX_TEXT_LENGTH) : rawText;
-  const normalized = safeText.replace(/\s+/g, " ").trim();
-  if (!normalized) return "<speak></speak>";
-
-  const sentenceParts = normalized
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .map(escapeXml);
-
-  if (sentenceParts.length <= 1) {
-    return `<speak>${sentenceParts[0] ?? ""}</speak>`;
-  }
-
-  const withBreaks = sentenceParts.join('<break time="280ms"/>');
-  return `<speak>${withBreaks}</speak>`;
-}
 
 function parseGoogleTtsError(raw: string): { message: string; code?: string } {
   if (!raw) return { message: "Google TTS request failed" };
@@ -104,6 +95,65 @@ function isUnsupportedSpeakingRate(message: string): boolean {
   return (m.includes("speakingrate") || m.includes("speaking rate")) && m.includes("does not support");
 }
 
+function isUnsupportedEffectsProfile(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    (m.includes("effectsprofileid") || m.includes("effects profile")) &&
+    (m.includes("unsupported") || m.includes("invalid") || m.includes("not support"))
+  );
+}
+
+type GoogleAudioConfig = {
+  audioEncoding: "MP3";
+  speakingRate?: number;
+  pitch?: number;
+  effectsProfileId?: string[];
+};
+
+function buildPreferredAudioConfig(cfg: LanguageTtsConfig): GoogleAudioConfig {
+  const audioConfig: GoogleAudioConfig = { audioEncoding: "MP3" };
+  if (typeof cfg.speakingRate === "number") {
+    audioConfig.speakingRate = cfg.speakingRate;
+  }
+  if (typeof cfg.pitch === "number") {
+    audioConfig.pitch = cfg.pitch;
+  }
+  if (cfg.effectsProfileIds?.length) {
+    audioConfig.effectsProfileId = [...cfg.effectsProfileIds];
+  }
+  return audioConfig;
+}
+
+function downgradeAudioConfig(audioConfig: GoogleAudioConfig, message: string): GoogleAudioConfig | null {
+  if (audioConfig.effectsProfileId?.length && isUnsupportedEffectsProfile(message)) {
+    const { effectsProfileId: _ignored, ...rest } = audioConfig;
+    return rest;
+  }
+
+  if (typeof audioConfig.pitch === "number" && isUnsupportedPitch(message)) {
+    const { pitch: _ignored, ...rest } = audioConfig;
+    return rest;
+  }
+
+  if (typeof audioConfig.speakingRate === "number" && isUnsupportedSpeakingRate(message)) {
+    const { speakingRate: _ignored, ...rest } = audioConfig;
+    return rest;
+  }
+
+  return null;
+}
+
+function assertTurkishTtsPayloadIntegrity(originalText: string, finalText: string): void {
+  const utf8RoundTrip = new TextDecoder("utf-8", { fatal: true }).decode(new TextEncoder().encode(finalText));
+  if (utf8RoundTrip !== finalText) {
+    throw new Error("Turkish TTS payload failed UTF-8 round-trip integrity");
+  }
+
+  if (originalText !== finalText) {
+    throw new Error("Turkish TTS text changed before synthesis");
+  }
+}
+
 async function synthesizeInterviewSpeechWithKey(args: {
   text: string;
   locale: InterviewLocale;
@@ -111,27 +161,32 @@ async function synthesizeInterviewSpeechWithKey(args: {
 }): Promise<{ buffer: Buffer; selectedVoice: string | null }> {
   const { text, locale, apiKey } = args;
   const cfg = TTS_LANGUAGE_CONFIG[locale];
-  const ssml = buildSsml(text);
+  const finalText = formatTextForSpeech(text, locale);
+  if (locale === "tr") {
+    assertTurkishTtsPayloadIntegrity(text, finalText);
+  }
+  const ssml = buildSsmlForSpeech(finalText, locale);
 
   let lastError = "Google TTS request failed";
 
-  const voiceCandidates: Array<string | null> = [...cfg.preferredVoiceNames, null];
+  const voiceCandidates: Array<string | null> = locale === "tr" ? [...cfg.preferredVoiceNames] : [...cfg.preferredVoiceNames, null];
   for (const voiceName of voiceCandidates) {
+    if (locale === "tr" && voiceName && !voiceName.startsWith("tr-TR-")) {
+      throw new Error(`Non-Turkish voice configured for Turkish TTS: ${voiceName}`);
+    }
+
     const voicePayload = voiceName
       ? { languageCode: cfg.languageCode, name: voiceName }
-      : { languageCode: cfg.languageCode, ssmlGender: "FEMALE" as const };
+      : { languageCode: cfg.languageCode, ssmlGender: cfg.ssmlGender };
 
-    const audioConfigCandidates: Array<{ audioEncoding: "MP3"; speakingRate?: number; pitch?: number }> = [
-      { audioEncoding: "MP3", speakingRate: cfg.speakingRate, pitch: cfg.pitch },
-      { audioEncoding: "MP3", speakingRate: cfg.speakingRate },
-      { audioEncoding: "MP3" },
-    ];
-
-    for (let i = 0; i < audioConfigCandidates.length; i++) {
-      const audioConfig = audioConfigCandidates[i];
+    let audioConfig: GoogleAudioConfig | null = buildPreferredAudioConfig(cfg);
+    while (audioConfig) {
       const res = await fetch(`${GOOGLE_TTS_URL}?key=${encodeURIComponent(apiKey)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Accept-Charset": "utf-8",
+        },
         body: JSON.stringify({
           input: { ssml },
           voice: voicePayload,
@@ -147,12 +202,13 @@ async function synthesizeInterviewSpeechWithKey(args: {
         if (voiceName && isVoiceUnavailable(message)) {
           break;
         }
-        if (i === 0 && isUnsupportedPitch(message)) {
+
+        const downgradedConfig = downgradeAudioConfig(audioConfig, message);
+        if (downgradedConfig) {
+          audioConfig = downgradedConfig;
           continue;
         }
-        if (i <= 1 && isUnsupportedSpeakingRate(message)) {
-          continue;
-        }
+
         throw new ProviderRequestError({
           provider: "google-cloud-tts",
           message,

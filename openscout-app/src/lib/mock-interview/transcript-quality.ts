@@ -6,6 +6,7 @@ import {
 export type InterviewTranscriptQuality = {
   /** True when timeouts, silence cues, or extremely thin user turns dominate */
   isLowSignal: boolean;
+  signalStrength: "none" | "weak" | "moderate" | "strong";
   /** Share of user turns that are exactly a synthetic contract line */
   syntheticTurnRatio: number;
   unansweredTurnCount: number;
@@ -47,11 +48,12 @@ export function assessInterviewTranscriptQuality(transcript: string): InterviewT
   if (userTurnCount === 0) {
     return {
       isLowSignal: true,
+      signalStrength: "none",
       syntheticTurnRatio: 1,
       unansweredTurnCount: 0,
       averageUserTurnChars: 0,
       userTurnCount: 0,
-      scoreCap: 45,
+      scoreCap: 0,
     };
   }
 
@@ -72,22 +74,29 @@ export function assessInterviewTranscriptQuality(transcript: string): InterviewT
   const averageUserTurnChars = charSum / userTurnCount;
   const syntheticTurnRatio = synthetic / userTurnCount;
   const shortRatio = shortSubstantive / userTurnCount;
+  const unansweredRatio = unanswered / userTurnCount;
 
-  const isLowSignal =
-    userTurnCount < 4 ||
-    averageUserTurnChars < 22 ||
-    syntheticTurnRatio >= 0.34 ||
-    (syntheticTurnRatio >= 0.2 && shortRatio >= 0.5);
+  const signalStrength =
+    syntheticTurnRatio >= 0.75 || unansweredRatio >= 0.75
+      ? "none"
+      : averageUserTurnChars < 18 ||
+          syntheticTurnRatio >= 0.34 ||
+          (syntheticTurnRatio >= 0.2 && shortRatio >= 0.5)
+        ? "weak"
+        : userTurnCount < 3 || averageUserTurnChars < 45 || shortRatio >= 0.4
+          ? "moderate"
+          : "strong";
+
+  const isLowSignal = signalStrength === "none" || signalStrength === "weak";
 
   let scoreCap: number | null = null;
   if (isLowSignal) {
-    if (syntheticTurnRatio >= 0.45 || averageUserTurnChars < 14) scoreCap = 48;
-    else if (syntheticTurnRatio >= 0.3 || userTurnCount < 5) scoreCap = 52;
-    else scoreCap = 58;
+    scoreCap = signalStrength === "none" ? 0 : 20;
   }
 
   return {
     isLowSignal,
+    signalStrength,
     syntheticTurnRatio,
     unansweredTurnCount: unanswered,
     averageUserTurnChars,
