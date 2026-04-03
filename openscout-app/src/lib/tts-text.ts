@@ -57,32 +57,33 @@ function capitalizeSentence(text: string, locale: InterviewLocale): string {
   return text.charAt(0).toLocaleUpperCase(locale === "tr" ? "tr-TR" : "en-US") + text.slice(1);
 }
 
+const TR_DIRECT_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bYapilandirmayi dusunmelisin\b/gi, replacement: "Sunu deneyebilirsin" },
+  { pattern: /\bDusunmelisin\b/gi, replacement: "Bakmak iyi olur" },
+  { pattern: /^\s*Senin de soyledigin gibi,\s*/i, replacement: "" },
+  { pattern: /^\s*Senin dedigin gibi,\s*/i, replacement: "" },
+  { pattern: /^\s*Az once soyledigin gibi,\s*/i, replacement: "" },
+  { pattern: /^\s*Soz ettigin noktada,\s*/i, replacement: "Bu noktada, " },
+];
+
+const EN_DIRECT_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bYou should consider implementing\b/gi, replacement: "You could try" },
+  { pattern: /\bYou should consider\b/gi, replacement: "You could" },
+  { pattern: /^\s*You mentioned that\s+/i, replacement: "" },
+  { pattern: /^\s*You mentioned\s+/i, replacement: "" },
+  { pattern: /^\s*As you said,\s*/i, replacement: "" },
+  { pattern: /^\s*As you mentioned,\s*/i, replacement: "" },
+  { pattern: /^\s*Like you said,\s*/i, replacement: "" },
+];
+
 function humanizeSpeechSentence(text: string, locale: InterviewLocale): string {
+  const directReplacements = locale === "tr" ? TR_DIRECT_REPLACEMENTS : EN_DIRECT_REPLACEMENTS;
+
   if (locale === "tr") {
     return text;
   }
 
   let sentence = text.trim();
-
-  const directReplacements: Array<{ pattern: RegExp; replacement: string }> =
-    locale === "tr"
-      ? [
-          { pattern: /\bYapilandirmayi dusunmelisin\b/gi, replacement: "Sunu deneyebilirsin" },
-          { pattern: /\bDusunmelisin\b/gi, replacement: "Bakmak iyi olur" },
-          { pattern: /^\s*Senin de soyledigin gibi,\s*/i, replacement: "" },
-          { pattern: /^\s*Senin dedigin gibi,\s*/i, replacement: "" },
-          { pattern: /^\s*Az once soyledigin gibi,\s*/i, replacement: "" },
-          { pattern: /^\s*Soz ettigin noktada,\s*/i, replacement: "Bu noktada, " },
-        ]
-      : [
-          { pattern: /\bYou should consider implementing\b/gi, replacement: "You could try" },
-          { pattern: /\bYou should consider\b/gi, replacement: "You could" },
-          { pattern: /^\s*You mentioned that\s+/i, replacement: "" },
-          { pattern: /^\s*You mentioned\s+/i, replacement: "" },
-          { pattern: /^\s*As you said,\s*/i, replacement: "" },
-          { pattern: /^\s*As you mentioned,\s*/i, replacement: "" },
-          { pattern: /^\s*Like you said,\s*/i, replacement: "" },
-        ];
 
   for (const { pattern, replacement } of directReplacements) {
     sentence = sentence.replace(pattern, replacement);
