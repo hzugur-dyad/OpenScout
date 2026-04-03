@@ -7,13 +7,13 @@ import {
   ClockCounterClockwise,
   CreditCard,
   FileText,
-  Hamburger,
   SquaresFour,
   User,
 } from "@phosphor-icons/react";
 import { ReferralAttribute } from "./ReferralAttribute";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Sidebar, type NavItem } from "@/components/layout/Sidebar";
+import { MobileNavToggleButton } from "@/components/ui/mobile-nav-toggle-button";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
@@ -137,7 +137,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="os-product-shell flex min-h-[100dvh] bg-transparent">
       <ReferralAttribute />
-      {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-zinc-950/50 lg:hidden"
@@ -154,22 +153,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         onExpandedChange={setSidebarExpanded}
       />
 
-      {/* Main content - offset by sidebar width on desktop (hover expands/collapses) */}
       <div
         className={`relative z-0 flex min-h-[100dvh] flex-1 flex-col transition-[margin] duration-200 ease-in-out ${
           sidebarExpanded ? "lg:ml-[240px]" : "lg:ml-[72px]"
         }`}
       >
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-[4.25rem] items-center justify-between gap-4 border-b border-zinc-200/70 bg-white/90 px-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)] lg:px-8">
-          <button
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-zinc-200/70 bg-white/90 px-3.5 shadow-[0_1px_0_rgba(0,0,0,0.03)] backdrop-blur-xl sm:px-4 dark:border-zinc-800/80 dark:bg-zinc-950/85 dark:shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)] lg:h-[4.25rem] lg:px-8">
+          <MobileNavToggleButton
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
-          >
-            <Hamburger className="h-6 w-6 text-gray-700 dark:text-zinc-200" weight="regular" aria-hidden />
-          </button>
-          <div className="ml-auto flex items-center">
-            <ThemeToggle />
+            aria-label="Open sidebar"
+          />
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeToggle className="h-11 w-11 rounded-2xl sm:h-9 sm:w-9 sm:rounded-xl" />
           </div>
         </header>
 

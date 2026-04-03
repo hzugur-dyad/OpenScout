@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Hamburger, X } from "@phosphor-icons/react";
 import { OpenScoutLogoMark } from "@/components/brand/OpenScoutLogoMark";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { MobileNavToggleButton } from "@/components/ui/mobile-nav-toggle-button";
+
 type UserType = "job_seeker" | "employer";
 
 interface NavbarProps {
@@ -32,15 +33,14 @@ export function Navbar({
 
   return (
     <>
-      {/* ── Navbar ── */}
-      <header className="sticky top-0 z-50 bg-transparent pt-3">
-        <nav className="mx-auto flex h-[4.5rem] w-[min(96%,1100px)] items-center justify-between overflow-visible rounded-2xl border border-black/10 bg-white/55 px-6 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:px-8 dark:border-white/10 dark:bg-black/55 dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-          {/* Left: Logo + nav links */}
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 overflow-visible">
-              <div className="flex items-center gap-2 overflow-visible">
-                <OpenScoutLogoMark className="h-14 w-14 origin-left scale-[1.1]" />
-                <span className="text-xl font-semibold tracking-tight text-gray-900 dark:text-white/95">
+      {/* Navbar */}
+      <header className="sticky top-0 z-50 bg-transparent pt-2.5 sm:pt-3">
+        <nav className="mx-auto flex h-[4.25rem] w-[min(96%,1100px)] items-center justify-between overflow-visible rounded-[1.35rem] border border-black/10 bg-white/55 px-4 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-xl sm:h-[4.5rem] sm:rounded-2xl sm:px-8 dark:border-white/10 dark:bg-black/55 dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+          <div className="flex min-w-0 items-center gap-3 md:gap-8">
+            <Link href="/" className="flex min-w-0 items-center gap-2 overflow-visible">
+              <div className="flex min-w-0 items-center gap-2 overflow-visible sm:gap-2.5">
+                <OpenScoutLogoMark className="h-11 w-11 shrink-0 origin-left sm:h-14 sm:w-14 sm:scale-[1.1]" />
+                <span className="truncate text-lg font-semibold tracking-tight text-gray-900 sm:text-xl dark:text-white/95">
                   OpenScout
                 </span>
               </div>
@@ -63,11 +63,12 @@ export function Navbar({
             </div>
           </div>
 
-          {/* Right: auth + theme toggle (far-right) */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             {isAuthenticated ? (
               <Link href="/dashboard">
-                <Button variant="primary" size="sm">Dashboard</Button>
+                <Button variant="primary" size="sm" className="px-3 sm:px-4">
+                  Dashboard
+                </Button>
               </Link>
             ) : (
               <>
@@ -78,50 +79,52 @@ export function Navbar({
                   Log In
                 </Link>
                 <Link href="/register">
-                  <Button variant="primary" size="sm">Sign Up</Button>
+                  <Button variant="primary" size="sm" className="px-3 sm:px-4">
+                    Sign Up
+                  </Button>
                 </Link>
               </>
             )}
 
-            <ThemeToggle />
+            <ThemeToggle className="h-11 w-11 rounded-2xl sm:h-9 sm:w-9 sm:rounded-xl" />
 
-            <button
-              className="text-gray-900 dark:text-white/85 md:hidden"
+            <MobileNavToggleButton
+              className="md:hidden"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
-            >
-              {mobileOpen ? (
-                <X className="h-6 w-6" weight="regular" aria-hidden />
-              ) : (
-                <Hamburger className="h-6 w-6" weight="regular" aria-hidden />
-              )}
-            </button>
+              icon={mobileOpen ? "close" : "menu"}
+            />
           </div>
         </nav>
 
-        {/* Mobile menu */}
         <AnimatePresence>
           {mobileOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mx-auto mt-2 w-[min(96%,1100px)] rounded-2xl border border-black/10 bg-white/80 backdrop-blur-xl dark:border-white/10 dark:bg-black/70 md:hidden"
+              className="mx-auto mt-2.5 w-[min(96%,1100px)] overflow-hidden rounded-[1.4rem] border border-black/10 bg-white/80 shadow-[0_20px_50px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-black/70 dark:shadow-[0_20px_50px_rgba(0,0,0,0.28)] md:hidden"
             >
-              <div className="space-y-2 px-4 py-4">
+              <div className="space-y-1.5 px-3 py-3">
                 {showUserTypeToggle && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 px-1 pb-1">
                     <button
-                      onClick={() => { onUserTypeChange?.("job_seeker"); setMobileOpen(false); }}
-                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
+                      onClick={() => {
+                        onUserTypeChange?.("job_seeker");
+                        setMobileOpen(false);
+                      }}
+                      className={`flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-medium dark:text-[#E6E6E6] ${
                         userType === "job_seeker" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
                       }`}
                     >
                       Find Jobs
                     </button>
                     <button
-                      onClick={() => { onUserTypeChange?.("employer"); setMobileOpen(false); }}
-                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium dark:text-[#E6E6E6] ${
+                      onClick={() => {
+                        onUserTypeChange?.("employer");
+                        setMobileOpen(false);
+                      }}
+                      className={`flex min-h-11 flex-1 items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-medium dark:text-[#E6E6E6] ${
                         userType === "employer" ? "bg-primary text-white" : "bg-gray-100 dark:bg-[#161B1D]"
                       }`}
                     >
@@ -134,7 +137,7 @@ export function Navbar({
                     key={link.href}
                     href={link.href}
                     onClick={() => setMobileOpen(false)}
-                    className="block rounded-lg px-4 py-2 text-sm text-gray-800 hover:bg-black/5 hover:text-black dark:text-white/90 dark:hover:bg-white/5 dark:hover:text-white"
+                    className="block rounded-xl px-4 py-3 text-sm font-medium text-gray-800 transition-colors hover:bg-black/5 hover:text-black dark:text-white/90 dark:hover:bg-white/5 dark:hover:text-white"
                   >
                     {link.label}
                   </Link>
@@ -145,7 +148,6 @@ export function Navbar({
         </AnimatePresence>
       </header>
 
-      {/* ── Find Jobs / I'm Hiring pill — homepage only, floating below navbar (desktop) ── */}
       {showUserTypeToggle && (
         <div className="relative z-40 hidden justify-center md:flex" style={{ marginTop: -1 }}>
           <div className="absolute top-3">
