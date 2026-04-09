@@ -29,6 +29,8 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("architecture");
     expect(prompt).toContain("core_logic");
     expect(prompt).toContain("final_pressure");
+    expect(prompt).toContain("internal topic keys only");
+    expect(prompt).toContain("Never leak internal topic labels or metadata words into visible text.");
     expect(prompt).toContain("Do not create derived same-topic ids for a third layer.");
     expect(prompt).toContain(`Say: "Hi ${baseArgs.displayName}, I'm Nova. I'll be with you through today's interview."`);
     expect(prompt).toContain("\"type\":\"question_control\"");
@@ -36,6 +38,33 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).not.toContain("Each spoken turn must stay within 1-2 sentences.");
     expect(prompt).not.toContain("Follow-up 2");
     expect(prompt).not.toContain("mint a NEW derived question_id");
+  });
+
+  it("injects a hard android-specialization boundary and allows short junior technical prompts", () => {
+    const prompt = buildInterviewerSystemPrompt("en", {
+      ...baseArgs,
+      jobCategory: "Junior Android Developer",
+    });
+
+    expect(prompt).toContain('Treat "Junior Android Developer" as a HARD specialization boundary.');
+    expect(prompt).toContain("Android architecture, Compose or Views");
+    expect(prompt).toContain("Do not ask backend service ownership");
+    expect(prompt).toContain("Short direct technical prompts are allowed");
+    expect(prompt).toContain("CURATED TOPIC PACK:");
+    expect(prompt).toContain("remember vs rememberSaveable");
+    expect(prompt).not.toContain("Frontend / web / UI:");
+    expect(prompt).not.toContain("Backend / API: design, caching, consistency, queueing, resilience.");
+  });
+
+  it("locks backend interviews away from mobile-client question drift", () => {
+    const prompt = buildInterviewerSystemPrompt("en", baseArgs);
+
+    expect(prompt).toContain('Treat "Senior Backend Engineer" as a HARD specialization boundary.');
+    expect(prompt).toContain("Service architecture, API design, data modeling");
+    expect(prompt).toContain("Do not ask mobile lifecycle, Jetpack Compose/SwiftUI");
+    expect(prompt).toContain("Clients only through API contracts");
+    expect(prompt).toContain("CURATED TOPIC PACK:");
+    expect(prompt).toContain("Legacy monolith split");
   });
 
   it("mirrors the same spoken-style topic discipline in Turkish", () => {
@@ -55,12 +84,29 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("Dogru cevabi tam anlatma");
     expect(prompt).toContain("architecture");
     expect(prompt).toContain("tradeoffs_decision");
+    expect(prompt).toContain("sadece ic topic anahtarlari");
+    expect(prompt).toContain("Ic topic label'larini veya metadata kelimelerini gorunur metne sizdirma.");
     expect(prompt).toContain("Ayni topicte derived question_id ile ucuncu katman acma.");
-    expect(prompt).toContain(`"Merhaba ${baseArgs.displayName}, ben Nova. Bugün görüşmede sana ben eşlik edeceğim."`);
+    expect(prompt).toContain(`"Merhaba ${baseArgs.displayName}, ben Nova.`);
     expect(prompt).toContain("\"type\":\"question_control\"");
     expect(prompt).toContain("\"type\":\"interview_end\"");
     expect(prompt).not.toContain("Her tur en fazla 1-2 cumle olsun.");
     expect(prompt).not.toContain("Follow-up 2");
     expect(prompt).not.toContain("YENI turetilmis bir question_id");
+  });
+
+  it("adds the same hard role boundary in Turkish for mobile-specialized interviews", () => {
+    const prompt = buildInterviewerSystemPrompt("tr", {
+      ...baseArgs,
+      jobCategory: "Junior Android Developer",
+    });
+
+    expect(prompt).toContain('\"Junior Android Developer\" title\'ini KATI uzmanlik siniri kabul et');
+    expect(prompt).toContain("Android architecture, Compose veya Views");
+    expect(prompt).toContain("Backend servis ownership");
+    expect(prompt).toContain("direkt teknik sorular serbest");
+    expect(prompt).toContain("KURETE TOPIC PACK:");
+    expect(prompt).toContain("remember vs rememberSaveable");
+    expect(prompt).not.toContain('Frontend / web / UI:');
   });
 });

@@ -31,6 +31,7 @@ import {
   parseMockInterviewAssistantTurn,
   type NormalizedMockQuestionControl,
 } from "@/lib/ai/structured-output";
+import { coerceInterviewQuestionPrompt } from "@/lib/mock-interview/question-guard";
 import { GROQ_MOCK_INTERVIEW_MODEL } from "@/lib/mock-interview/versioning";
 import { captureException, captureMessage } from "@/lib/monitoring";
 
@@ -384,7 +385,18 @@ export async function POST(request: NextRequest) {
         const locked = lockControlForDelayWarning(clientPrev);
         if (locked) qc = locked;
       }
-      const visible = parseResult.visibleText.trim() || rawContent;
+      const rawVisible = parseResult.visibleText.trim();
+      const visible = coerceInterviewQuestionPrompt({
+        text: rawVisible,
+        locale,
+        jobCategory,
+      });
+      if (visible !== rawVisible) {
+        logWarn("mock-interview coerced non-question assistant text", {
+          source: "question_control",
+          preview: rawVisible.slice(0, 120),
+        });
+      }
       return NextResponse.json({
         content: visible,
         interviewEnded: false,
@@ -420,8 +432,20 @@ export async function POST(request: NextRequest) {
           locale === "tr" ? "Bir sonraki soruya geçiyorum." : "Moving on to the next question.";
         visible = `${visible} ${filler}`.trim();
       }
+      const safeVisible = coerceInterviewQuestionPrompt({
+        text: visible,
+        locale,
+        jobCategory,
+      });
+      if (safeVisible !== visible) {
+        logWarn("mock-interview replaced non-question fallback text", {
+          source: "controlled_progression",
+          stimulus,
+          preview: visible.slice(0, 120),
+        });
+      }
       return NextResponse.json({
-        content: visible,
+        content: safeVisible,
         interviewEnded: false,
         questionControl: {
           questionId: qc.questionId,

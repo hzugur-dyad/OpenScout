@@ -23,6 +23,7 @@ import {
   calculateByteTimeDomainRms,
   createAudioSpeechState,
 } from "@/lib/mock-interview/speech-silence";
+import { coerceInterviewQuestionPrompt } from "@/lib/mock-interview/question-guard";
 import { mapMicrophoneError } from "@/lib/user-facing-errors";
 
 type InterviewControl = {
@@ -724,6 +725,21 @@ export default function MockInterviewSessionPage() {
         }
         const visibleText = (data.content ?? "").trim();
         const interviewEnded = Boolean(data.interviewEnded);
+        const currentQuestion = currentQuestionRef.current;
+        const sameQuestionFallback =
+          !interviewEnded &&
+          typeof data.questionControl?.questionId === "string" &&
+          data.questionControl.questionId === currentQuestion.questionId
+            ? currentQuestion.promptText
+            : undefined;
+        const assistantText = interviewEnded
+          ? visibleText
+          : coerceInterviewQuestionPrompt({
+              text: visibleText,
+              locale,
+              jobCategory,
+              fallbackText: sameQuestionFallback,
+            });
 
         if (interviewEnded) {
           controlStateRef.current = null;
@@ -738,14 +754,14 @@ export default function MockInterviewSessionPage() {
           controlStateRef.current = null;
         }
 
-        setTranscript((t) => [...t, { role: "assistant", content: visibleText }]);
-        setAiMessage(visibleText);
+        setTranscript((t) => [...t, { role: "assistant", content: assistantText }]);
+        setAiMessage(assistantText);
 
         if (interviewEnded) {
           setStep("processing");
           const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
           const transcriptText = [...transcript, { role: "user", content: trimmedMessage }]
-            .concat([{ role: "assistant", content: visibleText }])
+            .concat([{ role: "assistant", content: assistantText }])
             .map((m) => `${m.role}: ${m.content}`)
             .join("\n");
           const resultRes = await fetch("/api/mock-interview/result", {
@@ -779,9 +795,9 @@ export default function MockInterviewSessionPage() {
           return;
         }
 
-        resetCurrentQuestionTracking(visibleText, data.questionControl ?? controlStateRef.current);
+        resetCurrentQuestionTracking(assistantText, data.questionControl ?? controlStateRef.current);
 
-        void playAssistantTurn(visibleText);
+        void playAssistantTurn(assistantText);
       } finally {
         sendInFlightRef.current = false;
       }
@@ -1180,6 +1196,14 @@ export default function MockInterviewSessionPage() {
         return;
       }
       const visibleText = (data.content ?? "").trim() || copy.fallbackOpening;
+      const assistantText = data.interviewEnded
+        ? visibleText
+        : coerceInterviewQuestionPrompt({
+            text: visibleText,
+            locale,
+            jobCategory,
+            fallbackText: copy.fallbackOpening,
+          });
       if (data.interviewEnded) {
         controlStateRef.current = null;
       } else if (data.questionControl && typeof data.questionControl.questionId === "string") {
@@ -1191,7 +1215,7 @@ export default function MockInterviewSessionPage() {
       } else {
         controlStateRef.current = null;
       }
-      const content = visibleText;
+      const content = assistantText;
       setProviderError(null);
       setAiMessage(content);
       setTranscript([{ role: "assistant", content }]);
