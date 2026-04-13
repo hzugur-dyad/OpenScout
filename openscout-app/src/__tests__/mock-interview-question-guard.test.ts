@@ -7,6 +7,7 @@ import { checkProfileAndCv } from "@/lib/profile-guard";
 import {
   buildInterviewQuestionFallback,
   coerceInterviewQuestionPrompt,
+  extractInterviewQuestionPrompt,
   isQuestionLikeInterviewPrompt,
   sanitizeInterviewVisibleText,
 } from "@/lib/mock-interview/question-guard";
@@ -63,8 +64,24 @@ describe("mock interview question guard", () => {
         "You are given a legacy app with poor architecture and high technical debt. How do you refactor it."
       )
     ).toBe(true);
-    expect(isQuestionLikeInterviewPrompt("Hi, tell me a bit about yourself.")).toBe(true);
+    expect(isQuestionLikeInterviewPrompt("Hi, tell me a bit about yourself.")).toBe(false);
     expect(isQuestionLikeInterviewPrompt("Let's move on.")).toBe(false);
+  });
+
+  it("extracts the technical question and drops greeting or filler lead-in", () => {
+    expect(
+      extractInterviewQuestionPrompt(
+        "Hi Alex, I'm Nova. What happens to an Android ViewModel after a configuration change?",
+        "en"
+      )
+    ).toBe("What happens to an Android ViewModel after a configuration change?");
+
+    expect(
+      extractInterviewQuestionPrompt(
+        "Tamam. failure_handling topigine gecelim. Mobil uygulamada ANR gordugunde ilk neye bakarsin?",
+        "tr"
+      )
+    ).toBe("Mobil uygulamada ANR gordugunde ilk neye bakarsin?");
   });
 
   it("coerces filler assistant text into a deterministic fallback question", () => {
@@ -177,10 +194,57 @@ describe("POST /api/mock-interview question guard", () => {
     expect(res.status).toBe(200);
     expect(body.interviewEnded).toBe(false);
     expect(body.content).not.toContain("failure_handling");
-    expect(body.content).toContain("hata yonetimi");
+    expect(body.content).not.toContain("hata yonetimi");
     expect(body.content).toContain("Mobil uygulamanizda bir hata olustugunda ne yaparsiniz?");
     expect(body.questionControl).toMatchObject({
       questionId: "q5",
+      attempt: 1,
+      isFollowup: false,
+    });
+  });
+
+  it("strips greeting text from a mixed question-control response before returning it", async () => {
+    const createMock = vi.fn().mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content:
+              'Hi Ada, I\'m Nova. What happens to a ViewModel after an Activity recreation?\n{"type":"question_control","question_id":"q1","attempt":1,"is_followup":false}',
+          },
+        },
+      ],
+    });
+
+    vi.mocked(getGroq).mockReturnValue({
+      chat: {
+        completions: {
+          create: createMock,
+        },
+      },
+    } as never);
+
+    const req = new NextRequest("http://localhost/api/mock-interview", {
+      method: "POST",
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Hello, I'm ready for the interview." }],
+        jobCategory: "Android Developer",
+        userName: "Ada",
+        interviewLanguage: "en",
+      }),
+    });
+
+    const res = await POST(req);
+    const body = (await res.json()) as {
+      content: string;
+      interviewEnded: boolean;
+      questionControl?: { questionId: string; attempt: number; isFollowup: boolean };
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.interviewEnded).toBe(false);
+    expect(body.content).toBe("What happens to a ViewModel after an Activity recreation?");
+    expect(body.questionControl).toMatchObject({
+      questionId: "q1",
       attempt: 1,
       isFollowup: false,
     });

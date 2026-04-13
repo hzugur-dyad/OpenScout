@@ -41,8 +41,11 @@ type SampleCase = {
 const SAMPLE_CASES: SampleCase[] = [
   { role: "Junior Android Developer", locale: "en", displayName: "Alex", startMessage: "Let's start the interview." },
   { role: "Mid Backend Developer", locale: "en", displayName: "Mina", startMessage: "Let's begin." },
-  { role: "Senior Frontend Developer", locale: "en", displayName: "Sam", startMessage: "Start the interview." },
-  { role: "Senior Data Engineer", locale: "en", displayName: "Riley", startMessage: "Begin the interview." },
+  { role: "Senior Frontend Developer", locale: "en", displayName: "Sam", startMessage: "Start interview." },
+  { role: "Senior Data Engineer", locale: "en", displayName: "Riley", startMessage: "Begin interview." },
+  { role: "Junior Mechanical Engineer", locale: "en", displayName: "Jordan", startMessage: "Let's start." },
+  { role: "Mid Electrical Engineer", locale: "en", displayName: "Taylor", startMessage: "Begin." },
+  { role: "Senior Electrical & Electronics Engineer", locale: "en", displayName: "Morgan", startMessage: "Start." },
 ];
 
 describe("manual mock interview role samples", () => {

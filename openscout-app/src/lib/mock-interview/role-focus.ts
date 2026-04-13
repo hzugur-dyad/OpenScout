@@ -26,6 +26,16 @@ type RoleDescriptor = {
   topicMapTr: TopicMap;
 };
 
+type SpecializationGuide = {
+  matchers: RegExp[];
+  focusEn: string;
+  focusTr: string;
+  earlyLanesEn: string[];
+  earlyLanesTr: string[];
+  avoidEn: string;
+  avoidTr: string;
+};
+
 const ROLE_DESCRIPTORS: readonly RoleDescriptor[] = [
   {
     key: "android",
@@ -475,6 +485,207 @@ const ROLE_DESCRIPTORS: readonly RoleDescriptor[] = [
       finalPressure: "deadline, ambiguity veya stakeholder baskisi altinda yuksek etkili karar",
     },
   },
+  {
+    key: "mechanical",
+    matchers: [/\bmechanical engineer\b/i, /\bmechanical\b/i],
+    focusEn:
+      "Thermodynamics, heat transfer, fluid mechanics, material selection, stress analysis, fatigue, tolerance stack-up, manufacturability, validation, and failure diagnosis in real mechanical systems.",
+    focusTr:
+      "Termodinamik, isi transferi, akiskanlar mekanigi, malzeme secimi, gerilme analizi, yorulma, tolerance stack-up, uretilebilirlik, dogrulama ve gercek mekanik sistemlerde failure teshisi.",
+    adjacencyEn:
+      "Electrical or controls details are allowed only through the mechanical design decision, load path, thermal path, or validation boundary they affect.",
+    adjacencyTr:
+      "Elektrik veya kontrol detayina sadece mekanik tasarim karari, yuk yolu, termal yol veya dogrulama sinirini etkiliyorsa gir.",
+    avoidEn:
+      "Do not drift into generic software architecture, mobile/frontend implementation, or pure product/process chat as the main signal.",
+    avoidTr:
+      "Generic yazilim mimarisi, mobile/frontend implementasyonu veya saf product/process sohbetine ana sinyal olarak kayma.",
+    topicMapEn: {
+      architecture: "mechanical system layout, load path, thermal path, interfaces, and design constraints",
+      coreLogic: "material choice, geometry, tolerances, and mechanism behavior",
+      consistency: "validation plan, repeatability, tolerance control, and design correctness",
+      scaling: "thermal limits, fatigue life, vibration, manufacturability, and cost under higher load or volume",
+      failure: "crack, wear, deformation, leakage, overheating, and root-cause diagnosis",
+      security: "mechanical safety, containment, fail-safe behavior, and regulatory constraints",
+      tradeoffs: "strength vs weight, stiffness vs cost, thermal vs manufacturability, and tolerance trade-offs",
+      finalPressure: "production failure, validation miss, or redesign decision under delivery pressure",
+    },
+    topicMapTr: {
+      architecture: "mekanik sistem yerlesimi, yuk yolu, termal yol, arayuzler ve tasarim kisitlari",
+      coreLogic: "malzeme secimi, geometri, toleranslar ve mekanizma davranisi",
+      consistency: "dogrulama plani, tekrar edilebilirlik, tolerans kontrolu ve tasarim dogrulugu",
+      scaling: "termal limit, yorulma omru, titresim, uretilebilirlik ve artan yuk ya da hacimde maliyet",
+      failure: "catlak, asinma, deformasyon, sizdirma, asiri isinma ve kok neden teshisi",
+      security: "mekanik guvenlik, containment, fail-safe davranis ve regulasyon kisitlari",
+      tradeoffs: "mukavemet vs agirlik, rijitlik vs maliyet, termal davranis vs uretilebilirlik ve tolerans trade-off'u",
+      finalPressure: "production failure, validation kacagi veya teslim baskisi altinda redesign karari",
+    },
+  },
+  {
+    key: "mobile",
+    matchers: [/\bmobile developer\b/i, /\bmob\b/i],
+    focusEn:
+      "Mobile development, iOS, Android, cross-platform, React Native, Flutter, native SDKs, mobile performance, app lifecycle, memory management, offline support, push notifications, mobile UI patterns, responsive design, device-specific features, mobile testing.",
+    focusTr:
+      "Mobile development, iOS, Android, cross-platform, React Native, Flutter, native SDK'lar, mobil performans, uygulama lifecycle, memory yonetimi, offline destek, push bildirimleri, mobil UI pattern'leri, responsive tasarim, cihaza ozellikli ozellikler, mobil test.",
+    adjacencyEn: "Backend services only from mobile consumption perspective: API design, data synchronization, caching strategies, and network optimization.",
+    adjacencyTr: "Backend servisleri sadece mobil tuketim perspektifinden: API tasarimi, data senkronizasyonu, caching stratejileri ve network optimizasyonu.",
+    avoidEn: "Do not ask about deep backend architecture, database design, or DevOps infrastructure as primary topics.",
+    avoidTr: "Derin backend mimarisi, veritaban tasarimi veya DevOps altyapisi sorularini ana konu yapma.",
+    topicMapEn: {
+      architecture: "mobile app architecture, component organization, and navigation patterns",
+      coreLogic: "business logic, state management, and data flow in mobile apps",
+      consistency: "data synchronization, offline-first patterns, and state consistency",
+      scaling: "performance optimization, memory management, and handling large datasets",
+      failure: "crash handling, error recovery, and debugging mobile issues",
+      security: "authentication, data encryption, and secure mobile practices",
+      tradeoffs: "native vs cross-platform, performance vs features, and development speed",
+      finalPressure: "critical mobile failure or performance issue under user pressure",
+    },
+    topicMapTr: {
+      architecture: "mobil uygulama mimarisi, component organizasyonu ve navigation pattern'leri",
+      coreLogic: "business logic, state yonetimi ve mobil uygulamalarda data flow",
+      consistency: "data senkronizasyonu, offline-first pattern'leri ve state tutarliligi",
+      scaling: "performans optimizasyonu, memory yonetimi ve buyuk data set'leri yonetme",
+      failure: "crash yonetimi, error recovery ve mobil sorunlari debug etme",
+      security: "authentication, data sifreleme ve guvenli mobil pratikler",
+      tradeoffs: "native vs cross-platform, performans vs ozellikler ve gelistirme hizi",
+      finalPressure: "kullanici baskisi altinda kritik mobil hata veya performans sorunu",
+    },
+  },
+  {
+    key: "electrical",
+    matchers: [/\belectrical engineer\b/i, /\belectrical\b/i],
+    focusEn:
+      "Circuit analysis, power systems, signals, electromagnetics, control systems, power electronics, electrical machines, distribution systems, protection systems, and energy conversion.",
+    focusTr:
+      "Circuit analysis, power systems, signals, electromagnetics, control systems, power electronics, electrical machines, distribution systems, protection systems ve energy conversion.",
+    adjacencyEn: "Mechanical systems only from electrical power perspective: motor sizing, power requirements, and electrical-mechanical interface design.",
+    adjacencyTr: "Mechanical systems sadece electrical power perspektifinden: motor sizing, power requirements ve electrical-mechanical interface design.",
+    avoidEn: "Do not ask about software development, web applications, mobile apps, or mechanical design details as primary topics.",
+    avoidTr: "Software development, web applications, mobile apps veya mechanical design detaylarini ana konu yapma.",
+    topicMapEn: {
+      architecture: "power system topology, circuit layout, and electrical infrastructure",
+      coreLogic: "circuit analysis, signal processing, and control algorithm implementation",
+      consistency: "power quality, signal integrity, and system reliability",
+      scaling: "load capacity, voltage levels, and system expansion",
+      failure: "fault analysis, protection systems, and outage recovery",
+      security: "electrical safety, grounding systems, and protection coordination",
+      tradeoffs: "efficiency vs cost, reliability vs complexity, and AC vs DC systems",
+      finalPressure: "system failure analysis or design decision under emergency pressure",
+    },
+    topicMapTr: {
+      architecture: "power system topology, circuit layout ve electrical infrastructure",
+      coreLogic: "circuit analysis, signal processing ve control algorithm implementation",
+      consistency: "power quality, signal integrity ve system reliability",
+      scaling: "load capacity, voltage levels ve system expansion",
+      failure: "fault analysis, protection systems ve outage recovery",
+      security: "electrical safety, grounding systems ve protection coordination",
+      tradeoffs: "efficiency vs cost, reliability vs complexity ve AC vs DC systems",
+      finalPressure: "system failure analysis veya emergency pressure altinda design karari",
+    },
+  },
+  {
+    key: "electrical_electronics",
+    matchers: [/\belectrical & electronics engineer\b/i, /\belectronics engineer\b/i, /\bembedded systems\b/i],
+    focusEn:
+      "Embedded systems, microcontrollers, analog/digital electronics, PCB design, signal processing, communication systems, power electronics, sensors, actuators, and real-time systems.",
+    focusTr:
+      "Embedded systems, microcontrollers, analog/digital electronics, PCB design, signal processing, communication systems, power electronics, sensors, actuators ve real-time systems.",
+    adjacencyEn: "Software only from embedded perspective: firmware development, real-time constraints, and hardware-software interface design.",
+    adjacencyTr: "Software sadece embedded perspektifinden: firmware development, real-time constraints ve hardware-software interface design.",
+    avoidEn: "Do not ask about web development, mobile apps, enterprise software, or high-level application development as primary topics.",
+    avoidTr: "Web development, mobile apps, enterprise software veya high-level application development sorularini ana konu yapma.",
+    topicMapEn: {
+      architecture: "embedded system architecture, hardware abstraction, and interface design",
+      coreLogic: "firmware implementation, device drivers, and real-time processing",
+      consistency: "signal integrity, timing analysis, and system synchronization",
+      scaling: "performance optimization, memory management, and resource constraints",
+      failure: "hardware debugging, signal analysis, and system diagnostics",
+      security: "embedded security, secure boot, and hardware protection mechanisms",
+      tradeoffs: "performance vs power consumption, cost vs features, and hardware vs software implementation",
+      finalPressure: "critical system failure or design decision under resource/time pressure",
+    },
+    topicMapTr: {
+      architecture: "embedded system architecture, hardware abstraction ve interface design",
+      coreLogic: "firmware implementation, device drivers ve real-time processing",
+      consistency: "signal integrity, timing analysis ve system synchronization",
+      scaling: "performance optimization, memory management ve resource constraints",
+      failure: "hardware debugging, signal analysis ve system diagnostics",
+      security: "embedded security, secure boot ve hardware protection mechanisms",
+      tradeoffs: "performance vs power consumption, cost vs features ve hardware vs software implementation",
+      finalPressure: "critical system failure veya resource/time pressure altinda design karari",
+    },
+  },
+];
+
+const SPECIALIZATION_GUIDES: readonly SpecializationGuide[] = [
+  {
+    matchers: [/\bandroid\b/i, /\bkotlin\b/i, /\bjetpack compose\b/i, /\bcompose\b/i],
+    focusEn:
+      "Stay inside Android-specific mechanics such as lifecycle, ViewModel state, coroutines, Room/WorkManager, startup, ANR, memory, and client-side sync behavior.",
+    focusTr:
+      "Android'e ozgu mekaniklerde kal: lifecycle, ViewModel state, coroutine, Room/WorkManager, startup, ANR, memory ve client-side sync davranisi.",
+    earlyLanesEn: ["lifecycle", "state ownership", "client persistence", "performance diagnostics"],
+    earlyLanesTr: ["lifecycle", "state ownership", "client persistence", "performans teshisi"],
+    avoidEn: "Do not drift into Flutter, React Native, iOS-only APIs, or backend ownership.",
+    avoidTr: "Flutter, React Native, iOS-only API veya backend ownership'ine kayma.",
+  },
+  {
+    matchers: [/\bflutter\b/i, /\bdart\b/i],
+    focusEn:
+      "Stay inside Flutter mechanics such as widget rebuilds, state propagation, async UI, rendering cost, isolates, platform channels, and mobile runtime behavior.",
+    focusTr:
+      "Flutter mekaniklerinde kal: widget rebuild, state propagation, async UI, rendering maliyeti, isolate, platform channel ve mobile runtime davranisi.",
+    earlyLanesEn: ["widget rebuilds", "state flow", "platform integration", "runtime performance"],
+    earlyLanesTr: ["widget rebuild", "state flow", "platform entegrasyonu", "runtime performansi"],
+    avoidEn: "Do not drift into generic backend architecture or web-only browser behavior.",
+    avoidTr: "Generic backend mimarisi veya web-only browser davranisina kayma.",
+  },
+  {
+    matchers: [/\breact native\b/i],
+    focusEn:
+      "Stay inside React Native mechanics such as bridge boundaries, JS thread pressure, rendering behavior, navigation state, native modules, and mobile release/debug issues.",
+    focusTr:
+      "React Native mekaniklerinde kal: bridge sinirlari, JS thread baskisi, rendering davranisi, navigation state, native module ve mobile release/debug sorunlari.",
+    earlyLanesEn: ["JS thread pressure", "state/navigation", "native bridge", "runtime debugging"],
+    earlyLanesTr: ["JS thread baskisi", "state/navigation", "native bridge", "runtime debug"],
+    avoidEn: "Do not drift into pure Android SDK internals or backend service architecture as the main signal.",
+    avoidTr: "Saf Android SDK internali veya backend servis mimarisine ana sinyal olarak kayma.",
+  },
+  {
+    matchers: [/\breact performance\b/i, /\bnext(?:\.js)?\b/i, /\bhydration\b/i, /\bre-render/i],
+    focusEn:
+      "Stay inside frontend performance mechanics such as render paths, re-renders, hydration, memoization, cache coherence, and browser scheduling behavior.",
+    focusTr:
+      "Frontend performans mekaniklerinde kal: render path, re-render, hydration, memoization, cache uyumu ve browser scheduling davranisi.",
+    earlyLanesEn: ["render path", "state invalidation", "hydration/data fetching", "profiling bottlenecks"],
+    earlyLanesTr: ["render path", "state invalidation", "hydration/data fetching", "profiling bottleneck"],
+    avoidEn: "Do not drift into backend service design or generic product trade-offs.",
+    avoidTr: "Backend servis tasarimi veya generic product trade-off'una kayma.",
+  },
+  {
+    matchers: [/\bdistributed systems?\b/i, /\bdistributed\b/i, /\bmicroservices?\b/i, /\bevent-driven\b/i],
+    focusEn:
+      "Stay inside distributed-systems mechanics such as service boundaries, idempotency, ordering, consistency, retries, partial failure, and observability under load.",
+    focusTr:
+      "Distributed-systems mekaniklerinde kal: service boundary, idempotency, ordering, consistency, retry, partial failure ve yuk altinda observability.",
+    earlyLanesEn: ["service boundaries", "data consistency", "failure handling", "queue or concurrency behavior"],
+    earlyLanesTr: ["service boundary", "data consistency", "failure handling", "queue veya concurrency davranisi"],
+    avoidEn: "Do not drift into frontend rendering or client-only state questions.",
+    avoidTr: "Frontend rendering veya client-only state sorularina kayma.",
+  },
+  {
+    matchers: [/\bembedded systems?\b/i, /\bembedded\b/i, /\bmicrocontroller\b/i, /\bfirmware\b/i],
+    focusEn:
+      "Stay inside embedded mechanics such as MCU peripherals, timing, interrupts, memory limits, interfaces, board bring-up, and hardware-software debugging.",
+    focusTr:
+      "Embedded mekaniklerinde kal: MCU peripheral, timing, interrupt, memory limit, interface, board bring-up ve hardware-software debug.",
+    earlyLanesEn: ["timing and interrupts", "peripheral interfaces", "resource limits", "measurement/debugging"],
+    earlyLanesTr: ["timing ve interrupt", "peripheral interface", "kaynak limitleri", "olcum/debug"],
+    avoidEn: "Do not drift into web/mobile product questions or generic enterprise backend design.",
+    avoidTr: "Web/mobile product sorularina veya generic enterprise backend tasarimina kayma.",
+  },
 ];
 
 type CuratedTopicPack = {
@@ -707,6 +918,60 @@ const CURATED_TOPIC_PACKS: Record<string, CuratedTopicPack> = {
         "Operating-model redesign, stakeholder conflict cozumu, strategy-to-execution trade-off, org-level metric, process modernizasyonu ve yuksek etkili karar alma.",
     },
   },
+  mechanical: {
+    en: {
+      junior:
+        "Material selection, basic stress analysis, CAD design fundamentals, manufacturing processes, thermodynamics basics, fluid mechanics principles, quality control.",
+      mid:
+        "System integration, heat transfer analysis, vibration analysis, tolerance stack-up, design optimization, failure analysis, cost-effective manufacturing, safety compliance.",
+      senior:
+        "Complex system design, multi-physics analysis, reliability engineering, advanced materials, manufacturing strategy, risk assessment, project leadership, innovation management.",
+    },
+    tr: {
+      junior:
+        "Material selection, basic stress analysis, CAD design temelleri, manufacturing processes, thermodynamics basics, fluid mechanics principles, quality control.",
+      mid:
+        "System integration, heat transfer analysis, vibration analysis, tolerance stack-up, design optimization, failure analysis, cost-effective manufacturing, safety compliance.",
+      senior:
+        "Complex system design, multi-physics analysis, reliability engineering, advanced materials, manufacturing strategy, risk assessment, project leadership, innovation management.",
+    },
+  },
+  electrical: {
+    en: {
+      junior:
+        "Basic circuit analysis, power calculations, electrical safety, component selection, wiring fundamentals, basic control systems, electrical measurements.",
+      mid:
+        "Power system design, circuit protection, motor control, energy efficiency, fault analysis, electrical standards, system integration, project coordination.",
+      senior:
+        "Power grid integration, advanced protection systems, energy management, system reliability, regulatory compliance, complex troubleshooting, strategic planning, innovation.",
+    },
+    tr: {
+      junior:
+        "Basic circuit analysis, power calculations, electrical safety, component selection, wiring fundamentals, basic control systems, electrical measurements.",
+      mid:
+        "Power system design, circuit protection, motor control, energy efficiency, fault analysis, electrical standards, system integration, project coordination.",
+      senior:
+        "Power grid integration, advanced protection systems, energy management, system reliability, regulatory compliance, complex troubleshooting, strategic planning, innovation.",
+    },
+  },
+  electrical_electronics: {
+    en: {
+      junior:
+        "Basic electronics, microcontroller programming, digital logic, circuit design fundamentals, sensor interfacing, basic signal processing, PCB basics.",
+      mid:
+        "Embedded system design, real-time programming, communication protocols, power electronics, system debugging, optimization techniques, hardware-software integration.",
+      senior:
+        "Complex embedded systems, advanced communication systems, system architecture, performance optimization, security implementation, project leadership, innovation strategy.",
+    },
+    tr: {
+      junior:
+        "Basic electronics, microcontroller programming, digital logic, circuit design temelleri, sensor interfacing, basic signal processing, PCB basics.",
+      mid:
+        "Embedded system design, real-time programming, communication protocols, power electronics, system debugging, optimization techniques, hardware-software integration.",
+      senior:
+        "Complex embedded systems, advanced communication systems, system architecture, performance optimization, security implementation, project leadership, innovation strategy.",
+    },
+  },
 };
 
 function detectSeniority(jobCategory: string): Seniority {
@@ -773,9 +1038,109 @@ function buildCuratedTopicPack(
 - If you go beyond this pack, stay inside the same role's ownership boundary.`;
 }
 
-export function buildRoleSpecificInterviewBrief(locale: InterviewLocale, jobCategory: string): string {
+function pickEarlyCoverageLanes(packText: string, limit = 4): string[] {
+  return packText
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function buildEarlyCoverageRule(
+  locale: InterviewLocale,
+  roleKey: string,
+  seniority: Seniority,
+  jobCategory: string
+): string {
+  const pack = CURATED_TOPIC_PACKS[roleKey] ?? CURATED_TOPIC_PACKS.business;
+  const key = packSeniorityKey(seniority);
+  const packText = locale === "tr" ? pack.tr[key] : pack.en[key];
+  const earlyLanes = pickEarlyCoverageLanes(packText, 4);
+
+  if (locale === "tr") {
+    return `ERKEN DAGILIM:
+- Ilk 4 teknik soruda ayni dar alt konuda oyalanma.
+- "${jobCategory}" icin erken asamada en az 3 farkli lane kapla: ${earlyLanes.join(", ")}.
+- Erken turlerde ayni failure mode'u veya ayni mekanizmayi arka arkaya tekrar etme.`;
+  }
+
+  return `EARLY COVERAGE:
+- Do not camp on one narrow subtopic for the first 4 technical questions.
+- For "${jobCategory}", cover at least 3 distinct early lanes: ${earlyLanes.join(", ")}.
+- Do not repeat the same failure mode or mechanism back to back early in the interview.`;
+}
+
+function resolveSpecializationGuide(jobCategory: string, specialization?: string): SpecializationGuide | null {
+  const haystack = `${jobCategory} ${specialization ?? ""}`.trim();
+  if (!haystack) return null;
+  return SPECIALIZATION_GUIDES.find((guide) => guide.matchers.some((matcher) => matcher.test(haystack))) ?? null;
+}
+
+function inferSpecializationLabel(jobCategory: string): string | null {
+  if (/\bandroid\b/i.test(jobCategory)) return "Android";
+  if (/\bflutter\b/i.test(jobCategory)) return "Flutter";
+  if (/\breact native\b/i.test(jobCategory)) return "React Native";
+  if (/\breact performance\b/i.test(jobCategory)) return "React performance";
+  if (/\bdistributed systems?\b/i.test(jobCategory) || /\bmicroservices?\b/i.test(jobCategory)) {
+    return "distributed systems";
+  }
+  if (/\bembedded systems?\b/i.test(jobCategory) || /\bembedded\b/i.test(jobCategory)) {
+    return "embedded systems";
+  }
+  return null;
+}
+
+function buildResolvedSpecializationFocus(
+  locale: InterviewLocale,
+  jobCategory: string,
+  specialization: string
+): string {
+  const guide = resolveSpecializationGuide(jobCategory, specialization);
+
+  if (locale === "tr") {
+    if (guide) {
+      return `OZELLESTIRME ONCELIGI:
+- "${specialization}" alanini sert sekilde onceliklendir.
+- ${guide.focusTr}
+- Bu uzmanlikta bile ilk 4 teknik soruda ayni koseye saplanma; erken lane'leri dagit: ${guide.earlyLanesTr.join(", ")}.
+- ${guide.avoidTr}`;
+    }
+
+    return `OZELLESTIRME ONCELIGI:
+- "${specialization}" alanini sert sekilde onceliklendir.
+- Bu uzmanliga ait mekanizma, production failure ve trade-off'lari sor; generic rol sorularina kayma.
+- Ilk 4 teknik soruda bu uzmanligin en az 3 farkli alt alanina dokun; tek bir dar alt konuya erken saplanma.`;
+  }
+
+  if (guide) {
+    return `SPECIALIZATION PRIORITY:
+- Heavily prioritize "${specialization}".
+- ${guide.focusEn}
+- Even inside this specialization, do not tunnel too early; spread the first 4 technical questions across: ${guide.earlyLanesEn.join(", ")}.
+- ${guide.avoidEn}`;
+  }
+
+  return `SPECIALIZATION PRIORITY:
+- Heavily prioritize "${specialization}".
+- Ask for mechanisms, production failures, and trade-offs that belong to this specialization instead of generic role questions.
+- In the first 4 technical questions, touch at least 3 different subdomains inside this specialization before drilling deeper.`;
+}
+
+function buildSpecializationFocus(locale: InterviewLocale, jobCategory: string, specialization: string): string {
+  if (locale === "tr") {
+    return `ÖZELLEŞTİRME ÖNCELİĞİ: "${specialization}" uzmanlığını şiddetle önceliklendir. Bu alana özel sorular sor, genel rol sorularından kaçın. Örnek: Android → React Native değil, Android SDK ve lifecycle odaklı sorular.`;
+  }
+
+  return `SPECIALIZATION PRIORITY: Heavily prioritize "${specialization}" specialization. Ask questions specific to this domain, avoid generic role questions. Example: Android → focus on Android SDK and lifecycle, not React Native.`;
+}
+
+export function buildRoleSpecificInterviewBrief(locale: InterviewLocale, jobCategory: string, specialization?: string): string {
   const seniority = detectSeniority(jobCategory);
   const descriptor = detectRoleDescriptor(jobCategory);
+  const effectiveSpecialization = specialization?.trim() || inferSpecializationLabel(jobCategory) || null;
+  const specializationFocus = effectiveSpecialization
+    ? buildResolvedSpecializationFocus(locale, jobCategory, effectiveSpecialization)
+    : "";
 
   if (!descriptor) {
     if (locale === "tr") {
@@ -784,7 +1149,8 @@ export function buildRoleSpecificInterviewBrief(locale: InterviewLocale, jobCate
 - Sorulari gereksiz uzatma. Zorlugu daha teknik, daha spesifik ve daha production-gercek yap.
 - Yakin alanlara sadece bu role'un sorumluluk acisindan gir; komsu disiplinleri ana konu yapma.
 - Seviye kalibrasyonu: ${seniorityPolicy(locale, seniority)}
-${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}`;
+${specializationFocus ? `${specializationFocus}\n` : ""}${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}
+${buildEarlyCoverageRule(locale, "business", seniority, jobCategory)}`;
     }
 
     return `ROLE-SPECIFIC INTERVIEW BRIEF:
@@ -792,7 +1158,8 @@ ${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}`;
 - Keep questions compact. Make them harder through technical specificity, production realism, sharper trade-offs, and debugging pressure.
 - Adjacent domains are allowed only from this role's point of view; do not drift into neighboring disciplines as the main topic.
 - Seniority calibration: ${seniorityPolicy(locale, seniority)}
-${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}`;
+${specializationFocus ? `${specializationFocus}\n` : ""}${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}
+${buildEarlyCoverageRule(locale, "business", seniority, jobCategory)}`;
   }
 
   if (locale === "tr") {
@@ -812,7 +1179,8 @@ ${buildCuratedTopicPack(locale, "business", seniority, jobCategory)}`;
   tradeoffs_decision -> ${descriptor.topicMapTr.tradeoffs}
   final_pressure -> ${descriptor.topicMapTr.finalPressure}
 - Seviye kalibrasyonu: ${seniorityPolicy(locale, seniority)}
-${buildCuratedTopicPack(locale, descriptor.key, seniority, jobCategory)}`;
+${specializationFocus ? `${specializationFocus}\n` : ""}${buildCuratedTopicPack(locale, descriptor.key, seniority, jobCategory)}
+${buildEarlyCoverageRule(locale, descriptor.key, seniority, jobCategory)}`;
   }
 
   return `ROLE-SPECIFIC INTERVIEW BRIEF:
@@ -831,5 +1199,6 @@ ${buildCuratedTopicPack(locale, descriptor.key, seniority, jobCategory)}`;
   tradeoffs_decision -> ${descriptor.topicMapEn.tradeoffs}
   final_pressure -> ${descriptor.topicMapEn.finalPressure}
 - Seniority calibration: ${seniorityPolicy(locale, seniority)}
-${buildCuratedTopicPack(locale, descriptor.key, seniority, jobCategory)}`;
+${specializationFocus ? `${specializationFocus}\n` : ""}${buildCuratedTopicPack(locale, descriptor.key, seniority, jobCategory)}
+${buildEarlyCoverageRule(locale, descriptor.key, seniority, jobCategory)}`;
 }

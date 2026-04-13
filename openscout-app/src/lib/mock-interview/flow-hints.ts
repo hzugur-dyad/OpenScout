@@ -233,14 +233,23 @@ export function buildMockInterviewProgressHint(args: {
 
   if (progress.stage === "opening") {
     return locale === "tr"
-      ? `\nMULAKAT ASAMASI (sunucu): opening. ${counts} Selamdan hemen sonra role uygun TEK gercekci scenarioyu yalnizca bir kez kur. Ardindan architecture odakli ilk kisa soruyu sor. Soru 1-2 cumle olsun, tek konsepte odaklansin, uzun ozet yapma.`
-      : `\nINTERVIEW STAGE (server): opening. ${counts} Immediately after the greeting, introduce ONE realistic role-based scenario once. Then ask the first short architecture question. Keep it to 1-2 sentences, one concept only, and no long recap.`;
+      ? `\nMULAKAT ASAMASI (sunucu): opening. ${counts} Ilk teknik soruyu dogrudan sor. Selam, intro veya scenario filler kullanma. Architecture'a saplanmak zorunda degilsin; curated topic pack'ten role-native, kolay/fundamental ama teknik bir lane sec. Soru 1 cumle tercihli, tek konsepte odakli ve role-specific olsun.`
+      : `\nINTERVIEW STAGE (server): opening. ${counts} Ask the first technical question directly. Do not use greeting, intro, or scenario filler. You do not have to force architecture first; choose a role-native lane from the curated topic pack that is foundational but still technical. Prefer 1 sentence, one concept, and sharp role specificity.`;
   }
 
   if (progress.stage === "topic_flow") {
+    const phaseGuidance =
+      progress.assistantTurns <= 3
+        ? locale === "tr"
+          ? " Erken fazdasin: onceki sorudan farkli bir role-core domain sec, ayni dar alt konuya saplanma, easy->medium zorluk akisini koru."
+          : " You are still in the early phase: use a different role-core domain than the prior question, avoid narrow tunneling, and keep the difficulty moving from easy toward medium."
+        : locale === "tr"
+          ? " Orta/gec fazdasin: implementasyon, debugging, performance, failure veya trade-off derinligini artir; wording'i uzatma."
+          : " You are in the middle/later phase: raise the depth on implementation, debugging, performance, failure, or trade-offs without making the wording longer.";
+
     return locale === "tr"
-      ? `\nMULAKAT ASAMASI (sunucu): topic_flow. ${counts} AYNI scenarioda kal. Simdi ${progress.targetTopic.key} topiginden sinyal topla. Her topic icin en fazla 2 interviewer turn kullan; bu turden sonra ${progress.nextTopic?.key ?? "final_pressure"} topigine gec. Gerekirse yalnizca bir net, kisa follow-up sor; yeterli sinyal varsa follow-up'i atla ve ilerle.`
-      : `\nINTERVIEW STAGE (server): topic_flow. ${counts} Stay in the SAME scenario. Collect signal on ${progress.targetTopic.key} now. Use at most 2 interviewer turns per topic; after this slot, move to ${progress.nextTopic?.key ?? "final_pressure"}. Ask only one short follow-up if a key detail is missing; if the answer already has enough signal, skip the follow-up and advance.`;
+      ? `\nMULAKAT ASAMASI (sunucu): topic_flow. ${counts} Gerekmiyorsa scenario referansi verme; dogrudan role-native teknik soruyla sinyal topla. Simdi ${progress.targetTopic.key} topiginden sinyal topla. Her topic icin en fazla 2 interviewer turn kullan; bu turden sonra ${progress.nextTopic?.key ?? "final_pressure"} topigine gec. Gerekirse yalnizca bir net, kisa follow-up sor; yeterli sinyal varsa follow-up'i atla ve ilerle.${phaseGuidance}`
+      : `\nINTERVIEW STAGE (server): topic_flow. ${counts} Unless it sharpens the question, skip scenario references and ask the role-native technical question directly. Collect signal on ${progress.targetTopic.key} now. Use at most 2 interviewer turns per topic; after this slot, move to ${progress.nextTopic?.key ?? "final_pressure"}. Ask only one short follow-up if a key detail is missing; if the answer already has enough signal, skip the follow-up and advance.${phaseGuidance}`;
   }
 
   return locale === "tr"

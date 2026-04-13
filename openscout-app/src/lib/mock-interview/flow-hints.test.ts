@@ -3,16 +3,16 @@ import { describe, expect, it } from "vitest";
 import { buildMockInterviewProgressHint, buildMockInterviewServerFlowHint } from "@/lib/mock-interview/flow-hints";
 
 describe("buildMockInterviewProgressHint", () => {
-  it("anchors the opening turn to one fixed scenario and architecture", () => {
+  it("pushes the opening turn toward a direct foundational technical question", () => {
     const hint = buildMockInterviewProgressHint({
       locale: "en",
       messages: [{ role: "user", content: "I'm ready." }],
     });
 
     expect(hint).toContain("INTERVIEW STAGE (server): opening");
-    expect(hint).toContain("ONE realistic role-based scenario once");
-    expect(hint).toContain("architecture");
-    expect(hint).toContain("1-2 sentences");
+    expect(hint).toContain("Ask the first technical question directly");
+    expect(hint).toContain("You do not have to force architecture first");
+    expect(hint).toContain("Prefer 1 sentence");
   });
 
   it("forces a move to the next topic after a follow-up is already used", () => {

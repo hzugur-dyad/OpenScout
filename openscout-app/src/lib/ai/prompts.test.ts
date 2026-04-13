@@ -13,7 +13,7 @@ describe("buildInterviewerSystemPrompt", () => {
   it("enforces spoken delivery, topic progression, and one follow-up max in English", () => {
     const prompt = buildInterviewerSystemPrompt("en", baseArgs);
 
-    expect(prompt).toContain("ONE realistic role-based scenario");
+    expect(prompt).toContain("A scenario is optional, not mandatory.");
     expect(prompt).toContain("Ask exactly ONE thing at a time.");
     expect(prompt).toContain("Do not recap the candidate's full answer");
     expect(prompt).toContain("Each topic gets at most 2 interviewer turns");
@@ -30,9 +30,11 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("core_logic");
     expect(prompt).toContain("final_pressure");
     expect(prompt).toContain("internal topic keys only");
+    expect(prompt).toContain("DIFFICULTY PROGRESSION:");
+    expect(prompt).toContain("Do NOT drill into the same narrow subtopic for the first 4 technical questions.");
+    expect(prompt).toContain("QUESTION_CONTROL OVERRIDE:");
     expect(prompt).toContain("Never leak internal topic labels or metadata words into visible text.");
     expect(prompt).toContain("Do not create derived same-topic ids for a third layer.");
-    expect(prompt).toContain(`Say: "Hi ${baseArgs.displayName}, I'm Nova. I'll be with you through today's interview."`);
     expect(prompt).toContain("\"type\":\"question_control\"");
     expect(prompt).toContain("\"type\":\"interview_end\"");
     expect(prompt).not.toContain("Each spoken turn must stay within 1-2 sentences.");
@@ -50,6 +52,8 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("Android architecture, Compose or Views");
     expect(prompt).toContain("Do not ask backend service ownership");
     expect(prompt).toContain("Short direct technical prompts are allowed");
+    expect(prompt).toContain("SPECIALIZATION PRIORITY:");
+    expect(prompt).toContain("Stay inside Android-specific mechanics");
     expect(prompt).toContain("CURATED TOPIC PACK:");
     expect(prompt).toContain("remember vs rememberSaveable");
     expect(prompt).not.toContain("Frontend / web / UI:");
@@ -70,7 +74,7 @@ describe("buildInterviewerSystemPrompt", () => {
   it("mirrors the same spoken-style topic discipline in Turkish", () => {
     const prompt = buildInterviewerSystemPrompt("tr", baseArgs);
 
-    expect(prompt).toContain("TEK gercekci scenario");
+    expect(prompt).toContain("Senaryo zorunlu degil.");
     expect(prompt).toContain("Her soruda yalnizca TEK sey sor.");
     expect(prompt).toContain("Her topic icin en fazla 2 interviewer turn kullan");
     expect(prompt).toContain("Cogu tur 2-4 konusma cumlesi olabilir");
@@ -85,9 +89,11 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("architecture");
     expect(prompt).toContain("tradeoffs_decision");
     expect(prompt).toContain("sadece ic topic anahtarlari");
+    expect(prompt).toContain("ZORLUK AKISI:");
+    expect(prompt).toContain("Ilk 4 teknik soruda ayni dar alt konuya saplanma.");
+    expect(prompt).toContain("QUESTION_CONTROL OVERRIDE:");
     expect(prompt).toContain("Ic topic label'larini veya metadata kelimelerini gorunur metne sizdirma.");
     expect(prompt).toContain("Ayni topicte derived question_id ile ucuncu katman acma.");
-    expect(prompt).toContain(`"Merhaba ${baseArgs.displayName}, ben Nova.`);
     expect(prompt).toContain("\"type\":\"question_control\"");
     expect(prompt).toContain("\"type\":\"interview_end\"");
     expect(prompt).not.toContain("Her tur en fazla 1-2 cumle olsun.");
@@ -105,8 +111,22 @@ describe("buildInterviewerSystemPrompt", () => {
     expect(prompt).toContain("Android architecture, Compose veya Views");
     expect(prompt).toContain("Backend servis ownership");
     expect(prompt).toContain("direkt teknik sorular serbest");
+    expect(prompt).toContain("OZELLESTIRME ONCELIGI:");
     expect(prompt).toContain("KURETE TOPIC PACK:");
     expect(prompt).toContain("remember vs rememberSaveable");
     expect(prompt).not.toContain('Frontend / web / UI:');
+  });
+
+  it("adds a real mechanical-engineering role boundary instead of falling back to generic business prompts", () => {
+    const prompt = buildInterviewerSystemPrompt("en", {
+      ...baseArgs,
+      jobCategory: "Mechanical Engineer",
+    });
+
+    expect(prompt).toContain('Treat "Mechanical Engineer" as a HARD specialization boundary.');
+    expect(prompt).toContain("Thermodynamics, heat transfer, fluid mechanics");
+    expect(prompt).toContain("mechanical system layout, load path, thermal path");
+    expect(prompt).toContain("System integration");
+    expect(prompt).not.toContain("Role-specific tooling, workflow fundamentals");
   });
 });
