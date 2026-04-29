@@ -68,7 +68,7 @@ describe("rate-limit", () => {
     if (r.success) expect(r.redisConfigured).toBe(false);
   });
 
-  it("logs production error when Redis env is missing (still fail-open)", async () => {
+  it("fails closed in production when Redis env is missing", async () => {
     vi.stubEnv("NODE_ENV", "production");
     try {
       vi.resetModules();
@@ -77,8 +77,12 @@ describe("rate-limit", () => {
       const logger = await import("@/lib/logger");
       const logErrorSpy = vi.spyOn(logger, "logError").mockImplementation(() => {});
       const logWarnSpy = vi.spyOn(logger, "logWarn").mockImplementation(() => {});
-      const { rateLimit } = await import("@/lib/rate-limit");
-      await rateLimit("u:prod-rl", { namespace: "prod-test-ns", preset: "strict" });
+      const { rateLimit, tooManyRequestsResponse } = await import("@/lib/rate-limit");
+      const denied = await rateLimit("u:prod-rl", { namespace: "prod-test-ns", preset: "strict" });
+      expect(denied.success).toBe(false);
+      const res = tooManyRequestsResponse(denied as never);
+      expect(res.status).toBe(503);
+      await expect(res.json()).resolves.toEqual({ error: "Rate limiting is unavailable" });
       expect(logWarnSpy).toHaveBeenCalled();
       expect(logErrorSpy).toHaveBeenCalledWith(
         expect.stringContaining("DISABLED"),

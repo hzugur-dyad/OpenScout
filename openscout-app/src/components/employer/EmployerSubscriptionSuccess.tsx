@@ -1,20 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
+
+const PURCHASE_VALUES_BY_PLAN: Record<string, number> = {
+  growth: 99,
+  scale: 149,
+};
 
 export function EmployerSubscriptionSuccess() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const sessionId = searchParams.get("session_id");
-  const subscription = searchParams.get("subscription");
   const [activating, setActivating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [queryState, setQueryState] = useState(() => ({
+    sessionId: "",
+    subscription: "",
+    plan: "",
+  }));
 
   useEffect(() => {
-    if (subscription !== "success" || !sessionId) return;
+    const params = new URLSearchParams(window.location.search);
+    setQueryState({
+      sessionId: params.get("session_id") ?? "",
+      subscription: params.get("subscription") ?? "",
+      plan: params.get("plan") ?? "",
+    });
+  }, []);
+
+  const trackingKey = useMemo(
+    () => (queryState.sessionId ? `openscout.purchase.employer.${queryState.sessionId}` : null),
+    [queryState.sessionId]
+  );
+
+  useEffect(() => {
+    if (queryState.subscription !== "success" || !queryState.sessionId) return;
 
     setActivating(true);
     setError(null);
@@ -22,13 +44,28 @@ export function EmployerSubscriptionSuccess() {
     fetch("/api/employer/verify-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId }),
+      body: JSON.stringify({ session_id: queryState.sessionId }),
     })
       .then(async (res) => {
         if (cancelled) return;
         const data = await res.json().catch(() => ({}));
         setActivating(false);
         if (res.ok) {
+          if (trackingKey && !window.sessionStorage.getItem(trackingKey)) {
+            window.sessionStorage.setItem(trackingKey, "1");
+            trackClient(
+              ANALYTICS_EVENTS.purchase_completed,
+              {
+                scope: "employer",
+                plan: queryState.plan,
+                ...(queryState.plan && PURCHASE_VALUES_BY_PLAN[queryState.plan]
+                  ? { value: PURCHASE_VALUES_BY_PLAN[queryState.plan] }
+                  : {}),
+                checkout_session_id: queryState.sessionId,
+              },
+              { posthog: false }
+            );
+          }
           router.replace("/employer");
           return;
         }
@@ -46,7 +83,7 @@ export function EmployerSubscriptionSuccess() {
     return () => {
       cancelled = true;
     };
-  }, [sessionId, subscription, router]);
+  }, [queryState.plan, queryState.sessionId, queryState.subscription, router, trackingKey]);
 
   if (activating) {
     return (

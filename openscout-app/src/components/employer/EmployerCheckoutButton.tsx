@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@phosphor-icons/react";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 
 type Plan = "growth" | "scale";
 
@@ -13,6 +14,11 @@ export function EmployerCheckoutButton({ plan, companyId }: { plan: Plan; compan
   const handleSubscribe = async () => {
     setLoading(true);
     setError(null);
+    trackClient(ANALYTICS_EVENTS.upgrade_clicked, {
+      surface: "employer_pricing",
+      target_plan: plan,
+      company_id: companyId,
+    });
     try {
       const res = await fetch("/api/employer/create-checkout-session", {
         method: "POST",

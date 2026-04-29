@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import { captureException } from "@/lib/monitoring";
+import { safeExternalHref } from "@/lib/safe-url";
 
 export default function EmployerProfilePage() {
   const supabase = createClient();
@@ -29,6 +30,7 @@ export default function EmployerProfilePage() {
     description: "",
     website: "",
   });
+  const safeCompanyWebsiteHref = safeExternalHref(company.website);
 
   useEffect(() => {
     async function load() {
@@ -165,7 +167,7 @@ export default function EmployerProfilePage() {
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Website</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{company.website}</a> : "—"}</dd>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{safeCompanyWebsiteHref ? <a href={safeCompanyWebsiteHref} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{company.website}</a> : (company.website || "—")}</dd>
               </div>
               {company.description && (
                 <div className="sm:col-span-2">

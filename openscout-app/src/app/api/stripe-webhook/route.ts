@@ -27,6 +27,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+    return NextResponse.json({ error: "Database admin client not configured" }, { status: 503 });
+  }
+
   const signature = request.headers.get("stripe-signature");
   if (!signature) {
     return NextResponse.json({ error: "Missing stripe-signature" }, { status: 400 });
@@ -82,12 +86,20 @@ export async function POST(request: NextRequest) {
     return Boolean(metadata?.plan_type && metadata?.user_id && !metadata?.company_id);
   }
 
-  async function handleCandidatePlanUpdate(userId: string, planType: string, active: boolean) {
+  async function handleCandidatePlanUpdate(
+    userId: string,
+    planType: string,
+    active: boolean,
+    stripeCustomerId?: string | null
+  ) {
     const validPlans = ["plus", "pro"];
     const newPlan = active && validPlans.includes(planType) ? planType : "free";
     await supabase
       .from("profiles")
-      .update({ plan: newPlan })
+      .update({
+        plan: newPlan,
+        ...(stripeCustomerId ? { stripe_customer_id: stripeCustomerId } : {}),
+      })
       .eq("user_id", userId);
   }
 
@@ -98,7 +110,12 @@ export async function POST(request: NextRequest) {
 
       if (isCandidateSub(meta)) {
         const active = sub.status === "active" || sub.status === "trialing";
-        await handleCandidatePlanUpdate(meta!.user_id!, meta!.plan_type!, active);
+        await handleCandidatePlanUpdate(
+          meta!.user_id!,
+          meta!.plan_type!,
+          active,
+          sub.customer ? (typeof sub.customer === "string" ? sub.customer : sub.customer.id) : null
+        );
         break;
       }
 
@@ -125,7 +142,12 @@ export async function POST(request: NextRequest) {
       const meta = sub.metadata as SubMeta | undefined;
 
       if (isCandidateSub(meta)) {
-        await handleCandidatePlanUpdate(meta!.user_id!, meta!.plan_type!, false);
+        await handleCandidatePlanUpdate(
+          meta!.user_id!,
+          meta!.plan_type!,
+          false,
+          sub.customer ? (typeof sub.customer === "string" ? sub.customer : sub.customer.id) : null
+        );
         break;
       }
 
@@ -149,7 +171,17 @@ export async function POST(request: NextRequest) {
       const meta = session.metadata as SubMeta | undefined;
 
       if (isCandidateSub(meta) && session.mode === "subscription") {
-        await handleCandidatePlanUpdate(meta!.user_id!, meta!.plan_type!, true);
+        await handleCandidatePlanUpdate(
+          meta!.user_id!,
+          meta!.plan_type!,
+          true,
+          session.customer ? (typeof session.customer === "string" ? session.customer : session.customer.id) : null
+        );
+        await captureServer(meta!.user_id!, ANALYTICS_EVENTS.purchase_completed, {
+          scope: "candidate",
+          plan_type: meta!.plan_type,
+          checkout_session_id: session.id,
+        });
         await captureServer(meta!.user_id!, ANALYTICS_EVENTS.subscription_active, {
           scope: "candidate",
           plan_type: meta!.plan_type,
@@ -181,6 +213,12 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         const ownerId = (companyRow as { user_id?: string } | null)?.user_id;
         if (ownerId) {
+          await captureServer(ownerId, ANALYTICS_EVENTS.purchase_completed, {
+            scope: "employer",
+            company_id: companyId,
+            plan_type: meta?.plan_type,
+            checkout_session_id: session.id,
+          });
           await captureServer(ownerId, ANALYTICS_EVENTS.subscription_active, {
             scope: "employer",
             company_id: companyId,

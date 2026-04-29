@@ -6,6 +6,14 @@ import { parseInterviewLocale } from "@/lib/interview-locale";
 import { hasGoogleCloudTtsApiKeysConfigured, synthesizeInterviewSpeech } from "@/lib/tts";
 import { captureException } from "@/lib/monitoring";
 
+const MAX_SINGLE_TEXT_CHARS = 1200;
+const MAX_CHUNK_TEXT_CHARS = 800;
+const MAX_TOTAL_CHUNK_CHARS = 2000;
+
+function charLength(value: string): number {
+  return Array.from(value).length;
+}
+
 export async function POST(request: NextRequest) {
   logInfo("tts request received");
   try {
@@ -50,6 +58,32 @@ export async function POST(request: NextRequest) {
     if (!textHasContent && chunks.length === 0) {
       logWarn("tts validation failed", { reason: "text or chunks required" });
       return NextResponse.json({ error: "text or chunks is required" }, { status: 400 });
+    }
+
+    if (textHasContent && charLength(text) > MAX_SINGLE_TEXT_CHARS) {
+      logWarn("tts validation failed", { reason: "text too long" });
+      return NextResponse.json(
+        { error: `text must be ${MAX_SINGLE_TEXT_CHARS} characters or fewer` },
+        { status: 400 }
+      );
+    }
+
+    if (chunks.length > 0) {
+      const totalChunkChars = chunks.reduce((sum, chunk) => sum + charLength(chunk), 0);
+      if (chunks.some((chunk) => charLength(chunk) > MAX_CHUNK_TEXT_CHARS)) {
+        logWarn("tts validation failed", { reason: "chunk too long" });
+        return NextResponse.json(
+          { error: `each chunk must be ${MAX_CHUNK_TEXT_CHARS} characters or fewer` },
+          { status: 400 }
+        );
+      }
+      if (totalChunkChars > MAX_TOTAL_CHUNK_CHARS) {
+        logWarn("tts validation failed", { reason: "chunks too long" });
+        return NextResponse.json(
+          { error: `chunks must total ${MAX_TOTAL_CHUNK_CHARS} characters or fewer` },
+          { status: 400 }
+        );
+      }
     }
 
     const textsToSynthesize = chunks.length > 0 ? chunks : [text];

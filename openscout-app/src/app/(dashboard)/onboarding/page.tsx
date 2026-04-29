@@ -16,6 +16,7 @@ import { applyPendingCandidateProfileIfAny } from "@/lib/apply-pending-registrat
 import { captureException } from "@/lib/monitoring";
 import { SocialCardSharePanel } from "@/components/share/SocialCardSharePanel";
 import { CvAnalysisCard, InterviewResultCard, ProfileCard } from "@/components/share/SocialCards";
+import { safeExternalHref } from "@/lib/safe-url";
 
 const newsreader = Newsreader({
   subsets: ["latin"],
@@ -168,6 +169,9 @@ export default function OnboardingPage() {
     portfolio: "",
     other_highlights: [] as string[],
   });
+  const safeLinkedinHref = safeExternalHref(form.linkedin);
+  const safeGithubHref = safeExternalHref(form.github);
+  const safePortfolioHref = safeExternalHref(form.portfolio);
 
   useEffect(() => {
     async function loadProfile() {
@@ -276,9 +280,6 @@ export default function OnboardingPage() {
       if (!form.last_name.trim()) return "Last name is required";
       if (!form.email.trim()) return "Email is required";
       if (!form.location.trim()) return "Location is required";
-    }
-    if (stepNum === 5) {
-      if (!form.linkedin.trim()) return "LinkedIn URL is required";
     }
     return null;
   }
@@ -435,7 +436,8 @@ export default function OnboardingPage() {
         updated_at: new Date().toISOString(),
       });
 
-      if (!(onboardingRow as { onboarding_completed_at?: string } | null)?.onboarding_completed_at) {
+      const isFirstCompletion = !(onboardingRow as { onboarding_completed_at?: string } | null)?.onboarding_completed_at;
+      if (isFirstCompletion) {
         const completedIso = new Date().toISOString();
         await supabase
           .from("profiles")
@@ -451,6 +453,10 @@ export default function OnboardingPage() {
 
       setEditing(false);
       setStep(1);
+      if (isFirstCompletion) {
+        router.push(cvFileUrl || latestCv ? "/mock-interview" : "/cv-analysis");
+        return;
+      }
       router.refresh();
     } catch (e) {
       const normalized = e instanceof Error ? e : new Error(String(e));
@@ -639,15 +645,15 @@ export default function OnboardingPage() {
             <dl className="mt-4 space-y-3">
               <div>
                 <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">LinkedIn</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.linkedin ? <a href={form.linkedin} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.linkedin}</a> : "—"}</dd>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{safeLinkedinHref ? <a href={safeLinkedinHref} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.linkedin}</a> : (form.linkedin || "—")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">GitHub</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.github ? <a href={form.github} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.github}</a> : "—"}</dd>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{safeGithubHref ? <a href={safeGithubHref} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.github}</a> : (form.github || "—")}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-black/55 dark:text-zinc-500">Portfolio</dt>
-                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{form.portfolio ? <a href={form.portfolio} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : "—"}</dd>
+                <dd className="mt-0.5 text-[#111111] dark:text-zinc-100">{safePortfolioHref ? <a href={safePortfolioHref} target="_blank" rel="noopener noreferrer" className="font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300">{form.portfolio}</a> : (form.portfolio || "—")}</dd>
               </div>
             </dl>
               </section>
@@ -764,7 +770,7 @@ export default function OnboardingPage() {
             href="/cv-analysis"
             className={`mt-5 inline-flex min-h-11 items-center text-sm font-medium text-[#111111] underline decoration-[#E5E5E3] underline-offset-4 transition-colors duration-200 ${easeOut} hover:decoration-[#111111] dark:text-zinc-100 dark:decoration-zinc-700 dark:hover:decoration-zinc-300`}
           >
-            Upload new CV
+            Run CV analysis or upload CV
           </Link>
           <div className="mt-6">
             <p className="mb-2 max-w-[65ch] text-sm leading-[1.5] text-black/60 dark:text-zinc-400">
@@ -798,6 +804,9 @@ export default function OnboardingPage() {
                 {saveError}
               </div>
             )}
+            <div className="mb-5 rounded-lg border border-[#E8DFC4] bg-[#FBF6E8] px-4 py-3 text-sm leading-[1.5] text-[#7A5E20] dark:border-zinc-700 dark:bg-zinc-900/80 dark:text-zinc-300">
+              First value path: save your basics, add one CV, then start the mock interview. Links and extra history are optional.
+            </div>
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -808,7 +817,7 @@ export default function OnboardingPage() {
             >
               <h2 className={stepHeadingClass}>About</h2>
               <p className="max-w-[65ch] text-sm leading-[1.5] text-black/55 dark:text-zinc-400">
-                Pre-filled from your account when available. Adjust anything that is out of date.
+                Start here. These fields unlock the interview flow immediately after you save.
               </p>
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">

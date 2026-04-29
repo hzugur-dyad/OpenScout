@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/Button";
 import { SkeletonBlock } from "@/components/ui/Skeleton";
 import { type CandidatePlan, getUserPlan } from "@/lib/usage";
 import { Check } from "@phosphor-icons/react";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 type PlanDef = {
@@ -142,6 +143,8 @@ export default function CandidatePricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [pageReady, setPageReady] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const hasTrackedViewRef = useRef(false);
+  const hasTrackedPurchaseRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -163,10 +166,56 @@ export default function CandidatePricingPage() {
     void load();
   }, [supabase]);
 
+  useEffect(() => {
+    if (!pageReady) return;
+    if (hasTrackedViewRef.current) return;
+    hasTrackedViewRef.current = true;
+    trackClient(ANALYTICS_EVENTS.pricing_viewed, {
+      surface: "candidate_pricing",
+      current_plan: currentPlan,
+    });
+  }, [currentPlan, pageReady]);
+
+  useEffect(() => {
+    if (!pageReady) return;
+    if (hasTrackedPurchaseRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("subscription") !== "success") return;
+
+    const plan = params.get("plan");
+    const sessionId = params.get("session_id");
+    const trackingKey = sessionId ? `openscout.purchase.candidate.${sessionId}` : null;
+    if (trackingKey && window.sessionStorage.getItem(trackingKey)) {
+      hasTrackedPurchaseRef.current = true;
+      return;
+    }
+
+    hasTrackedPurchaseRef.current = true;
+    if (trackingKey) {
+      window.sessionStorage.setItem(trackingKey, "1");
+    }
+
+    trackClient(
+      ANALYTICS_EVENTS.purchase_completed,
+      {
+        scope: "candidate",
+        plan,
+        checkout_session_id: sessionId,
+      },
+      { posthog: false }
+    );
+  }, [pageReady]);
+
   async function handleUpgrade(planId: CandidatePlan) {
     if (planId === "free") return;
     setCheckoutError(null);
     setLoading(planId);
+    trackClient(ANALYTICS_EVENTS.upgrade_clicked, {
+      surface: "candidate_pricing",
+      current_plan: currentPlan,
+      target_plan: planId,
+    });
     try {
       const res = await fetch("/api/candidate/create-checkout-session", {
         method: "POST",

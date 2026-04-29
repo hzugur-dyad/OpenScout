@@ -48,21 +48,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(session.url, { status: 303 });
     }
 
-    if (!user.email) {
-      return NextResponse.json({ error: "No email found for this account." }, { status: 400 });
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    let customerId =
+      typeof (profile as { stripe_customer_id?: string | null } | null)?.stripe_customer_id === "string"
+        ? (profile as { stripe_customer_id: string }).stripe_customer_id
+        : null;
+
+    if (!customerId) {
+      if (!user.email) {
+        return NextResponse.json({ error: "No email found for this account." }, { status: 400 });
+      }
+
+      const customers = await stripe.customers.list({
+        email: user.email,
+        limit: 10,
+      });
+      if (customers.data.length !== 1) {
+        return NextResponse.json({ error: "No unique billing account found for candidate." }, { status: 400 });
+      }
+      customerId = customers.data[0]?.id ?? null;
+      if (customerId) {
+        await supabase.from("profiles").update({ stripe_customer_id: customerId }).eq("user_id", user.id);
+      }
     }
 
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 10,
-    });
-    const customer = customers.data[0];
-    if (!customer) {
+    if (!customerId) {
       return NextResponse.json({ error: "No billing account found for candidate." }, { status: 400 });
     }
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: customer.id,
+      customer: customerId,
       return_url: `${origin}/pricing`,
     });
     return NextResponse.redirect(session.url, { status: 303 });

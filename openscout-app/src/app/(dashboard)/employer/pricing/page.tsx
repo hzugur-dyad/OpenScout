@@ -4,6 +4,7 @@ import { RscCheckIcon, RscCaretLeftIcon } from "@/components/icons/PhosphorRscIc
 import { createClient } from "@/lib/supabase/server";
 import { Button } from "@/components/ui/Button";
 import { EmployerCheckoutButton } from "@/components/employer/EmployerCheckoutButton";
+import { EmployerPricingTelemetry } from "@/components/employer/EmployerPricingTelemetry";
 import { getTrialStatus } from "@/lib/employer-trial";
 import { getEmployerPrimaryCompany } from "@/lib/employer-company";
 
@@ -28,6 +29,7 @@ export default async function EmployerPricingPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
+      <EmployerPricingTelemetry currentPlan={currentPlan} />
       <Link
         href="/employer"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-500 transition-colors hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"

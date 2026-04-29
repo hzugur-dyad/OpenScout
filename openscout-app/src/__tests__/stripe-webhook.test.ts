@@ -66,6 +66,7 @@ function buildWebhookSupabase() {
 describe("POST /api/stripe-webhook", () => {
   const savedUpstashUrl = process.env.UPSTASH_REDIS_REST_URL;
   const savedUpstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const savedServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   beforeEach(() => {
     // Same idea as rate-limit.test.ts: CI/local env often has Upstash (or placeholders). If the
@@ -81,6 +82,7 @@ describe("POST /api/stripe-webhook", () => {
     webhookRlHoisted.enforceRateLimit.mockResolvedValue(null);
     process.env.STRIPE_SECRET_KEY = "sk_test_mock";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_mock";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
   });
 
   afterEach(() => {
@@ -88,6 +90,8 @@ describe("POST /api/stripe-webhook", () => {
     else process.env.UPSTASH_REDIS_REST_URL = savedUpstashUrl;
     if (savedUpstashToken === undefined) delete process.env.UPSTASH_REDIS_REST_TOKEN;
     else process.env.UPSTASH_REDIS_REST_TOKEN = savedUpstashToken;
+    if (savedServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    else process.env.SUPABASE_SERVICE_ROLE_KEY = savedServiceRoleKey;
   });
 
   it(
@@ -218,6 +222,7 @@ describe("POST /api/stripe-webhook", () => {
     const profileUpdate = ops.find((o) => o.table === "profiles");
     expect(profileUpdate).toBeDefined();
     expect(profileUpdate!.payload.plan).toBe("plus");
+    expect(profileUpdate!.payload.stripe_customer_id).toBe("cus_c");
     expect(profileUpdate!.val).toBe("cand-99");
     expect(vi.mocked(captureServer)).toHaveBeenCalled();
   });

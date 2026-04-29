@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProviderWrapper } from "@/components/theme/ThemeProviderWrapper";
+import { MarketingTrackingProvider } from "@/components/analytics/MarketingTrackingProvider";
 import { PostHogProvider } from "@/components/analytics/PostHogProvider";
 import { FramerBadgeCleanup } from "@/components/layout/FramerBadgeCleanup";
 import { FramerBackgroundEmbed } from "@/components/layout/FramerBackgroundEmbed";
@@ -86,7 +87,9 @@ export default function RootLayout({
         <FramerBadgeCleanup />
         <div className="relative z-[1] min-h-dvh">
           <PostHogProvider>
-            <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+            <MarketingTrackingProvider>
+              <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+            </MarketingTrackingProvider>
           </PostHogProvider>
           <SupportChatWidget />
         </div>

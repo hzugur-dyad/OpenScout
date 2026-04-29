@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { getRateLimitIdentifier, rateLimitForKind, tooManyRequestsResponse } from "@/lib/rate-limit";
 import { logError, logInfo, logWarn } from "@/lib/logger";
 import { checkProfileAndCv } from "@/lib/profile-guard";
@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
       const isSubscribed = (companyData as { stripe_subscription_status?: string } | null)?.stripe_subscription_status === "active";
 
       if (isSubscribed) {
-        const { data: companyListings } = await supabase
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+          return NextResponse.json({ error: "Application limit check unavailable" }, { status: 503 });
+        }
+        const admin = createAdminClient();
+        const { data: companyListings } = await admin
           .from("job_listings")
           .select("id")
           .eq("company_id", companyId);
@@ -80,7 +84,7 @@ export async function POST(request: NextRequest) {
         const listingIds = (companyListings ?? []).map((l: { id: string }) => l.id);
 
         if (listingIds.length > 0) {
-          const { count } = await supabase
+          const { count } = await admin
             .from("job_applications")
             .select("id", { count: "exact", head: true })
             .in("job_id", listingIds);

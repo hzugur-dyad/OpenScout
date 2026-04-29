@@ -17,7 +17,9 @@ export function FramerBackgroundEmbed() {
 
   useEffect(() => {
     let timeoutId: number | undefined;
-    let rafId: number | undefined;
+    const rafId: number | undefined = window.requestAnimationFrame(() => {
+      timeoutId = window.setTimeout(showEmbed, 60);
+    });
 
     const showEmbed = () => {
       setSrc(resolveSrc());
@@ -25,10 +27,6 @@ export function FramerBackgroundEmbed() {
     };
 
     // Paint a stable fallback immediately, then attach the iframe on next frame.
-    rafId = window.requestAnimationFrame(() => {
-      timeoutId = window.setTimeout(showEmbed, 60);
-    });
-
     const observer = new MutationObserver(() => {
       setSrc(resolveSrc());
     });

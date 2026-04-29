@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowUpRight } from "@phosphor-icons/react";
 import { Container } from "@/components/ui/Container";
 import { useLandingUserType } from "@/contexts/LandingUserTypeContext";
+import { ANALYTICS_EVENTS, trackClient } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 type Tier = {
@@ -96,6 +98,17 @@ export function LandingPricing() {
   const { userType } = useLandingUserType();
   const isEmployer = userType === "employer";
   const tiers = isEmployer ? employerTiers : candidateTiers;
+  const lastTrackedAudienceRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const audience = isEmployer ? "employer" : "candidate";
+    if (lastTrackedAudienceRef.current === audience) return;
+    lastTrackedAudienceRef.current = audience;
+    trackClient(ANALYTICS_EVENTS.pricing_viewed, {
+      surface: "landing_pricing",
+      audience,
+    });
+  }, [isEmployer]);
 
   return (
     <section className="relative overflow-hidden py-24">
@@ -195,6 +208,13 @@ export function LandingPricing() {
                   <div className="mt-10 flex flex-1 flex-col justify-end">
                     <Link
                       href={tier.cta.href}
+                      onClick={() =>
+                        trackClient(ANALYTICS_EVENTS.upgrade_clicked, {
+                          surface: "landing_pricing",
+                          audience: isEmployer ? "employer" : "candidate",
+                          target_plan: tier.id,
+                        })
+                      }
                       className={cn(ctaBase, ctaVariants[tier.cta.variant], "group w-full")}
                     >
                       {tier.cta.label}

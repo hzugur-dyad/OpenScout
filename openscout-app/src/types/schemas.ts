@@ -120,6 +120,7 @@ export const interviewResponseSchema = z.object({
     .array(interviewMessageSchema)
     .min(1, "messages must include at least one item")
     .max(100),
+  sessionId: z.string().uuid().optional(),
   jobCategory: z.string().trim().min(1, "jobCategory is required").max(500),
   userName: z.string().trim().max(200).optional(),
   jobId: optionalTrimmedId,

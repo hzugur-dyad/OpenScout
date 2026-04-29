@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     const origin = request.nextUrl.origin;
-    const successUrl = `${origin}/employer?session_id={CHECKOUT_SESSION_ID}&subscription=success`;
+    const successUrl = `${origin}/employer?session_id={CHECKOUT_SESSION_ID}&subscription=success&plan=${planParam}`;
     const cancelUrl = `${origin}/employer/pricing`;
 
     const stripe = new Stripe(stripeSecretKey);
@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
     const session = await stripe.checkout.sessions.create(sessionParams);
 
     if (session.url) {
+      await captureServer(user.id, ANALYTICS_EVENTS.checkout_started, {
+        scope: "employer",
+        plan: planParam,
+        company_id: company.id,
+        checkout_session_id: session.id,
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.subscription_started, {
         scope: "employer",
         plan: planParam,

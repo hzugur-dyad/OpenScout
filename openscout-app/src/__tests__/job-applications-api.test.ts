@@ -1,10 +1,11 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { POST } from "@/app/api/job-applications/route";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { createSupabaseForJobApplicationsRoute } from "@/test/supabase-mocks";
 
 vi.mock("@/lib/supabase/server", () => ({
+  createAdminClient: vi.fn(),
   createClient: vi.fn(),
 }));
 
@@ -23,8 +24,16 @@ const interviewReport = {
   problem_solving_score: 77,
 };
 
+const savedServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 beforeEach(() => {
   vi.mocked(createClient).mockReset();
+  vi.mocked(createAdminClient).mockReset();
+});
+
+afterEach(() => {
+  if (savedServiceRoleKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+  else process.env.SUPABASE_SERVICE_ROLE_KEY = savedServiceRoleKey;
 });
 
 describe("POST /api/job-applications", () => {
@@ -164,6 +173,50 @@ describe("POST /api/job-applications", () => {
       communication_score: 79,
       problem_solving_score: 77,
     });
+  });
+
+  it("uses the admin client for subscribed employer application-limit checks", async () => {
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-test-key";
+    const dbCv = 88;
+    const dbInterview = 91;
+    const activeJob = { ...job, company_id: "co-1" };
+    const { client, upsertMock } = createSupabaseForJobApplicationsRoute({
+      userId: "user-1",
+      job: activeJob,
+      company: { total_application_limit: 2, stripe_subscription_status: "active" },
+      cvByJob: { overall_score: dbCv },
+      cvByCategory: null,
+      interviewByJob: { score: dbInterview, report: interviewReport },
+      interviewByCategory: null,
+      profileGuard: "complete",
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+    vi.mocked(createAdminClient).mockReturnValue({
+      from(table: string) {
+        if (table === "job_listings") {
+          return {
+            select: () => ({
+              eq: async () => ({ data: [{ id: "job-1" }, { id: "job-2" }], error: null }),
+            }),
+          };
+        }
+        return {
+          select: () => ({
+            in: async () => ({ count: 2, data: null, error: null }),
+          }),
+        };
+      },
+    } as never);
+
+    const req = new NextRequest("http://localhost/api/job-applications", {
+      method: "POST",
+      body: JSON.stringify({ jobId: activeJob.id }),
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(403);
+    expect(createAdminClient).toHaveBeenCalled();
+    expect(upsertMock).not.toHaveBeenCalled();
   });
 
   it("accepts authenticated candidate with complete profile, CV, and interview", async () => {

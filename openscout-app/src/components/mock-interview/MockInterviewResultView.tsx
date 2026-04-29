@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle,
@@ -81,6 +81,7 @@ export function MockInterviewResultView({
   const [shareCopied, setShareCopied] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const displayOverall = useCountUp(tooShort ? 0 : score, 1600, !tooShort);
+  const hasTrackedReportViewRef = useRef(false);
 
   const hasDimensions =
     technicalScore != null || communicationScore != null || problemSolvingScore != null;
@@ -103,6 +104,18 @@ export function MockInterviewResultView({
       .then((data: ScoutCredentialResponse | null) => data?.passUrl && setPassUrl(data.passUrl))
       .catch(() => {});
   }, [tooShort, category, score, strengths, improvements, cvScore]);
+
+  useEffect(() => {
+    if (tooShort) return;
+    if (hasTrackedReportViewRef.current) return;
+    hasTrackedReportViewRef.current = true;
+    trackClient(ANALYTICS_EVENTS.report_viewed, {
+      surface: "mock_interview_result",
+      score,
+      category,
+      result_id: shareResultId,
+    });
+  }, [category, score, shareResultId, tooShort]);
 
   const handleCopyPassUrl = () => {
     if (!passUrl) return;

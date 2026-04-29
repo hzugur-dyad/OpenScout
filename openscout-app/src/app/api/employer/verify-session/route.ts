@@ -39,6 +39,13 @@ export async function POST(request: NextRequest) {
     if (!companyId) {
       return NextResponse.json({ error: "Invalid session" }, { status: 400 });
     }
+    if (session.mode !== "subscription") {
+      return NextResponse.json({ error: "Invalid checkout mode" }, { status: 400 });
+    }
+    const planType = session.metadata?.plan_type;
+    if (planType !== "growth" && planType !== "scale") {
+      return NextResponse.json({ error: "Invalid plan metadata" }, { status: 400 });
+    }
 
     const { data: company } = await supabase
       .from("companies")
@@ -64,6 +71,17 @@ export async function POST(request: NextRequest) {
       : typeof session.subscription === "string"
         ? session.subscription
         : null;
+    if (!subscriptionId) {
+      return NextResponse.json({ error: "Missing subscription" }, { status: 400 });
+    }
+
+    const subscriptionStatus =
+      typeof session.subscription === "object" && session.subscription?.status
+        ? session.subscription.status
+        : null;
+    if (subscriptionStatus && subscriptionStatus !== "active" && subscriptionStatus !== "trialing") {
+      return NextResponse.json({ error: "Subscription is not active yet" }, { status: 400 });
+    }
 
     const updates: {
       stripe_subscription_status: string;

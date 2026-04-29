@@ -32,11 +32,12 @@ export async function createClient() {
 /**
  * Server-only client that bypasses RLS (service role). Use only where necessary:
  * Stripe webhook, Scout Pass public API, and similar server-trusted paths.
- * Falls back to anon key when service role is unset (local/dev); production webhooks
- * should always set SUPABASE_SERVICE_ROLE_KEY.
  */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  return createSupabaseClient(url, key!);
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!key) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for admin Supabase operations");
+  }
+  return createSupabaseClient(url, key);
 }

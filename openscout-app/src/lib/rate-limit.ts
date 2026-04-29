@@ -99,6 +99,7 @@ export type RateLimitDenied = {
   limit: number;
   remaining: number;
   reset: number;
+  misconfigured?: boolean;
 };
 
 export type RateLimitOk = {
@@ -118,6 +119,13 @@ function parseCsvLowerSet(raw: string | undefined): Set<string> {
       .split(",")
       .map((s) => s.trim().toLowerCase())
       .filter(Boolean)
+  );
+}
+
+function shouldFailClosedForMissingRedis(): boolean {
+  return (
+    process.env.NODE_ENV === "production" &&
+    process.env.OPENSCOUT_ALLOW_UNCAPPED_PRODUCTION_TRAFFIC !== "true"
   );
 }
 
@@ -145,6 +153,15 @@ export function isRateLimitBypassed(user: { id?: string | null; email?: string |
  */
 export async function rateLimit(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
   if (!getRedis()) {
+    if (shouldFailClosedForMissingRedis()) {
+      return {
+        success: false,
+        limit: 0,
+        remaining: 0,
+        reset: Date.now() + 60_000,
+        misconfigured: true,
+      };
+    }
     return { success: true, redisConfigured: false };
   }
   const { limiterKey, limit, window } = resolveLimiterSpec(config);
@@ -171,6 +188,15 @@ export async function rateLimit(identifier: string, config: RateLimitConfig): Pr
       limiterKey,
       err: e instanceof Error ? e.message : String(e),
     });
+    if (shouldFailClosedForMissingRedis()) {
+      return {
+        success: false,
+        limit: 0,
+        remaining: 0,
+        reset: Date.now() + 60_000,
+        misconfigured: true,
+      };
+    }
     return { success: true, redisConfigured: false };
   }
 }
@@ -228,6 +254,9 @@ export function getRateLimitIdentifier(request: Request, userId: string | null |
 }
 
 export function tooManyRequestsResponse(denied?: RateLimitDenied): NextResponse {
+  if (denied?.misconfigured) {
+    return NextResponse.json({ error: "Rate limiting is unavailable" }, { status: 503 });
+  }
   const headers = new Headers();
   if (denied?.reset) {
     const seconds = Math.max(1, Math.ceil((denied.reset - Date.now()) / 1000));

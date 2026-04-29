@@ -4,6 +4,8 @@ import { POST } from "@/app/api/mock-interview/result/route";
 import { createClient } from "@/lib/supabase/server";
 import { getGroq } from "@/lib/groq";
 import { createSupabaseForMockInterviewResultRoute } from "@/test/supabase-mocks";
+import { hashInterviewTranscript } from "@/lib/mock-interview/session-security";
+import { normalizeInterviewTranscriptText } from "@/lib/mock-interview/transcript";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 import { INTERVIEW_CONTRACT_USER_LINES } from "@/lib/mock-interview/interview-contract-messages";
 
@@ -119,6 +121,15 @@ const qualifyingInterviewTranscript = [
 ].join("\n");
 const testSessionId = "f47ac10b-58cc-4372-a567-0e02b2c3d479";
 
+function buildSessionSeed(transcript: string, overrides?: { jobCategory?: string; jobId?: string; interviewLanguage?: string }) {
+  return {
+    transcriptHash: hashInterviewTranscript(normalizeInterviewTranscriptText(transcript)),
+    jobCategory: overrides?.jobCategory ?? "Engineering",
+    jobId: overrides?.jobId ?? null,
+    interviewLanguage: overrides?.interviewLanguage ?? "en",
+  };
+}
+
 describe("POST /api/mock-interview/result", () => {
   it("returns 401 when unauthenticated", async () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
@@ -140,10 +151,32 @@ describe("POST /api/mock-interview/result", () => {
     expect(res.status).toBe(401);
   });
 
+  it("rejects result submission when the transcript no longer matches the server session", async () => {
+    const { client } = createSupabaseForMockInterviewResultRoute({
+      userId: "user-1",
+      profileGuard: "complete",
+      sessionSeed: buildSessionSeed("assistant: original question\nuser: original answer"),
+    });
+    vi.mocked(createClient).mockResolvedValue(client as never);
+
+    const req = new NextRequest("http://localhost/api/mock-interview/result", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: testSessionId,
+        transcript: "assistant: changed question\nuser: changed answer",
+        jobCategory: "Engineering",
+        interviewLanguage: "en",
+      }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(409);
+  });
+
   it("forces hallucinated scoring down to zero when the transcript has no usable evidence", async () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed("short"),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -173,6 +206,7 @@ describe("POST /api/mock-interview/result", () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "blocked",
+      sessionSeed: buildSessionSeed(longTranscript),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -191,9 +225,10 @@ describe("POST /api/mock-interview/result", () => {
 
   it("persists deterministic scoring fields and compatibility aliases", async () => {
     const transcript = qualifyingInterviewTranscript;
-    const { client, insertMock } = createSupabaseForMockInterviewResultRoute({
+    const { client, updateMock } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed(transcript, { jobCategory: "Engineering", jobId: "job-xyz", interviewLanguage: "tr" }),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -230,8 +265,8 @@ describe("POST /api/mock-interview/result", () => {
     expect(json.communication_score).toBe(78);
     expect(json.problem_solving_score).toBe(83);
 
-    expect(insertMock).toHaveBeenCalledTimes(1);
-    const row = insertMock.mock.calls[0][0] as Record<string, unknown>;
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    const row = updateMock.mock.calls[0][0] as Record<string, unknown>;
     expect(row.transcript).toBe(transcript);
     expect(row.interview_language).toBe("tr");
     expect(row.model_version).toBe(GROQ_MOCK_INTERVIEW_MODEL);
@@ -283,16 +318,17 @@ describe("POST /api/mock-interview/result", () => {
       question_id: "q1",
       result: "strong",
     });
-    expect(row.user_id).toBe("user-1");
     expect(row.job_id).toBe("job-xyz");
     expect(row.job_category).toBe("Engineering");
-    expect(row.id).toBe(testSessionId);
+    expect(row.session_state).toBe("completed");
+    expect(typeof row.transcript_hash).toBe("string");
   });
 
   it("accepts authenticated user with complete profile for happy-path authorization", async () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed(longTranscript, { jobCategory: "Design" }),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -368,6 +404,7 @@ describe("POST /api/mock-interview/result", () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed(transcript),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -411,6 +448,7 @@ describe("POST /api/mock-interview/result", () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed(qualifyingInterviewTranscript),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 
@@ -496,6 +534,7 @@ describe("POST /api/mock-interview/result", () => {
     const { client } = createSupabaseForMockInterviewResultRoute({
       userId: "user-1",
       profileGuard: "complete",
+      sessionSeed: buildSessionSeed(transcript),
     });
     vi.mocked(createClient).mockResolvedValue(client as never);
 

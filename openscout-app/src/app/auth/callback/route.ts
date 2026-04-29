@@ -3,6 +3,15 @@ import { NextResponse } from "next/server";
 import { captureServer } from "@/lib/analytics-server";
 import { ANALYTICS_EVENTS } from "@/lib/analytics";
 
+function safeInternalRedirectPath(raw: string | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (!value.startsWith("/") || value.startsWith("//")) return null;
+  if (value.includes("\\") || value.includes("://")) return null;
+  if (/[\u0000-\u001f\u007f]/.test(value)) return null;
+  return value;
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -12,7 +21,7 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      let redirectPath = nextParam ?? "/dashboard";
+      let redirectPath = safeInternalRedirectPath(nextParam) ?? "/dashboard";
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await captureServer(user.id, ANALYTICS_EVENTS.email_confirmed, {});

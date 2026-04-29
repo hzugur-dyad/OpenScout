@@ -16,6 +16,7 @@ export type JobApplicationsMockOptions = {
   interviewByJob: { score: number; report: Record<string, unknown> } | null;
   interviewByCategory: { score: number; report: Record<string, unknown> } | null;
   profileGuard: "complete" | "incomplete" | "no_cv";
+  company?: { total_application_limit?: number; stripe_subscription_status?: string };
   upsertMock?: ReturnType<typeof vi.fn>;
 };
 
@@ -87,7 +88,7 @@ export function createSupabaseForJobApplicationsRoute(opts: JobApplicationsMockO
       }
       if (table === "companies" && selectCols.includes("total_application_limit")) {
         return {
-          data: { total_application_limit: 50, stripe_subscription_status: "inactive" },
+          data: opts.company ?? { total_application_limit: 50, stripe_subscription_status: "inactive" },
           error: null,
         };
       }
@@ -121,12 +122,22 @@ export function createSupabaseForJobApplicationsRoute(opts: JobApplicationsMockO
 export type MockInterviewResultSupabaseOptions = {
   userId: string | null;
   insertMock?: ReturnType<typeof vi.fn>;
+  updateMock?: ReturnType<typeof vi.fn>;
   profileGuard: "complete" | "blocked";
+  sessionSeed?: {
+    transcriptHash: string;
+    jobCategory?: string;
+    jobId?: string | null;
+    interviewLanguage?: string;
+    sessionState?: "started" | "completed";
+    report?: Record<string, unknown> | null;
+    score?: number | null;
+  };
 };
 
 export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewResultSupabaseOptions) {
   const insertMock = opts.insertMock ?? vi.fn().mockResolvedValue({ error: null });
-  const upsertMock = insertMock;
+  const updateMock = opts.updateMock ?? vi.fn().mockResolvedValue({ error: null });
 
   const guardProfile =
     opts.profileGuard === "blocked"
@@ -163,6 +174,23 @@ export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewRes
       if (table === "profiles" && selectCols.includes("plan")) {
         return { data: { plan: "pro", bonus_mock_interview_credits: 0 }, error: null };
       }
+      if (table === "mock_interviews" && selectCols.includes("session_state")) {
+        if (!opts.sessionSeed) {
+          return { data: null, error: null };
+        }
+        return {
+          data: {
+            job_category: opts.sessionSeed.jobCategory ?? "Engineering",
+            job_id: opts.sessionSeed.jobId ?? null,
+            interview_language: opts.sessionSeed.interviewLanguage ?? "en",
+            session_state: opts.sessionSeed.sessionState ?? "started",
+            transcript_hash: opts.sessionSeed.transcriptHash,
+            report: opts.sessionSeed.report ?? null,
+            score: opts.sessionSeed.score ?? null,
+          },
+          error: null,
+        };
+      }
       return { data: null, error: null };
     };
 
@@ -173,18 +201,23 @@ export function createSupabaseForMockInterviewResultRoute(opts: MockInterviewRes
       return { error: null };
     };
 
-    chain.upsert = async (payload: unknown) => {
+    chain.update = (payload: unknown) => {
       if (table === "mock_interviews") {
-        (upsertMock as (p: unknown) => void)(payload);
+        (updateMock as (p: unknown) => void)(payload);
       }
-      return { error: null };
+      return {
+        eq: () => ({
+          eq: async () => ({ error: null }),
+        }),
+      };
     };
 
     return chain;
   };
 
   return {
-    insertMock: upsertMock,
+    insertMock,
+    updateMock,
     client: {
       auth: {
         getUser: async () => ({

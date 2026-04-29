@@ -6,6 +6,10 @@ import { parseMockInterviewAssistantTurn } from "@/lib/ai/structured-output";
 import { GROQ_MOCK_INTERVIEW_MODEL } from "@/lib/mock-interview/versioning";
 import { parseInterviewLocale, type InterviewLocale } from "@/lib/interview-locale";
 import { extractInterviewQuestionPrompt } from "@/lib/mock-interview/question-guard";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { logError } from "@/lib/logger";
+
+class BadRequestError extends Error {}
 
 // Supported roles for debugging
 const SUPPORTED_ROLES = [
@@ -37,7 +41,7 @@ interface DebugResponse {
 
 function validateRole(role: string): SupportedRole {
   if (!SUPPORTED_ROLES.includes(role as SupportedRole)) {
-    throw new Error(`Unsupported role: ${role}. Supported roles: ${SUPPORTED_ROLES.join(", ")}`);
+    throw new BadRequestError(`Unsupported role: ${role}. Supported roles: ${SUPPORTED_ROLES.join(", ")}`);
   }
   return role as SupportedRole;
 }
@@ -45,7 +49,7 @@ function validateRole(role: string): SupportedRole {
 function validateCount(count: string | null): number {
   const parsed = count ? parseInt(count, 10) : 10;
   if (isNaN(parsed) || parsed < 1 || parsed > 20) {
-    throw new Error("Count must be between 1 and 20");
+    throw new BadRequestError("Count must be between 1 and 20");
   }
   return parsed;
 }
@@ -54,7 +58,7 @@ function validateLang(lang: string | null): InterviewLocale {
   if (!lang) return "en";
   const parsed = parseInterviewLocale(lang);
   if (!parsed) {
-    throw new Error("Invalid lang. Must be 'en' or 'tr'");
+    throw new BadRequestError("Invalid lang. Must be 'en' or 'tr'");
   }
   return parsed;
 }
@@ -65,7 +69,7 @@ function validateLevel(level: string | null): "junior" | "mid" | "senior" {
   if (normalized === "junior" || normalized === "mid" || normalized === "senior") {
     return normalized;
   }
-  throw new Error("Invalid level. Must be 'junior', 'mid', or 'senior'");
+  throw new BadRequestError("Invalid level. Must be 'junior', 'mid', or 'senior'");
 }
 
 function buildDebugJobCategory(role: string, level: "junior" | "mid" | "senior"): string {
@@ -75,6 +79,17 @@ function buildDebugJobCategory(role: string, level: "junior" | "mid" | "senior")
 
 export async function GET(request: NextRequest) {
   try {
+    if (process.env.NODE_ENV === "production" && process.env.OPENSCOUT_ENABLE_DEBUG_API !== "true") {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const limited = await enforceRateLimit(request, null, {
+      namespace: "debug-interview-questions",
+      limit: 5,
+      window: "1 h",
+    });
+    if (limited) return limited;
+
     const { searchParams } = new URL(request.url);
     
     // Validate query parameters
@@ -164,9 +179,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
     
   } catch (error) {
-    console.error("Debug interview questions error:", error);
-    
-    if (error instanceof Error) {
+    logError("debug interview questions error", error);
+
+    if (error instanceof BadRequestError) {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }

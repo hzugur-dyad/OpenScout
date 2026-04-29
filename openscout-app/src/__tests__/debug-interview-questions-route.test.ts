@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { GET } from "@/app/api/debug/interview-questions/route";
@@ -11,6 +11,21 @@ vi.mock("@/lib/groq", () => ({
 describe("GET /api/debug/interview-questions", () => {
   beforeEach(() => {
     vi.mocked(getGroq).mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is disabled in production unless explicitly enabled", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("OPENSCOUT_ENABLE_DEBUG_API", "");
+
+    const req = new NextRequest("http://localhost/api/debug/interview-questions");
+    const res = await GET(req);
+
+    expect(res.status).toBe(404);
+    expect(getGroq).not.toHaveBeenCalled();
   });
 
   it("returns only technical question text in the question list and applies the requested level", async () => {

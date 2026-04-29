@@ -50,11 +50,9 @@ const CI_REQUIRED = [
   "UPSTASH_REDIS_REST_TOKEN",
 ];
 
-/** Optional in production: app degrades gracefully (see rate-limit.ts, stripe-webhook route). */
+/** Optional in production: webhook flow can stay disabled until billing is live. */
 const PRODUCTION_OPTIONAL_INFRA = [
   "STRIPE_WEBHOOK_SECRET",
-  "UPSTASH_REDIS_REST_URL",
-  "UPSTASH_REDIS_REST_TOKEN",
 ];
 
 /** Must be real (non-placeholder) for production; excludes optional infra above. */
@@ -68,6 +66,22 @@ const PRODUCTION_OPTIONAL_FEATURES = [
   {
     name: "PostHog (analytics)",
     anyOf: ["NEXT_PUBLIC_POSTHOG_KEY", "POSTHOG_KEY"],
+  },
+  {
+    name: "GA4 (marketing analytics)",
+    anyOf: ["NEXT_PUBLIC_GA4_MEASUREMENT_ID"],
+  },
+  {
+    name: "Google Ads conversion tracking",
+    anyOf: ["NEXT_PUBLIC_GOOGLE_ADS_ID"],
+  },
+  {
+    name: "Meta Pixel",
+    anyOf: ["NEXT_PUBLIC_META_PIXEL_ID"],
+  },
+  {
+    name: "Hotjar",
+    anyOf: ["NEXT_PUBLIC_HOTJAR_ID"],
   },
 ];
 
@@ -189,27 +203,6 @@ function checkProductionOptionalInfra() {
     );
   } else if (looksLikeCiPlaceholder("STRIPE_WEBHOOK_SECRET", wh)) {
     errors.push("STRIPE_WEBHOOK_SECRET (looks like a CI/placeholder value)");
-  }
-
-  const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-  const redisTok = process.env.UPSTASH_REDIS_REST_TOKEN;
-  const urlBlank = isBlank(redisUrl);
-  const tokBlank = isBlank(redisTok);
-  if (urlBlank && tokBlank) {
-    warnings.push(
-      "Upstash Redis not configured - distributed rate limits are disabled (set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable)",
-    );
-  } else if (urlBlank !== tokBlank) {
-    errors.push(
-      "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must both be set or both empty",
-    );
-  } else {
-    if (looksLikeCiPlaceholder("UPSTASH_REDIS_REST_URL", redisUrl)) {
-      errors.push("UPSTASH_REDIS_REST_URL (looks like a CI/placeholder value)");
-    }
-    if (looksLikeCiPlaceholder("UPSTASH_REDIS_REST_TOKEN", redisTok)) {
-      errors.push("UPSTASH_REDIS_REST_TOKEN (looks like a CI/placeholder value)");
-    }
   }
 
   if (errors.length) {

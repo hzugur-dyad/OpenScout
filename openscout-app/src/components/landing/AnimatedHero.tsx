@@ -36,8 +36,8 @@ export function AnimatedHero() {
                 </h1>
 
                 <p className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl">
-                  Practice with AI, prove yourself with a shareable score, and apply with
-                  confidence - every candidate is evaluated by the same fair standards.
+                  Run one realistic interview, get one shareable score, and walk into applications
+                  with evidence instead of guesswork.
                 </p>
 
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -84,8 +84,8 @@ export function AnimatedHero() {
                 </h1>
 
                 <p className="mt-6 text-lg text-gray-800 dark:text-zinc-200 sm:text-xl">
-                  Scout pre-vets every applicant, so your team screens less, hires faster, and
-                  selects higher-quality candidates with confidence.
+                  Review candidates with the same CV and interview rubric, cut manual screening,
+                  and move faster on the shortlist.
                 </p>
 
                 <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

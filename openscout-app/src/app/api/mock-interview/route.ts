@@ -32,7 +32,9 @@ import {
   type NormalizedMockQuestionControl,
 } from "@/lib/ai/structured-output";
 import { coerceInterviewQuestionPrompt } from "@/lib/mock-interview/question-guard";
-import { GROQ_MOCK_INTERVIEW_MODEL } from "@/lib/mock-interview/versioning";
+import { normalizeInterviewSessionId, hashInterviewTranscript } from "@/lib/mock-interview/session-security";
+import { buildInterviewTranscript, normalizeInterviewTranscriptText } from "@/lib/mock-interview/transcript";
+import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 import { captureException, captureMessage } from "@/lib/monitoring";
 
 /** Max user-side messages (each POST adds one user line) before hard stop. */
@@ -111,9 +113,6 @@ function buildControlContextHint(
     return `\nKONTROL BAGLAMI: Aktif question_id=${q}, bildirilen attempt=${a}. attempt=2 ise ayni question_id'yi ve ayni topigi tekrar kullanma. Yeni question_id ile siradaki topige gec; attempt=1, is_followup=false. __deep gibi turetilmis ayni-topic id'leri kullanma.`;
   }
   return `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt=2, do not reuse the same question_id and do not stay on the same topic. Advance to the next topic with a new question_id, attempt=1, is_followup=false. Do not create same-topic derived ids like ${q}__deep.`;
-  return locale === "tr"
-    ? `\nKONTROL BAĞLAMI: Aktif question_id=${q}, bildirilen attempt=${a}. attempt zaten 2 ise aynı soruda kalma; yeni question_id ve attempt=1 kullan.`
-    : `\nCONTROL CONTEXT: Active question_id=${q}, reported attempt=${a}. If attempt is already 2, advance with a new question_id and attempt=1.`;
 }
 
 function buildJsonRepairAttemptSuffix(locale: InterviewLocale): string {
@@ -197,8 +196,9 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = user.id;
 
-    const guard = await checkProfileAndCv(supabase, user.id);
+    const guard = await checkProfileAndCv(supabase, userId);
     if (!guard.canApplyOrInterview) {
       const reasons: string[] = [];
       if (!guard.profileComplete) reasons.push("Complete required profile fields (name, email, location)");
@@ -219,29 +219,120 @@ export async function POST(request: NextRequest) {
       logWarn("mock-interview validation failed", { reason: "body schema" });
       return parsed.response;
     }
-    const { messages, jobCategory, userName, jobId, interviewLanguage, interviewControl } = parsed.data;
+    const { messages, sessionId, jobCategory, userName, jobId, interviewLanguage, interviewControl } = parsed.data;
 
+    const isStartRequest = messages.length === 1 && messages[0]?.role === "user";
     if (!isRateLimitBypassed(user)) {
-      const rlId = getRateLimitIdentifier(request, user.id);
-      const isStartRequest = messages.length === 1 && messages[0]?.role === "user";
+      const rlId = getRateLimitIdentifier(request, userId);
       const limited = await rateLimitForKind(isStartRequest ? "mockInterviewStart" : "mockInterviewTurn", rlId);
       if (!limited.success) return tooManyRequestsResponse(limited);
     }
 
     const locale: InterviewLocale = parseInterviewLocale(interviewLanguage);
+    const normalizedSessionId = normalizeInterviewSessionId(sessionId);
+    const transcriptMessages = messages
+      .filter(
+        (message): message is { role: "user" | "assistant"; content: string } =>
+          message.role === "user" || message.role === "assistant"
+      )
+      .map((message) => ({ role: message.role, content: message.content }));
+
+    async function persistSessionSnapshot(assistantContent: string) {
+      if (!normalizedSessionId) return;
+      const transcript = buildInterviewTranscript([
+        ...transcriptMessages,
+        { role: "assistant", content: assistantContent },
+      ]);
+      const row: Record<string, unknown> = {
+        id: normalizedSessionId,
+        user_id: userId,
+        job_category: jobCategory,
+        interview_language: locale,
+        model_version: GROQ_MOCK_INTERVIEW_MODEL,
+        prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
+        transcript,
+        transcript_hash: hashInterviewTranscript(transcript),
+        turn_count: messages.filter((message) => message.role === "user").length,
+        session_state: "started",
+        last_activity_at: new Date().toISOString(),
+      };
+      if (jobId && typeof jobId === "string" && jobId.trim()) {
+        row.job_id = jobId.trim();
+      }
+      const { error: sessionError } = await supabase.from("mock_interviews").upsert(row, { onConflict: "id" });
+      if (sessionError) {
+        logWarn("mock-interview session snapshot failed", {
+          sessionId: normalizedSessionId,
+          reason: sessionError.message,
+        });
+      }
+    }
+
+    if (normalizedSessionId) {
+      const incomingTranscript = buildInterviewTranscript(transcriptMessages);
+      const { data: existingSession } = await supabase
+        .from("mock_interviews")
+        .select("job_category, job_id, interview_language, session_state, transcript")
+        .eq("id", normalizedSessionId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!existingSession) {
+        if (!isStartRequest) {
+          return NextResponse.json(
+            { error: "Interview session is missing. Start a new interview." },
+            { status: 409 }
+          );
+        }
+      } else {
+        const sessionJobCategory =
+          typeof existingSession.job_category === "string" ? existingSession.job_category : null;
+        const sessionJobId =
+          typeof (existingSession as { job_id?: unknown }).job_id === "string"
+            ? ((existingSession as { job_id: string }).job_id || null)
+            : null;
+        const sessionLocale =
+          typeof existingSession.interview_language === "string" ? existingSession.interview_language : null;
+        const sessionState =
+          typeof existingSession.session_state === "string" ? existingSession.session_state : "started";
+        const storedTranscript =
+          typeof existingSession.transcript === "string" ? normalizeInterviewTranscriptText(existingSession.transcript) : "";
+
+        if (sessionState === "completed") {
+          return NextResponse.json({ error: "Interview session is already complete." }, { status: 409 });
+        }
+        if (sessionJobCategory && sessionJobCategory !== jobCategory) {
+          return NextResponse.json({ error: "Interview session metadata mismatch." }, { status: 409 });
+        }
+        if ((sessionJobId ?? undefined) !== (jobId ?? undefined)) {
+          return NextResponse.json({ error: "Interview job context mismatch." }, { status: 409 });
+        }
+        if (sessionLocale && sessionLocale !== locale) {
+          return NextResponse.json({ error: "Interview language mismatch." }, { status: 409 });
+        }
+        if (storedTranscript !== incomingTranscript) {
+          logWarn("mock-interview turn rejected: transcript drift detected", {
+            sessionId: normalizedSessionId,
+          });
+          return NextResponse.json({ error: "Interview session is out of sync. Start a new interview." }, { status: 409 });
+        }
+      }
+    }
 
     const userTurnCount = messages.filter((m) => m.role === "user").length;
     if (userTurnCount > MAX_INTERVIEW_USER_MESSAGES) {
       logWarn("mock-interview max user messages exceeded", { userTurnCount });
       captureMessage("Mock interview: max user turns reached", {
         route: "/api/mock-interview",
-        user_id: user.id,
+        user_id: userId,
         ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
         aiInterview: { stage: "generation", reason: "max_turns" },
       });
       const scores = defaultMockInterviewEndScores();
+      const closingText = maxTurnsClosingText(locale);
+      await persistSessionSnapshot(closingText);
       return NextResponse.json({
-        content: maxTurnsClosingText(locale),
+        content: closingText,
         interviewEnded: true,
         interviewEnd: {
           reason: "max_turns",
@@ -333,7 +424,7 @@ export async function POST(request: NextRequest) {
         logError("mock-interview Groq request failed", groqError);
         captureException(groqError, {
           route: "/api/mock-interview",
-          user_id: user.id,
+          user_id: userId,
           ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
           aiInterview: { stage: "generation", reason: "groq_error" },
         });
@@ -371,6 +462,7 @@ export async function POST(request: NextRequest) {
       const visible =
         parseResult.visibleText.trim() ||
         (locale === "tr" ? "Mülakatı tamamlıyoruz; sonuçların hazırlanıyor." : "Wrapping up — preparing your results.");
+      await persistSessionSnapshot(visible);
       return NextResponse.json({
         content: visible,
         interviewEnded: true,
@@ -397,6 +489,7 @@ export async function POST(request: NextRequest) {
           preview: rawVisible.slice(0, 120),
         });
       }
+      await persistSessionSnapshot(visible);
       return NextResponse.json({
         content: visible,
         interviewEnded: false,
@@ -444,6 +537,7 @@ export async function POST(request: NextRequest) {
           preview: visible.slice(0, 120),
         });
       }
+      await persistSessionSnapshot(safeVisible);
       return NextResponse.json({
         content: safeVisible,
         interviewEnded: false,
@@ -464,7 +558,7 @@ export async function POST(request: NextRequest) {
         : "Mock interview: structured output parse failsafe",
       {
         route: "/api/mock-interview",
-        user_id: user.id,
+        user_id: userId,
         ...(jobId && typeof jobId === "string" && jobId.trim() ? { job_id: jobId.trim() } : {}),
         aiInterview: {
           stage: "generation",
@@ -473,8 +567,10 @@ export async function POST(request: NextRequest) {
       }
     );
     const scores = defaultMockInterviewEndScores();
+    const closingText = failsafeClosingText(locale, terminatedBy === "empty_model" ? "empty_model" : "parse_failure");
+    await persistSessionSnapshot(closingText);
     return NextResponse.json({
-      content: failsafeClosingText(locale, terminatedBy === "empty_model" ? "empty_model" : "parse_failure"),
+      content: closingText,
       interviewEnded: true,
       interviewEnd: {
         reason: terminatedBy === "empty_model" ? "empty_model_response" : "invalid_structured_output",

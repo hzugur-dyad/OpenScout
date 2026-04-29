@@ -118,6 +118,32 @@ describe("POST /api/tts", () => {
     expect(vi.mocked(synthesizeInterviewSpeech)).not.toHaveBeenCalled();
   });
 
+  it("rejects oversized single text before calling the provider", async () => {
+    const req = new NextRequest("http://localhost/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text: "x".repeat(1201), locale: "en" }),
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    expect(vi.mocked(synthesizeInterviewSpeech)).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized chunk payloads before calling the provider", async () => {
+    const req = new NextRequest("http://localhost/api/tts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chunks: ["x".repeat(801)], locale: "en" }),
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    expect(vi.mocked(synthesizeInterviewSpeech)).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when TTS API key is not configured (message is generic config hint)", async () => {
     delete process.env.GOOGLE_CLOUD_TTS_API_KEY;
     vi.mocked(hasGoogleCloudTtsApiKeysConfigured).mockReturnValue(false);

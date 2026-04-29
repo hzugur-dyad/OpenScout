@@ -24,6 +24,7 @@ import {
   createAudioSpeechState,
 } from "@/lib/mock-interview/speech-silence";
 import { coerceInterviewQuestionPrompt } from "@/lib/mock-interview/question-guard";
+import { buildInterviewTranscript } from "@/lib/mock-interview/transcript";
 import { mapMicrophoneError } from "@/lib/user-facing-errors";
 
 type InterviewControl = {
@@ -674,6 +675,7 @@ export default function MockInterviewSessionPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            sessionId,
             messages: newMessages,
             jobCategory,
             userName,
@@ -760,10 +762,14 @@ export default function MockInterviewSessionPage() {
         if (interviewEnded) {
           setStep("processing");
           const durationMs = interviewStartTimeRef.current ? Date.now() - interviewStartTimeRef.current : 0;
-          const transcriptText = [...transcript, { role: "user", content: trimmedMessage }]
-            .concat([{ role: "assistant", content: assistantText }])
-            .map((m) => `${m.role}: ${m.content}`)
-            .join("\n");
+          const transcriptText = buildInterviewTranscript(
+            [...transcript, { role: "user", content: trimmedMessage }]
+              .concat([{ role: "assistant", content: assistantText }])
+              .filter(
+                (message): message is { role: "user" | "assistant"; content: string } =>
+                  message.role === "user" || message.role === "assistant"
+              )
+          );
           const resultRes = await fetch("/api/mock-interview/result", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -1165,6 +1171,7 @@ export default function MockInterviewSessionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId,
           messages: [{ role: "user", content: copy.readyPhrase }],
           jobCategory,
           userName,

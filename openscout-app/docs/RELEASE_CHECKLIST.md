@@ -8,7 +8,9 @@ Use this before merging to `main` or running a production deployment.
 - Build command is `npm run build:vercel`.
 - Required production environment variables are set.
 - No placeholder or localhost values remain in production env.
-- `GROQ_API_KEY` is present in Vercel `Production`.
+- Groq and TTS provider keys are present in Vercel `Production`.
+- Upstash production variables are present. Rate limits now fail closed without them.
+- Apply the latest Supabase migration before switching traffic.
 
 ## Local verification
 
@@ -16,6 +18,7 @@ Use this before merging to `main` or running a production deployment.
 - Run `npx tsc --noEmit`.
 - Run tests relevant to the changed area.
 - Check the affected user flows locally.
+- Verify marketing consent banner and conversion events if GA4 / Ads / Meta / Hotjar envs are set.
 
 ## Production smoke test
 
@@ -26,6 +29,8 @@ Use this before merging to `main` or running a production deployment.
 - Mock interview scoring works.
 - TTS works if interview voice changed.
 - Stripe checkout and webhook work if billing changed.
+- Candidate pricing success flow emits purchase tracking after redirect.
+- Employer pricing success flow verifies the Stripe session and emits purchase tracking after redirect.
 
 ## Rollback discipline
 

@@ -48,14 +48,22 @@ export async function POST(request: NextRequest) {
 
     const origin = request.nextUrl.origin;
     const stripe = new Stripe(stripeSecretKey);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_customer_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    const stripeCustomerId =
+      typeof (profile as { stripe_customer_id?: string | null } | null)?.stripe_customer_id === "string"
+        ? (profile as { stripe_customer_id: string }).stripe_customer_id
+        : null;
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${origin}/pricing?subscription=success`,
+      success_url: `${origin}/pricing?subscription=success&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing`,
-      customer_email: user.email ?? undefined,
       metadata: {
         user_id: user.id,
         plan_type: plan,
@@ -67,10 +75,20 @@ export async function POST(request: NextRequest) {
         },
       },
     };
+    if (stripeCustomerId) {
+      sessionParams.customer = stripeCustomerId;
+    } else {
+      sessionParams.customer_email = user.email ?? undefined;
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 
     if (session.url) {
+      await captureServer(user.id, ANALYTICS_EVENTS.checkout_started, {
+        scope: "candidate",
+        plan,
+        checkout_session_id: session.id,
+      });
       await captureServer(user.id, ANALYTICS_EVENTS.subscription_started, {
         scope: "candidate",
         plan,

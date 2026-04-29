@@ -65,16 +65,16 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {(!isEmployer
               ? [
-                  { value: "AI Evaluation", label: "Fair interview" },
-                  { value: "< 2 weeks", label: "Fast process" },
-                  { value: "100%", label: "Free for candidates" },
-                  { value: "AI Precision", label: "Consistent quality" },
+                  { value: "1 score", label: "Shareable outcome" },
+                  { value: "1 interview", label: "Role-specific practice" },
+                  { value: "Same bar", label: "Consistent scoring" },
+                  { value: "CV + report", label: "Stronger applications" },
                 ]
               : [
-                  { value: "Pre-vetted", label: "CV + interview score" },
-                  { value: "< 2 weeks", label: "Hire faster" },
-                  { value: "One bar", label: "Same format for all" },
-                  { value: "Less screening", label: "Skip first rounds" },
+                  { value: "CV + interview", label: "Pre-vetted signal" },
+                  { value: "Same rubric", label: "Comparable applicants" },
+                  { value: "Fewer screens", label: "Less manual review" },
+                  { value: "Faster shortlist", label: "Move with evidence" },
                 ]
             ).map((item: { value: string; label: string }, i) => (
               <motion.div
@@ -109,14 +109,14 @@ export default function LandingPage() {
           {(() => {
             const steps = !isEmployer
               ? [
-                  { step: 1, title: "Build Profile", desc: "Upload your CV and fill in your details. AI evaluates and scores you.", icon: User },
-                  { step: 2, title: "Get your Scout Score", desc: "Take one mock interview per role. Get a shareable credential and report.", icon: Award },
-                  { step: 3, title: "Apply everywhere", desc: "One credential, many companies. Connect with employers who trust Scout.", icon: Send },
+                  { step: 1, title: "Add basics + CV", desc: "Complete the essentials once, then upload a CV or run CV analysis.", icon: User },
+                  { step: 2, title: "Run the interview", desc: "Take a role-specific mock interview and get a scored report.", icon: Award },
+                  { step: 3, title: "Share the signal", desc: "Use your Scout Score and report when you apply.", icon: Send },
                 ]
               : [
-                  { step: 1, title: "Create company & post", desc: "Add your company and job listing. Set minimum CV score and optional interview questions.", icon: Building2 },
-                  { step: 2, title: "Receive applications", desc: "Only Scout-vetted candidates can apply. Each has a CV score and mock interview report.", icon: ListChecks },
-                  { step: 3, title: "Hire faster", desc: "Skip first-round screening. Compare candidates on the same score and report format.", icon: Zap },
+                  { step: 1, title: "Post with a bar", desc: "Create the role, set a minimum CV score, and add interview prompts if needed.", icon: Building2 },
+                  { step: 2, title: "Review scored applicants", desc: "Every applicant arrives with CV signal and interview evidence.", icon: ListChecks },
+                  { step: 3, title: "Shortlist faster", desc: "Compare candidates on the same format instead of running first-pass screens.", icon: Zap },
                 ];
             return (
               <div className="mx-auto mt-16 flex max-w-4xl flex-col items-stretch gap-6 md:flex-row md:items-stretch md:gap-0">
@@ -163,13 +163,13 @@ export default function LandingPage() {
             {(!isEmployer
               ? [
                   {
-                    title: "Hired in days",
-                    desc: "No long waits. Our candidates get offers within 2 weeks.",
+                    title: "Real practice",
+                    desc: "Train against role-specific questions instead of generic quizzes.",
                     icon: Timer,
                   },
                   {
-                    title: "Skip the gatekeepers",
-                    desc: "Connect directly with employers. No recruiter screens.",
+                    title: "Shareable proof",
+                    desc: "Send a score and report instead of saying you are interview-ready.",
                     icon: UserRoundSearch,
                   },
                   {
@@ -195,13 +195,13 @@ export default function LandingPage() {
                     icon: GitCompareArrows,
                   },
                   {
-                    title: "One credential, many roles",
-                    desc: "Candidates do the work once. You see their Scout Score when they apply.",
+                    title: "Evidence before interviews",
+                    desc: "See structured interview signal before your team spends calendar time.",
                     icon: Scale,
                   },
                   {
-                    title: "Hire in days",
-                    desc: "Cut first-round interviews. Move straight to the candidates who passed the bar.",
+                    title: "Cleaner shortlist",
+                    desc: "Move faster on candidates who already cleared your baseline.",
                     icon: Rocket,
                   },
                 ]

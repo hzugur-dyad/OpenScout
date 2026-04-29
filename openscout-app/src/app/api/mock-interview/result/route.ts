@@ -19,12 +19,11 @@ import {
   GROQ_JSON_OBJECT_RESPONSE_FORMAT,
 } from "@/lib/ai/prompts";
 import { parseInterviewEvaluationModelOutput } from "@/lib/ai/structured-output";
+import { hashInterviewTranscript, normalizeInterviewSessionId } from "@/lib/mock-interview/session-security";
+import { normalizeInterviewTranscriptText } from "@/lib/mock-interview/transcript";
 import { GROQ_MOCK_INTERVIEW_MODEL, MOCK_INTERVIEW_PIPELINE_VERSION } from "@/lib/mock-interview/versioning";
 import { assessInterviewTranscriptQuality } from "@/lib/mock-interview/transcript-quality";
 import { captureException, captureMessage } from "@/lib/monitoring";
-
-const SESSION_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function buildEmployerEvalRubricBlock(jobRow: { ai_interview_config?: unknown } | null): string {
   const config = jobRow?.ai_interview_config as { custom_questions?: unknown } | undefined;
@@ -33,6 +32,50 @@ function buildEmployerEvalRubricBlock(jobRow: { ai_interview_config?: unknown } 
     : [];
   if (qs.length === 0) return "";
   return qs.map((q, i) => `${i + 1}. ${q.trim()}`).join("\n");
+}
+
+function buildStoredInterviewResultPayload(
+  sessionId: string,
+  row: { score?: number | null; report?: Record<string, unknown> | null }
+) {
+  const report = (row.report as Record<string, unknown> | null) ?? {};
+  const finalScore =
+    typeof row.score === "number"
+      ? row.score
+      : typeof report.final_score === "number"
+        ? report.final_score
+        : 0;
+
+  return {
+    interview_id: sessionId,
+    score: finalScore,
+    final_score: finalScore,
+    overall_score: finalScore,
+    confidence: report.confidence,
+    coverage_score: report.coverage_score,
+    is_preliminary: report.is_preliminary,
+    competency_breakdown: report.competency_breakdown,
+    categories: report.categories,
+    question_evaluations: report.question_evaluations,
+    answer_breakdown: report.answer_breakdown,
+    strengths: report.strengths,
+    weaknesses: report.weaknesses,
+    improvements: report.improvements,
+    summary: report.summary,
+    evaluation_used_fallback:
+      (report.evaluation_meta as { used_fallback?: unknown } | undefined)?.used_fallback === true,
+    ...(typeof report.hire_recommendation === "string"
+      ? { hire_recommendation: report.hire_recommendation }
+      : {}),
+    ...(typeof report.justification === "string" ? { justification: report.justification } : {}),
+    ...(typeof report.technical_score === "number" ? { technical_score: report.technical_score } : {}),
+    ...(typeof report.communication_score === "number"
+      ? { communication_score: report.communication_score }
+      : {}),
+    ...(typeof report.problem_solving_score === "number"
+      ? { problem_solving_score: report.problem_solving_score }
+      : {}),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -85,8 +128,8 @@ export async function POST(request: NextRequest) {
       durationMs?: unknown;
     };
 
-    const sessionIdRaw = typeof b.sessionId === "string" ? b.sessionId.trim() : "";
-    if (!SESSION_UUID_RE.test(sessionIdRaw)) {
+    const sessionIdRaw = normalizeInterviewSessionId(b.sessionId) ?? "";
+    if (!sessionIdRaw) {
       logWarn("mock-interview result validation failed", { reason: "sessionId" });
       return NextResponse.json({ error: "sessionId must be a valid interview session UUID" }, { status: 400 });
     }
@@ -96,6 +139,8 @@ export async function POST(request: NextRequest) {
       logWarn("mock-interview result validation failed", { reason: "transcript required" });
       return NextResponse.json({ error: "transcript required" }, { status: 400 });
     }
+    const canonicalTranscript = normalizeInterviewTranscriptText(transcriptStr);
+    const transcriptHash = hashInterviewTranscript(canonicalTranscript);
 
     const jobCategory = typeof b.jobCategory === "string" ? b.jobCategory.trim() : "";
     if (!jobCategory) {
@@ -111,6 +156,53 @@ export async function POST(request: NextRequest) {
     let durationMs: number | null = null;
     if (typeof b.durationMs === "number" && !Number.isNaN(b.durationMs) && b.durationMs >= 0) {
       durationMs = Math.min(Math.round(b.durationMs), 6 * 60 * 60 * 1000);
+    }
+
+    const { data: existingSession } = await supabase
+      .from("mock_interviews")
+      .select("job_category, job_id, interview_language, session_state, transcript_hash, report, score")
+      .eq("id", sessionIdRaw)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!existingSession) {
+      logWarn("mock-interview result rejected: missing session seed", { sessionId: sessionIdRaw });
+      return NextResponse.json(
+        { error: "Interview session was not started from this account. Start a new interview." },
+        { status: 409 }
+      );
+    }
+
+    const sessionJobCategory = typeof existingSession.job_category === "string" ? existingSession.job_category : "";
+    const sessionJobId =
+      typeof (existingSession as { job_id?: unknown }).job_id === "string"
+        ? ((existingSession as { job_id: string }).job_id || null)
+        : null;
+    const sessionLocale =
+      typeof existingSession.interview_language === "string" ? existingSession.interview_language : null;
+    const sessionState =
+      typeof existingSession.session_state === "string" ? existingSession.session_state : "started";
+    const storedTranscriptHash =
+      typeof existingSession.transcript_hash === "string" ? existingSession.transcript_hash : null;
+
+    if (sessionJobCategory && sessionJobCategory !== jobCategory) {
+      return NextResponse.json({ error: "Interview session metadata mismatch. Start a new interview." }, { status: 409 });
+    }
+    if ((sessionJobId ?? undefined) !== (jobId ?? undefined)) {
+      return NextResponse.json({ error: "Interview job context mismatch. Start a new interview." }, { status: 409 });
+    }
+    if (sessionLocale && sessionLocale !== locale) {
+      return NextResponse.json({ error: "Interview language mismatch. Start a new interview." }, { status: 409 });
+    }
+    if (!storedTranscriptHash) {
+      return NextResponse.json({ error: "Interview session is out of sync. Start a new interview." }, { status: 409 });
+    }
+    if (storedTranscriptHash !== transcriptHash) {
+      logWarn("mock-interview result rejected: transcript hash mismatch", { sessionId: sessionIdRaw });
+      return NextResponse.json({ error: "Interview transcript mismatch. Start a new interview." }, { status: 409 });
+    }
+    if (sessionState === "completed") {
+      return NextResponse.json(buildStoredInterviewResultPayload(sessionIdRaw, existingSession), { status: 200 });
     }
 
     const { data: profile } = await supabase
@@ -146,7 +238,7 @@ export async function POST(request: NextRequest) {
 
     const evalSystem = buildRecruiterGradeInterviewEvaluationSystemPrompt(jobCategory, locale, rubricBlock);
 
-    const transcriptQuality = assessInterviewTranscriptQuality(transcriptStr);
+    const transcriptQuality = assessInterviewTranscriptQuality(canonicalTranscript);
     const lowSignalEvalNote =
       locale === "tr"
         ? `\n\n[DEGERLENDIRME_NOTU: Transkriptte cok sayida sessizlik/zaman asimi satiri veya asiri kisa aday yanitlari olabilir. Bunu sinirli kanit olarak kabul et. Guclu transcript kaniti yoksa strong etiketi veya yuksek competency skoru verme.]`
@@ -159,8 +251,8 @@ export async function POST(request: NextRequest) {
           : `\n\n[EVALUATION_NOTE: The transcript marks ${transcriptQuality.unansweredTurnCount} question(s) as unanswered/no_response. When there is no meaningful answer, set answered=false, label=no_response, score=0, and every competency score to 0.]`
         : "";
     const evaluationTranscriptPayload = transcriptQuality.isLowSignal
-      ? `${transcriptStr}${lowSignalEvalNote}${unansweredEvalNote}`
-      : `${transcriptStr}${unansweredEvalNote}`;
+      ? `${canonicalTranscript}${lowSignalEvalNote}${unansweredEvalNote}`
+      : `${canonicalTranscript}${unansweredEvalNote}`;
 
     const groq = getGroq();
     let completion;
@@ -279,30 +371,36 @@ export async function POST(request: NextRequest) {
     if (communicationScore !== null) report.communication_score = communicationScore;
     if (problemSolvingScore !== null) report.problem_solving_score = problemSolvingScore;
 
-    const upsertRow: Record<string, unknown> = {
-      id: sessionIdRaw,
-      user_id: user.id,
+    const updateRow: Record<string, unknown> = {
       job_category: jobCategory,
       score: overallScore,
       report,
-      transcript: transcriptStr,
+      transcript: canonicalTranscript,
+      transcript_hash: transcriptHash,
       interview_language: locale,
       model_version: GROQ_MOCK_INTERVIEW_MODEL,
       prompt_version: MOCK_INTERVIEW_PIPELINE_VERSION,
+      session_state: "completed",
+      completed_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString(),
     };
-    if (jobId) upsertRow.job_id = jobId;
-    if (durationMs !== null) upsertRow.duration_ms = durationMs;
+    if (jobId) updateRow.job_id = jobId;
+    if (durationMs !== null) updateRow.duration_ms = durationMs;
 
-    const { error: upsertError } = await supabase.from("mock_interviews").upsert(upsertRow, { onConflict: "id" });
+    const { error: updateError } = await supabase
+      .from("mock_interviews")
+      .update(updateRow)
+      .eq("id", sessionIdRaw)
+      .eq("user_id", user.id);
 
-    if (upsertError) {
-      logError("mock-interview result upsert failed", upsertError);
-      captureException(upsertError, {
+    if (updateError) {
+      logError("mock-interview result update failed", updateError);
+      captureException(updateError, {
         route: "/api/mock-interview/result",
         user_id: user.id,
         ...(jobId ? { job_id: jobId } : {}),
       });
-      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     if (viaBonus) {
